@@ -98,9 +98,9 @@ export class Pipeline extends BaseEntity {
   @Column({ type: 'varchar', length: 255, nullable: true })
   webhookSecret?: string;
 
-  // Relations will be added later
-  // @OneToMany(() => PipelineRun, run => run.pipeline, { cascade: true })
-  // runs!: PipelineRun[];
+  // Relations
+  @OneToMany('PipelineRun', 'pipeline', { cascade: true })
+  runs!: any[];
 
   /**
    * Calculate and update success rate
