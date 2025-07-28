@@ -5,6 +5,7 @@
 
 import { databaseManager } from '@/core/database';
 import { databaseConnectionManager } from '@/core/database-monitor';
+import { databaseSecurityManager } from '@/core/database-security';
 import { repositoryFactory } from '@/repositories/factory.enhanced';
 import { Logger } from '@/shared/logger';
 import { configManager } from '@/config';
@@ -29,6 +30,12 @@ export interface DatabaseHealthStatus {
   uptime: number;
   isHealthy: boolean;
   recommendations: string[];
+  security: {
+    metrics: any;
+    recentEvents: any[];
+    recommendations: string[];
+    securityScore: number;
+  };
 }
 
 export interface DatabaseSeedOptions {
@@ -163,6 +170,9 @@ export class EnhancedDatabaseService {
       // Get performance recommendations
       const recommendations = databaseConnectionManager.getPerformanceRecommendations();
       
+      // Get security status
+      const securityReport = databaseSecurityManager.generateSecurityReport();
+      
       return {
         isConnected,
         connectionStats,
@@ -178,7 +188,13 @@ export class EnhancedDatabaseService {
         },
         uptime: metrics.uptime,
         isHealthy: metrics.isHealthy,
-        recommendations
+        recommendations,
+        security: {
+          metrics: securityReport.summary,
+          recentEvents: securityReport.recentEvents,
+          recommendations: securityReport.recommendations,
+          securityScore: securityReport.summary.securityScore
+        }
       };
     } catch (error) {
       this.logger.error('Failed to get database health status', error);
