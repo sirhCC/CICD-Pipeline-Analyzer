@@ -60,9 +60,9 @@ export class PipelineRunStage extends BaseEntity {
   @Column({ type: 'uuid' })
   runId!: string;
 
-  @ManyToOne(() => PipelineRun, run => run.stages, { onDelete: 'CASCADE' })
+  @ManyToOne('PipelineRun', 'stages', { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'runId' })
-  run!: PipelineRun;
+  run!: any;
 
   /**
    * Calculate stage duration
@@ -202,8 +202,8 @@ export class PipelineRun extends BaseEntity {
   @JoinColumn({ name: 'pipelineId' })
   pipeline!: Pipeline;
 
-  @OneToMany(() => PipelineRunStage, stage => stage.run, { cascade: true })
-  stages!: PipelineRunStage[];
+  @OneToMany('PipelineRunStage', 'run', { cascade: true })
+  stages!: any[];
 
   /**
    * Calculate run duration
