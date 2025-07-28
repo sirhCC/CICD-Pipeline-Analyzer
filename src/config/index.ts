@@ -19,7 +19,7 @@ const configSchema = Joi.object({
   HOST: Joi.string().default('0.0.0.0'),
 
   // Database Configuration
-  DB_TYPE: Joi.string().valid('postgres', 'mysql', 'sqlite').default('postgres'),
+  DB_TYPE: Joi.string().valid('postgres', 'mysql').default('postgres'),
   DB_HOST: Joi.string().default('localhost'),
   DB_PORT: Joi.number().port().default(5432),
   DB_NAME: Joi.string().required(),
