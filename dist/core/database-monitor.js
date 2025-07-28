@@ -7,7 +7,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.databaseConnectionManager = exports.DatabaseConnectionManager = void 0;
 const events_1 = require("events");
 const database_1 = require("./database");
-const logger_1 = require("@/shared/logger");
+const logger_1 = require("../shared/logger");
 class DatabaseConnectionManager extends events_1.EventEmitter {
     static instance;
     logger;

@@ -4,7 +4,7 @@
  */
 import { BaseCICDProvider } from './base.provider';
 import { PipelineProvider, PipelineStatus } from '../types';
-import type { ProviderConfig, PipelineData, JobData, ProviderMetrics } from './base.provider';
+import type { ProviderConfig, PipelineData, JobData, LogData, WebhookPayload, ProviderMetrics } from './base.provider';
 interface GitLabConfig extends ProviderConfig {
     baseUrl: string;
     token: string;
@@ -12,7 +12,7 @@ interface GitLabConfig extends ProviderConfig {
 }
 export declare class GitLabCIProvider extends BaseCICDProvider {
     private client;
-    private config;
+    private gitlabConfig;
     constructor(config: GitLabConfig);
     getProviderType(): PipelineProvider;
     validateConfig(): Promise<boolean>;
@@ -29,14 +29,18 @@ export declare class GitLabCIProvider extends BaseCICDProvider {
         limit?: number;
         since?: Date;
     }): Promise<JobData[]>;
-    fetchLogs(pipelineId: string, runId: string): Promise<string[]>;
-    processWebhook(payload: any): Promise<boolean>;
+    fetchLogs(pipelineId: string, runId: string): Promise<LogData[]>;
+    private detectLogLevel;
+    processWebhook(payload: WebhookPayload): Promise<PipelineData | null>;
+    private transformWebhookToPipelineData;
     verifyWebhookSignature(payload: string, signature: string): boolean;
     getSupportedEvents(): string[];
-    setupWebhook(repository: string, webhookUrl: string): Promise<boolean>;
+    setupWebhook(repository: string, webhookUrl: string, events: string[]): Promise<{
+        id: string;
+        secret: string;
+    }>;
     getMetrics(): ProviderMetrics;
     syncRepository(repository: string): Promise<boolean>;
-    createWebhook(repository: string, webhookUrl: string): Promise<boolean>;
     private transformPipeline;
     private transformJob;
     private mapStatus;

@@ -5,10 +5,10 @@
  */
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.initializeDatabaseForEnvironment = exports.databaseInitializer = exports.DatabaseInitializer = void 0;
-const database_enhanced_1 = require("@/services/database.enhanced");
-const database_1 = require("@/core/database");
-const logger_1 = require("@/shared/logger");
-const config_1 = require("@/config");
+const database_enhanced_1 = require("../services/database.enhanced");
+const database_1 = require("../core/database");
+const logger_1 = require("../shared/logger");
+const config_1 = require("../config");
 const logger = new logger_1.Logger('DatabaseInit');
 class DatabaseInitializer {
     logger;

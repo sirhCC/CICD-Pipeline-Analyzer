@@ -13,6 +13,8 @@ import type {
   ProviderConfig,
   PipelineData,
   JobData,
+  LogData,
+  WebhookPayload,
   ProviderMetrics
 } from './base.provider';
 import { Logger } from '../shared/logger';
@@ -55,25 +57,25 @@ interface GitLabJob {
 
 export class GitLabCIProvider extends BaseCICDProvider {
   private client: any;
-  private config: GitLabConfig;
+  private gitlabConfig: GitLabConfig;
 
   constructor(config: GitLabConfig) {
     super(config);
-    this.config = config;
+    this.gitlabConfig = config;
     
     // Initialize GitLab API client
     this.client = axios.create({
-      baseURL: config.baseUrl || 'https://gitlab.com/api/v4',
+      baseURL: this.gitlabConfig.baseUrl || 'https://gitlab.com/api/v4',
       headers: {
-        'Private-Token': config.token || config.apiKey,
+        'Private-Token': this.gitlabConfig.token || this.gitlabConfig.apiKey,
         'Content-Type': 'application/json'
       },
-      timeout: config.timeout || 30000,
+      timeout: this.gitlabConfig.timeout || 30000,
     });
 
     logger.info('GitLab CI provider initialized', {
-      baseUrl: this.config.baseUrl,
-      hasToken: !!(this.config.token || this.config.apiKey)
+      baseUrl: this.gitlabConfig.baseUrl,
+      hasToken: !!(this.gitlabConfig.token || this.gitlabConfig.apiKey)
     });
   }
 
@@ -83,11 +85,11 @@ export class GitLabCIProvider extends BaseCICDProvider {
 
   async validateConfig(): Promise<boolean> {
     try {
-      if (!this.config.token && !this.config.apiKey) {
+      if (!this.gitlabConfig.token && !this.gitlabConfig.apiKey) {
         throw new Error('GitLab token is required');
       }
 
-      if (!this.config.baseUrl) {
+      if (!this.gitlabConfig.baseUrl) {
         throw new Error('GitLab base URL is required');
       }
 
@@ -124,7 +126,7 @@ export class GitLabCIProvider extends BaseCICDProvider {
     status?: PipelineStatus[];
   } = {}): Promise<PipelineData[]> {
     try {
-      const projectId = repository || this.config.projectId;
+      const projectId = repository || this.gitlabConfig.projectId;
       if (!projectId) {
         throw new Error('Project ID is required');
       }
@@ -194,15 +196,13 @@ export class GitLabCIProvider extends BaseCICDProvider {
       // For GitLab, a "run" is actually a job, so we return job details as pipeline data
       const job = this.transformJob(response.data);
       
-      return {
+      const pipelineData: PipelineData = {
         id: runId,
         name: job.name,
         repository: projectId || '',
         branch: 'unknown',
         status: job.status,
         startedAt: job.startedAt,
-        finishedAt: job.finishedAt || new Date(),
-        duration: job.duration,
         triggeredBy: 'system',
         triggeredEvent: 'job',
         commitSha: 'unknown',
@@ -210,6 +210,16 @@ export class GitLabCIProvider extends BaseCICDProvider {
         runNumber: parseInt(runId) || 0,
         jobs: [job]
       };
+
+      if (job.finishedAt) {
+        pipelineData.finishedAt = job.finishedAt;
+      }
+
+      if (job.duration) {
+        pipelineData.duration = job.duration;
+      }
+
+      return pipelineData;
     } catch (error) {
       logger.error('Failed to fetch GitLab job', {
         error: error instanceof Error ? error.message : String(error),
@@ -245,23 +255,85 @@ export class GitLabCIProvider extends BaseCICDProvider {
     }
   }
 
-  async fetchLogs(pipelineId: string, runId: string): Promise<string[]> {
+  async fetchLogs(pipelineId: string, runId: string): Promise<LogData[]> {
     try {
       const [projectId] = pipelineId.split(':');
       const response = await this.client.get(`/projects/${projectId}/jobs/${runId}/trace`);
-      return [response.data || ''];
+      
+      // Convert raw log text to LogData format
+      const logText = response.data || '';
+      const logLines = logText.split('\n').filter((line: string) => line.trim());
+      
+      return logLines.map((line: string, index: number) => ({
+        timestamp: new Date(),
+        level: this.detectLogLevel(line),
+        message: line,
+        source: 'gitlab-ci',
+        jobId: runId,
+        stepId: undefined
+      }));
     } catch {
       return [];
     }
   }
 
-  async processWebhook(payload: any): Promise<boolean> {
+  private detectLogLevel(logLine: string): 'debug' | 'info' | 'warn' | 'error' {
+    const lowerLine = logLine.toLowerCase();
+    if (lowerLine.includes('error') || lowerLine.includes('fail')) return 'error';
+    if (lowerLine.includes('warn')) return 'warn';
+    if (lowerLine.includes('debug')) return 'debug';
+    return 'info';
+  }
+
+  async processWebhook(payload: WebhookPayload): Promise<PipelineData | null> {
     try {
-      logger.info('Processing GitLab webhook', { payload });
-      return true;
-    } catch {
-      return false;
+      logger.info('Processing GitLab webhook', { 
+        event: payload.event,
+        provider: payload.provider 
+      });
+      
+      // Basic webhook processing - would need to parse GitLab webhook format
+      if (payload.event === 'pipeline' && payload.data) {
+        // Transform GitLab webhook data to PipelineData
+        return this.transformWebhookToPipelineData(payload.data);
+      }
+      
+      return null;
+    } catch (error) {
+      logger.error('Failed to process GitLab webhook', {
+        error: error instanceof Error ? error.message : String(error)
+      });
+      return null;
     }
+  }
+
+  private transformWebhookToPipelineData(webhookData: any): PipelineData {
+    const pipelineData: PipelineData = {
+      id: `${webhookData.project?.id}:${webhookData.id}`,
+      name: `Pipeline #${webhookData.id}`,
+      repository: webhookData.project?.id?.toString() || 'unknown',
+      branch: webhookData.ref || 'unknown',
+      status: this.mapStatus(webhookData.status || 'unknown'),
+      startedAt: new Date(webhookData.created_at || Date.now()),
+      triggeredBy: webhookData.user?.username || 'unknown',
+      triggeredEvent: 'webhook',
+      commitSha: webhookData.sha || 'unknown',
+      commitAuthor: webhookData.user?.username || 'unknown',
+      runNumber: webhookData.id || 0,
+      jobs: [],
+      artifacts: [],
+      logs: []
+    };
+
+    if (webhookData.finished_at) {
+      pipelineData.finishedAt = new Date(webhookData.finished_at);
+    }
+
+    if (webhookData.duration) {
+      pipelineData.duration = webhookData.duration;
+    }
+
+    return pipelineData;
   }
 
   verifyWebhookSignature(payload: string, signature: string): boolean {
@@ -273,8 +345,34 @@ export class GitLabCIProvider extends BaseCICDProvider {
     return ['push', 'pipeline', 'job', 'merge_request'];
   }
 
-  async setupWebhook(repository: string, webhookUrl: string): Promise<boolean> {
-    return this.createWebhook(repository, webhookUrl);
+  async setupWebhook(repository: string, webhookUrl: string, events: string[]): Promise<{ id: string; secret: string }> {
+    try {
+      const projectId = repository;
+      const response = await this.client.post(`/projects/${projectId}/hooks`, {
+        url: webhookUrl,
+        pipeline_events: events.includes('pipeline'),
+        job_events: events.includes('job'),
+        push_events: events.includes('push'),
+        merge_requests_events: events.includes('merge_request')
+      });
+
+      logger.info('Created GitLab webhook', {
+        repository,
+        webhookUrl,
+        webhookId: response.data.id
+      });
+
+      return {
+        id: response.data.id.toString(),
+        secret: this.gitlabConfig.webhookSecret || 'no-secret'
+      };
+    } catch (error) {
+      logger.error('Failed to create GitLab webhook', {
+        error: error instanceof Error ? error.message : String(error),
+        repository
+      });
+      throw error;
+    }
   }
 
   getMetrics(): ProviderMetrics {
@@ -284,8 +382,7 @@ export class GitLabCIProvider extends BaseCICDProvider {
       averageResponseTime: 0,
       lastSyncTime: new Date(),
       errorCount: 0,
-      rateLimitRemaining: 1000,
-      quotaUsage: 0
+      rateLimitRemaining: 1000
     };
   }
 
@@ -306,65 +403,51 @@ export class GitLabCIProvider extends BaseCICDProvider {
     }
   }
 
-  async createWebhook(repository: string, webhookUrl: string): Promise<boolean> {
-    try {
-      const projectId = repository;
-      await this.client.post(`/projects/${projectId}/hooks`, {
-        url: webhookUrl,
-        pipeline_events: true,
-        job_events: true,
-        push_events: true,
-        merge_requests_events: true
-      });
-
-      logger.info('Created GitLab webhook', {
-        repository,
-        webhookUrl
-      });
-      return true;
-    } catch (error) {
-      logger.error('Failed to create GitLab webhook', {
-        error: error instanceof Error ? error.message : String(error),
-        repository
-      });
-      return false;
-    }
-  }
-
   private transformPipeline(gitlabPipeline: GitLabPipeline, projectId: string): PipelineData {
-    return {
+    const pipelineData: PipelineData = {
       id: `${projectId}:${gitlabPipeline.id}`,
       name: `Pipeline #${gitlabPipeline.id}`,
       repository: projectId,
       branch: gitlabPipeline.ref,
       status: this.mapStatus(gitlabPipeline.status),
       startedAt: new Date(gitlabPipeline.created_at),
-      finishedAt: gitlabPipeline.updated_at ? new Date(gitlabPipeline.updated_at) : undefined,
-      duration: undefined,
       triggeredBy: gitlabPipeline.user?.username || 'unknown',
       triggeredEvent: 'push',
       commitSha: gitlabPipeline.sha,
       commitAuthor: gitlabPipeline.user?.username || 'unknown',
-      commitMessage: undefined,
       runNumber: gitlabPipeline.id,
       jobs: [],
       artifacts: [],
       logs: []
     };
+
+    // Only add finishedAt if it exists
+    if (gitlabPipeline.updated_at) {
+      pipelineData.finishedAt = new Date(gitlabPipeline.updated_at);
+    }
+
+    return pipelineData;
   }
 
   private transformJob(gitlabJob: GitLabJob): JobData {
-    return {
+    const jobData: JobData = {
       id: gitlabJob.id.toString(),
       name: gitlabJob.name,
       status: this.mapStatus(gitlabJob.status),
       startedAt: gitlabJob.started_at ? new Date(gitlabJob.started_at) : new Date(gitlabJob.created_at),
-      finishedAt: gitlabJob.finished_at ? new Date(gitlabJob.finished_at) : undefined,
-      duration: gitlabJob.duration || undefined,
-      steps: [],
-      runner: undefined,
-      resourceUsage: undefined
+      steps: []
     };
+
+    // Only add optional fields if they exist
+    if (gitlabJob.finished_at) {
+      jobData.finishedAt = new Date(gitlabJob.finished_at);
+    }
+
+    if (gitlabJob.duration) {
+      jobData.duration = gitlabJob.duration;
+    }
+
+    return jobData;
   }
 
   private mapStatus(gitlabStatus: string): PipelineStatus {

@@ -52,7 +52,7 @@ export declare class DatabaseManager {
      */
     getPoolStats(): Record<string, unknown>;
     /**
-     * Execute raw SQL query with logging
+     * Execute raw SQL query with logging and security analysis
      */
     query<T = unknown>(sql: string, parameters?: unknown[]): Promise<T>;
     /**

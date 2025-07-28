@@ -5,6 +5,7 @@
 
 import { BaseCICDProvider, ProviderConfig } from './base.provider';
 import { GitHubActionsProvider } from './github-actions.provider';
+import { GitLabCIProvider } from './gitlab-ci.provider';
 import { PipelineProvider } from '../types';
 import { Logger } from '../shared/logger';
 import { configManager } from '../config';
@@ -165,14 +166,76 @@ export class ProviderFactory {
    */
   public getProviderFromConfig(configKey: string): BaseCICDProvider | null {
     try {
-      // For now, we'll simplify and not use dynamic config access
-      // This can be enhanced later when we have actual provider configurations
+      // This would typically load from environment variables or config files
+      // For now, return null as it's not implemented
+      this.logger.warn(`Configuration-based provider creation not implemented for: ${configKey}`);
       return null;
     } catch (error) {
       this.logger.error(`Failed to create provider from config: ${configKey}`, {
         error: error instanceof Error ? error.message : String(error),
       });
       return null;
+    }
+  }
+
+  /**
+   * Create provider from environment configuration
+   */
+  public createProviderFromEnv(provider: PipelineProvider): BaseCICDProvider | null {
+    try {
+      const envConfig = this.getEnvironmentConfig(provider);
+      if (!envConfig) {
+        return null;
+      }
+
+      return this.createProvider(provider, envConfig);
+    } catch (error) {
+      this.logger.error(`Failed to create provider from environment: ${provider}`, {
+        error: error instanceof Error ? error.message : String(error),
+      });
+      return null;
+    }
+  }
+
+  /**
+   * Get environment configuration for a provider
+   */
+  private getEnvironmentConfig(provider: PipelineProvider): ProviderConfig | null {
+    switch (provider) {
+      case PipelineProvider.GITHUB_ACTIONS:
+        const githubApiKey = process.env.GITHUB_TOKEN || process.env.GITHUB_API_KEY;
+        if (!githubApiKey) return null;
+        
+        const githubConfig: ProviderConfig = {
+          apiKey: githubApiKey,
+          baseUrl: process.env.GITHUB_API_URL || 'https://api.github.com',
+          timeout: parseInt(process.env.GITHUB_TIMEOUT || '30000'),
+        };
+        
+        if (process.env.GITHUB_WEBHOOK_SECRET) {
+          githubConfig.webhookSecret = process.env.GITHUB_WEBHOOK_SECRET;
+        }
+        
+        return githubConfig;
+
+      case PipelineProvider.GITLAB_CI:
+        const gitlabApiKey = process.env.GITLAB_TOKEN || process.env.GITLAB_API_KEY;
+        if (!gitlabApiKey) return null;
+        
+        const gitlabConfig: ProviderConfig = {
+          apiKey: gitlabApiKey,
+          baseUrl: process.env.GITLAB_API_URL || 'https://gitlab.com/api/v4',
+          timeout: parseInt(process.env.GITLAB_TIMEOUT || '30000'),
+        };
+        
+        if (process.env.GITLAB_WEBHOOK_SECRET) {
+          gitlabConfig.webhookSecret = process.env.GITLAB_WEBHOOK_SECRET;
+        }
+        
+        return gitlabConfig;
+
+      default:
+        return null;
     }
   }
 
@@ -234,18 +297,17 @@ export class ProviderFactory {
       ],
     });
 
-    // GitLab CI provider registration (will implement later)
+    // GitLab CI provider registration
     this.registerProvider({
       provider: PipelineProvider.GITLAB_CI,
       factory: (config) => {
-        // TODO: Import and create GitLabCIProvider
-        throw new Error('GitLab CI provider not implemented yet');
+        return new GitLabCIProvider(config as any);
       },
       validateConfig: (config) => {
         return !!(config.apiKey && config.baseUrl);
       },
       getRequiredFields: () => ['apiKey', 'baseUrl'],
-      getOptionalFields: () => ['webhookSecret', 'timeout'],
+      getOptionalFields: () => ['webhookSecret', 'timeout', 'projectId'],
       getSupportedFeatures: () => [
         'pipelines',
         'webhooks',

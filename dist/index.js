@@ -22,10 +22,10 @@ const database_enhanced_1 = require("./services/database.enhanced");
 // Import middleware
 const response_1 = require("./middleware/response");
 const router_1 = require("./config/router");
-// import { errorHandler } from '@/middleware/error-handler';
-// import { requestLogger } from '@/middleware/request-logger';
-// import { rateLimiter } from '@/middleware/rate-limiter';
-// import { auth } from '@/middleware/auth';
+// import { errorHandler } from './middleware/error-handler';
+// import { requestLogger } from './middleware/request-logger';
+// import { rateLimiter } from './middleware/rate-limiter';
+// import { auth } from './middleware/auth';
 class Application {
     app;
     logger;

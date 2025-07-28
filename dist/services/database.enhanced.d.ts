@@ -18,6 +18,12 @@ export interface DatabaseHealthStatus {
     uptime: number;
     isHealthy: boolean;
     recommendations: string[];
+    security: {
+        metrics: any;
+        recentEvents: any[];
+        recommendations: string[];
+        securityScore: number;
+    };
 }
 export interface DatabaseSeedOptions {
     createUsers?: boolean;

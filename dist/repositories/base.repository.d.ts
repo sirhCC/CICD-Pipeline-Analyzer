@@ -2,8 +2,8 @@
  * Base Repository - Generic repository with common CRUD operations
  */
 import { Repository, EntityTarget, FindOptionsWhere, FindManyOptions, FindOneOptions, DeepPartial } from 'typeorm';
-import { Logger } from '@/shared/logger';
-import { BaseEntity } from '@/entities/base.entity';
+import { Logger } from '../shared/logger';
+import { BaseEntity } from '../entities/base.entity';
 export interface PaginationOptions {
     page?: number;
     limit?: number;

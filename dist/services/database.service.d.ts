@@ -1,7 +1,7 @@
 /**
  * Database Service - High-level database operations and business logic
  */
-import { RepositoryFactory } from '@/repositories';
+import { RepositoryFactory } from '../repositories';
 export interface DatabaseHealthStatus {
     isConnected: boolean;
     poolStats: Record<string, unknown>;

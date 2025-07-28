@@ -5,11 +5,11 @@
  */
 Object.defineProperty(exports, "__esModule", { value: true });
 const commander_1 = require("commander");
-const database_enhanced_1 = require("@/services/database.enhanced");
-const database_init_1 = require("@/core/database-init");
-const factory_enhanced_1 = require("@/repositories/factory.enhanced");
-const config_1 = require("@/config");
-const logger_1 = require("@/shared/logger");
+const database_enhanced_1 = require("../services/database.enhanced");
+const database_init_1 = require("../core/database-init");
+const factory_enhanced_1 = require("../repositories/factory.enhanced");
+const config_1 = require("../config");
+const logger_1 = require("../shared/logger");
 const logger = new logger_1.Logger('DatabaseCLI');
 commander_1.program
     .name('db-cli')

@@ -24,8 +24,8 @@ exports.ROLE_PERMISSIONS = exports.getRolePermissions = exports.generateSessionI
 const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
 const bcryptjs_1 = __importDefault(require("bcryptjs"));
 const uuid_1 = require("uuid");
-const logger_1 = require("@/shared/logger");
-const config_1 = require("@/config");
+const logger_1 = require("../shared/logger");
+const config_1 = require("../config");
 const error_handler_1 = require("./error-handler");
 var UserRole;
 (function (UserRole) {

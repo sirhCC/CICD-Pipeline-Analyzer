@@ -17,6 +17,11 @@ export interface DatabaseConfig {
     idleTimeout: number;
     maxRetries: number;
     retryDelay: number;
+    enableSSLValidation: boolean;
+    enableQueryLogging: boolean;
+    enableConnectionAuditing: boolean;
+    maxConnections: number;
+    connectionAuditLog: boolean;
 }
 export interface CacheConfig {
     enabled: boolean;
@@ -76,6 +81,10 @@ export declare class DatabaseConfigManager {
      * Validate database configuration
      */
     validateConfig(): void;
+    /**
+     * Validate security configuration
+     */
+    private validateSecurity;
 }
 export declare const databaseConfigManager: DatabaseConfigManager;
 //# sourceMappingURL=database.config.d.ts.map

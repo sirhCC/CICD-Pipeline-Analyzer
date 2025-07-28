@@ -7,7 +7,8 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.databaseManager = exports.DatabaseManager = void 0;
 const typeorm_1 = require("typeorm");
 const database_config_1 = require("./database.config");
-const logger_1 = require("@/shared/logger");
+const database_security_1 = require("./database-security");
+const logger_1 = require("../shared/logger");
 class DatabaseManager {
     static instance;
     dataSource = null;
@@ -52,10 +53,23 @@ class DatabaseManager {
             try {
                 await this.dataSource.initialize();
                 this.connectionRetries = 0; // Reset on success
+                // Log successful connection
+                const options = this.dataSource.options;
+                database_security_1.databaseSecurityManager.logConnectionAttempt(true, {
+                    database: options.database || 'unknown',
+                    host: options.host || 'unknown'
+                });
                 return;
             }
             catch (error) {
                 this.connectionRetries++;
+                // Log failed connection attempt
+                const options = this.dataSource.options;
+                database_security_1.databaseSecurityManager.logConnectionAttempt(false, {
+                    database: options.database || 'unknown',
+                    host: options.host || 'unknown',
+                    error: error instanceof Error ? error.message : String(error)
+                });
                 if (this.connectionRetries >= this.maxRetries) {
                     this.logger.error('Max connection retries reached', error);
                     throw error;
@@ -180,9 +194,14 @@ class DatabaseManager {
         };
     }
     /**
-     * Execute raw SQL query with logging
+     * Execute raw SQL query with logging and security analysis
      */
     async query(sql, parameters) {
+        // Analyze query for security issues
+        database_security_1.databaseSecurityManager.analyzeQuery(sql, {
+            host: 'internal',
+            user: 'system'
+        });
         const timer = this.logger.startTimer('database_query');
         try {
             const result = await this.getDataSource().query(sql, parameters);
@@ -193,6 +212,18 @@ class DatabaseManager {
         catch (error) {
             timer();
             this.logger.error('Database query failed', error, { sql, parameters });
+            // Log potential security errors
+            if (error instanceof Error) {
+                database_security_1.databaseSecurityManager.logSecurityEvent({
+                    type: 'error',
+                    severity: 'medium',
+                    message: 'Database query execution failed',
+                    details: {
+                        query: sql.substring(0, 200) + (sql.length > 200 ? '...' : ''),
+                        error: error.message
+                    }
+                });
+            }
             throw error;
         }
     }

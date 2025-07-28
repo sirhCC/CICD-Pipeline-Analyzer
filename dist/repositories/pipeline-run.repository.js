@@ -6,8 +6,8 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.PipelineRunRepository = void 0;
 const typeorm_1 = require("typeorm");
 const base_repository_1 = require("./base.repository");
-const pipeline_run_entity_1 = require("@/entities/pipeline-run.entity");
-const types_1 = require("@/types");
+const pipeline_run_entity_1 = require("../entities/pipeline-run.entity");
+const types_1 = require("../types");
 class PipelineRunRepository extends base_repository_1.BaseRepository {
     constructor() {
         super(pipeline_run_entity_1.PipelineRun);

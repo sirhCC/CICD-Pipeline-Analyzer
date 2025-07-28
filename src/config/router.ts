@@ -8,6 +8,7 @@ import { apiVersionManager } from '../config/versioning';
 import { Logger } from '../shared/logger';
 import authRoutes from '../routes/auth.routes';
 import pipelineRoutes from '../routes/pipeline.routes';
+import analyticsRoutes from '../routes/analytics.routes';
 
 const logger = new Logger('VersionedRouter');
 

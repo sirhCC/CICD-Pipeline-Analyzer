@@ -23,7 +23,7 @@ exports.createRequestLogger = createRequestLogger;
 exports.createHealthCheckEndpoint = createHealthCheckEndpoint;
 exports.createMetricsEndpoint = createMetricsEndpoint;
 const uuid_1 = require("uuid");
-const logger_1 = require("@/shared/logger");
+const logger_1 = require("../shared/logger");
 // Default configuration
 const defaultOptions = {
     enabled: true,

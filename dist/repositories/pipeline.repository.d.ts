@@ -2,8 +2,8 @@
  * Pipeline Repository - Database operations for Pipeline entities
  */
 import { BaseRepository, PaginationOptions, PaginationResult } from './base.repository';
-import { Pipeline } from '@/entities/pipeline.entity';
-import { PipelineProvider, PipelineStatus } from '@/types';
+import { Pipeline } from '../entities/pipeline.entity';
+import { PipelineProvider, PipelineStatus } from '../types';
 export interface PipelineSearchOptions {
     provider?: PipelineProvider;
     status?: PipelineStatus;

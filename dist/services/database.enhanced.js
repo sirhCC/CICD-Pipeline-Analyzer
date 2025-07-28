@@ -5,12 +5,13 @@
  */
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.enhancedDatabaseService = exports.EnhancedDatabaseService = void 0;
-const database_1 = require("@/core/database");
-const database_monitor_1 = require("@/core/database-monitor");
-const factory_enhanced_1 = require("@/repositories/factory.enhanced");
-const logger_1 = require("@/shared/logger");
-const config_1 = require("@/config");
-const types_1 = require("@/types");
+const database_1 = require("../core/database");
+const database_monitor_1 = require("../core/database-monitor");
+const database_security_1 = require("../core/database-security");
+const factory_enhanced_1 = require("../repositories/factory.enhanced");
+const logger_1 = require("../shared/logger");
+const config_1 = require("../config");
+const types_1 = require("../types");
 class EnhancedDatabaseService {
     static instance;
     logger;
@@ -102,6 +103,8 @@ class EnhancedDatabaseService {
             const executedMigrations = await dataSource.query('SELECT COUNT(*) as count FROM migrations').catch(() => [{ count: 0 }]);
             // Get performance recommendations
             const recommendations = database_monitor_1.databaseConnectionManager.getPerformanceRecommendations();
+            // Get security status
+            const securityReport = database_security_1.databaseSecurityManager.generateSecurityReport();
             return {
                 isConnected,
                 connectionStats,
@@ -117,7 +120,13 @@ class EnhancedDatabaseService {
                 },
                 uptime: metrics.uptime,
                 isHealthy: metrics.isHealthy,
-                recommendations
+                recommendations,
+                security: {
+                    metrics: securityReport.summary,
+                    recentEvents: securityReport.recentEvents,
+                    recommendations: securityReport.recommendations,
+                    securityScore: securityReport.summary.securityScore
+                }
             };
         }
         catch (error) {

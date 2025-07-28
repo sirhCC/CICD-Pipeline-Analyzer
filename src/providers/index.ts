@@ -6,6 +6,7 @@
 // Core provider abstractions
 export { BaseCICDProvider } from './base.provider';
 export { GitHubActionsProvider } from './github-actions.provider';
+export { GitLabCIProvider } from './gitlab-ci.provider';
 export type {
   ProviderConfig,
   PipelineData,

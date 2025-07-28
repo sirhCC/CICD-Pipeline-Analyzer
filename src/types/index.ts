@@ -422,3 +422,13 @@ export interface LoggingConfig {
   maxSize?: string;
   maxFiles?: number;
 }
+
+// === Express Request Types ===
+import { Request, ParamsDictionary } from 'express-serve-static-core';
+import { ParsedQs } from 'qs';
+
+export interface TypedRequest<
+  TParams extends ParamsDictionary = ParamsDictionary,
+  TQuery extends ParsedQs = ParsedQs,
+  TBody = any
+> extends Request<TParams, any, TBody, TQuery> {}

@@ -61,6 +61,14 @@ export declare class ProviderFactory {
      */
     getProviderFromConfig(configKey: string): BaseCICDProvider | null;
     /**
+     * Create provider from environment configuration
+     */
+    createProviderFromEnv(provider: PipelineProvider): BaseCICDProvider | null;
+    /**
+     * Get environment configuration for a provider
+     */
+    private getEnvironmentConfig;
+    /**
      * Test all configured providers
      */
     testAllProviders(): Promise<{
