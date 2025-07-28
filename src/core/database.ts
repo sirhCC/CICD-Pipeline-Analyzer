@@ -7,10 +7,10 @@ import { DataSource, QueryRunner, EntityManager } from 'typeorm';
 import { configManager } from '@/config';
 import { Logger } from '@/shared/logger';
 
-// Database entities will be imported here as they're created
-// import { Pipeline } from '@/entities/Pipeline';
-// import { PipelineStage } from '@/entities/PipelineStage';
-// import { User } from '@/entities/User';
+// Import all entities
+import { Pipeline } from '@/entities/pipeline.entity';
+import { PipelineRun, PipelineRunStage } from '@/entities/pipeline-run.entity';
+import { User, UserSession, ApiKey } from '@/entities/user.entity';
 
 export class DatabaseManager {
   private static instance: DatabaseManager;
@@ -60,11 +60,16 @@ export class DatabaseManager {
 
         // Entity Configuration
         entities: [
-          // './src/entities/**/*.ts' // Will be uncommented when entities are created
+          Pipeline,
+          PipelineRun,
+          PipelineRunStage,
+          User,
+          UserSession,
+          ApiKey
         ],
         
         // Migration Configuration
-        migrations: ['./src/migrations/**/*.ts'],
+        migrations: ['src/migrations/**/*.ts'],
         migrationsRun: false, // We'll run migrations manually
         
         // Development Configuration
