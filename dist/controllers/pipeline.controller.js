@@ -7,7 +7,6 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.pipelineController = void 0;
 const repositories_1 = require("../repositories");
 const logger_1 = require("../shared/logger");
-const error_handler_1 = require("../middleware/error-handler");
 const factory_1 = require("../providers/factory");
 const types_1 = require("../types");
 const api_response_1 = require("../shared/api-response");
@@ -62,7 +61,7 @@ exports.pipelineController = {
                 error: error instanceof Error ? error.message : String(error),
                 userId: req.user?.userId
             });
-            next(error);
+            return res.apiInternalError('Failed to list pipelines');
         }
     },
     /**
@@ -73,12 +72,12 @@ exports.pipelineController = {
             const { name, provider, repository, branch = 'main' } = req.body;
             // Validate required fields
             if (!name || !provider || !repository) {
-                throw new error_handler_1.ValidationError('Name, provider, and repository are required');
+                return res.apiValidationError('Name, provider, and repository are required');
             }
             // Validate provider is supported
             const registeredProviders = factory_1.providerFactory.getRegisteredProviders();
             if (!registeredProviders.includes(provider)) {
-                throw new error_handler_1.ValidationError(`Provider ${provider} is not supported`);
+                return res.apiValidationError(`Provider ${provider} is not supported`);
             }
             const pipeline = await repositories_1.pipelineRepository.create({
                 name,
@@ -98,19 +97,14 @@ exports.pipelineController = {
                 provider,
                 repository
             });
-            res.status(201).json({
-                success: true,
-                data: { pipeline },
-                metadata: {
-                    requestId: req.headers['x-request-id'] || 'unknown',
-                    timestamp: new Date(),
-                    processingTime: 0,
-                    version: '1.0.0'
-                }
-            });
+            res.apiCreated({ pipeline });
         }
         catch (error) {
-            next(error);
+            logger.error('Failed to create pipeline', {
+                error: error instanceof Error ? error.message : String(error),
+                userId: req.user?.userId
+            });
+            return res.apiInternalError('Failed to create pipeline');
         }
     },
     /**
@@ -120,29 +114,25 @@ exports.pipelineController = {
         try {
             const { pipelineId } = req.params;
             if (!pipelineId) {
-                throw new error_handler_1.ValidationError('Pipeline ID is required');
+                return res.apiValidationError('Pipeline ID is required');
             }
             const pipeline = await repositories_1.pipelineRepository.findById(pipelineId);
             if (!pipeline) {
-                throw new error_handler_1.NotFoundError('Pipeline not found');
+                return res.apiNotFound('Pipeline', pipelineId);
             }
             logger.info('Pipeline retrieved', {
                 pipelineId,
                 userId: req.user?.userId
             });
-            res.json({
-                success: true,
-                data: { pipeline },
-                metadata: {
-                    requestId: req.headers['x-request-id'] || 'unknown',
-                    timestamp: new Date(),
-                    processingTime: 0,
-                    version: '1.0.0'
-                }
-            });
+            res.apiSuccess({ pipeline });
         }
         catch (error) {
-            next(error);
+            logger.error('Failed to retrieve pipeline', {
+                error: error instanceof Error ? error.message : String(error),
+                userId: req.user?.userId,
+                pipelineId: req.params.pipelineId
+            });
+            return res.apiInternalError('Failed to retrieve pipeline');
         }
     },
     /**
@@ -152,33 +142,29 @@ exports.pipelineController = {
         try {
             const { pipelineId } = req.params;
             if (!pipelineId) {
-                throw new error_handler_1.ValidationError('Pipeline ID is required');
+                return res.apiValidationError('Pipeline ID is required');
             }
             const pipeline = await repositories_1.pipelineRepository.findById(pipelineId);
             if (!pipeline) {
-                throw new error_handler_1.NotFoundError('Pipeline not found');
+                return res.apiNotFound('Pipeline', pipelineId);
             }
             // For now, just return success without actual update logic
             logger.info('Pipeline update requested', {
                 pipelineId,
                 userId: req.user?.userId
             });
-            res.json({
-                success: true,
-                data: {
-                    pipeline,
-                    message: 'Pipeline update functionality will be implemented in Phase 2'
-                },
-                metadata: {
-                    requestId: req.headers['x-request-id'] || 'unknown',
-                    timestamp: new Date(),
-                    processingTime: 0,
-                    version: '1.0.0'
-                }
+            res.apiSuccess({
+                pipeline,
+                message: 'Pipeline update functionality will be implemented in Phase 2'
             });
         }
         catch (error) {
-            next(error);
+            logger.error('Failed to update pipeline', {
+                error: error instanceof Error ? error.message : String(error),
+                userId: req.user?.userId,
+                pipelineId: req.params.pipelineId
+            });
+            return res.apiInternalError('Failed to update pipeline');
         }
     },
     /**
@@ -188,30 +174,26 @@ exports.pipelineController = {
         try {
             const { pipelineId } = req.params;
             if (!pipelineId) {
-                throw new error_handler_1.ValidationError('Pipeline ID is required');
+                return res.apiValidationError('Pipeline ID is required');
             }
             const pipeline = await repositories_1.pipelineRepository.findById(pipelineId);
             if (!pipeline) {
-                throw new error_handler_1.NotFoundError('Pipeline not found');
+                return res.apiNotFound('Pipeline', pipelineId);
             }
             // For now, just return success without actual deletion
             logger.info('Pipeline deletion requested', {
                 pipelineId,
                 userId: req.user?.userId
             });
-            res.json({
-                success: true,
-                data: { message: 'Pipeline deletion functionality will be implemented in Phase 2' },
-                metadata: {
-                    requestId: req.headers['x-request-id'] || 'unknown',
-                    timestamp: new Date(),
-                    processingTime: 0,
-                    version: '1.0.0'
-                }
-            });
+            res.apiSuccess({ message: 'Pipeline deletion functionality will be implemented in Phase 2' });
         }
         catch (error) {
-            next(error);
+            logger.error('Failed to delete pipeline', {
+                error: error instanceof Error ? error.message : String(error),
+                userId: req.user?.userId,
+                pipelineId: req.params.pipelineId
+            });
+            return res.apiInternalError('Failed to delete pipeline');
         }
     },
     /**
@@ -221,11 +203,11 @@ exports.pipelineController = {
         try {
             const { pipelineId } = req.params;
             if (!pipelineId) {
-                throw new error_handler_1.ValidationError('Pipeline ID is required');
+                return res.apiValidationError('Pipeline ID is required');
             }
             const pipeline = await repositories_1.pipelineRepository.findById(pipelineId);
             if (!pipeline) {
-                throw new error_handler_1.NotFoundError('Pipeline not found');
+                return res.apiNotFound('Pipeline', pipelineId);
             }
             // For now, return empty runs array
             const runs = [];
@@ -234,27 +216,23 @@ exports.pipelineController = {
                 userId: req.user?.userId,
                 count: runs.length
             });
-            res.json({
-                success: true,
-                data: {
-                    runs,
-                    pagination: {
-                        page: 1,
-                        limit: 20,
-                        total: 0,
-                        totalPages: 0
-                    }
-                },
-                metadata: {
-                    requestId: req.headers['x-request-id'] || 'unknown',
-                    timestamp: new Date(),
-                    processingTime: 0,
-                    version: '1.0.0'
+            res.apiSuccess({
+                runs,
+                pagination: {
+                    page: 1,
+                    limit: 20,
+                    total: 0,
+                    totalPages: 0
                 }
             });
         }
         catch (error) {
-            next(error);
+            logger.error('Failed to retrieve pipeline runs', {
+                error: error instanceof Error ? error.message : String(error),
+                userId: req.user?.userId,
+                pipelineId: req.params.pipelineId
+            });
+            return res.apiInternalError('Failed to retrieve pipeline runs');
         }
     },
     /**
@@ -264,11 +242,11 @@ exports.pipelineController = {
         try {
             const { pipelineId, runId } = req.params;
             if (!pipelineId || !runId) {
-                throw new error_handler_1.ValidationError('Pipeline ID and Run ID are required');
+                return res.apiValidationError('Pipeline ID and Run ID are required');
             }
             const pipeline = await repositories_1.pipelineRepository.findById(pipelineId);
             if (!pipeline) {
-                throw new error_handler_1.NotFoundError('Pipeline not found');
+                return res.apiNotFound('Pipeline', pipelineId);
             }
             // For now, return a mock run
             const run = {
@@ -284,19 +262,16 @@ exports.pipelineController = {
                 runId,
                 userId: req.user?.userId
             });
-            res.json({
-                success: true,
-                data: { run },
-                metadata: {
-                    requestId: req.headers['x-request-id'] || 'unknown',
-                    timestamp: new Date(),
-                    processingTime: 0,
-                    version: '1.0.0'
-                }
-            });
+            res.apiSuccess({ run });
         }
         catch (error) {
-            next(error);
+            logger.error('Failed to retrieve pipeline run', {
+                error: error instanceof Error ? error.message : String(error),
+                userId: req.user?.userId,
+                pipelineId: req.params.pipelineId,
+                runId: req.params.runId
+            });
+            return res.apiInternalError('Failed to retrieve pipeline run');
         }
     },
     /**
@@ -306,11 +281,11 @@ exports.pipelineController = {
         try {
             const { pipelineId } = req.params;
             if (!pipelineId) {
-                throw new error_handler_1.ValidationError('Pipeline ID is required');
+                return res.apiValidationError('Pipeline ID is required');
             }
             const pipeline = await repositories_1.pipelineRepository.findById(pipelineId);
             if (!pipeline) {
-                throw new error_handler_1.NotFoundError('Pipeline not found');
+                return res.apiNotFound('Pipeline', pipelineId);
             }
             const analysisJobId = `analysis_${pipelineId}_${Date.now()}`;
             logger.info('Pipeline analysis triggered', {
@@ -318,23 +293,19 @@ exports.pipelineController = {
                 analysisJobId,
                 userId: req.user?.userId
             });
-            res.json({
-                success: true,
-                data: {
-                    analysisJobId,
-                    message: 'Pipeline analysis started',
-                    estimatedCompletion: new Date(Date.now() + 5 * 60 * 1000)
-                },
-                metadata: {
-                    requestId: req.headers['x-request-id'] || 'unknown',
-                    timestamp: new Date(),
-                    processingTime: 0,
-                    version: '1.0.0'
-                }
+            res.apiSuccess({
+                analysisJobId,
+                message: 'Pipeline analysis started',
+                estimatedCompletion: new Date(Date.now() + 5 * 60 * 1000)
             });
         }
         catch (error) {
-            next(error);
+            logger.error('Failed to trigger pipeline analysis', {
+                error: error instanceof Error ? error.message : String(error),
+                userId: req.user?.userId,
+                pipelineId: req.params.pipelineId
+            });
+            return res.apiInternalError('Failed to trigger pipeline analysis');
         }
     },
     /**
@@ -344,11 +315,11 @@ exports.pipelineController = {
         try {
             const { pipelineId } = req.params;
             if (!pipelineId) {
-                throw new error_handler_1.ValidationError('Pipeline ID is required');
+                return res.apiValidationError('Pipeline ID is required');
             }
             const pipeline = await repositories_1.pipelineRepository.findById(pipelineId);
             if (!pipeline) {
-                throw new error_handler_1.NotFoundError('Pipeline not found');
+                return res.apiNotFound('Pipeline', pipelineId);
             }
             const syncJobId = `sync_${pipelineId}_${Date.now()}`;
             logger.info('Pipeline sync triggered', {
@@ -356,23 +327,19 @@ exports.pipelineController = {
                 syncJobId,
                 userId: req.user?.userId
             });
-            res.json({
-                success: true,
-                data: {
-                    syncJobId,
-                    message: 'Pipeline sync started',
-                    estimatedCompletion: new Date(Date.now() + 2 * 60 * 1000)
-                },
-                metadata: {
-                    requestId: req.headers['x-request-id'] || 'unknown',
-                    timestamp: new Date(),
-                    processingTime: 0,
-                    version: '1.0.0'
-                }
+            res.apiSuccess({
+                syncJobId,
+                message: 'Pipeline sync started',
+                estimatedCompletion: new Date(Date.now() + 2 * 60 * 1000)
             });
         }
         catch (error) {
-            next(error);
+            logger.error('Failed to trigger pipeline sync', {
+                error: error instanceof Error ? error.message : String(error),
+                userId: req.user?.userId,
+                pipelineId: req.params.pipelineId
+            });
+            return res.apiInternalError('Failed to trigger pipeline sync');
         }
     }
 };

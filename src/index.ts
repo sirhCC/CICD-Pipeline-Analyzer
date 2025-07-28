@@ -16,6 +16,7 @@ import { redisManager } from './core/redis';
 
 // Import middleware
 import { responseMiddleware } from './middleware/response';
+import { createAllVersionedRouters, createVersionInfoRouter } from './config/router';
 // import { errorHandler } from '@/middleware/error-handler';
 // import { requestLogger } from '@/middleware/request-logger';
 // import { rateLimiter } from '@/middleware/rate-limiter';
@@ -46,7 +47,7 @@ class Application {
 
       // Configure Express application
       this.configureMiddleware();
-      this.configureRoutes();
+      await this.configureRoutes();
       this.configureErrorHandling();
 
       // Initialize modules
@@ -214,7 +215,7 @@ class Application {
   /**
    * Configure application routes
    */
-  private configureRoutes(): void {
+  private async configureRoutes(): Promise<void> {
     this.logger.info('Configuring routes...');
 
     // Health check endpoint
@@ -266,6 +267,16 @@ class Application {
     // this.app.use('/api/v1/pipelines', pipelineRoutes);
     // this.app.use('/api/v1/analysis', analysisRoutes);
     // this.app.use('/api/v1/auth', authRoutes);
+
+    // API version information endpoint
+    this.app.use('/api/version', createVersionInfoRouter());
+    
+    // Create and register all versioned API routers
+    const versionedRouters = createAllVersionedRouters();
+    for (const { version, prefix, router } of versionedRouters) {
+      this.app.use(prefix, router);
+      this.logger.info(`Registered API router for ${version} at ${prefix}`);
+    }
 
     // Catch-all for unmatched routes
     this.app.use('*', (req, res) => {

@@ -5,6 +5,7 @@
 
 import { Request, Response, NextFunction } from 'express';
 import { ApiResponse, ResponseBuilder, PerformanceMeta, getRequestId } from '../shared/api-response';
+import { apiVersionManager } from '../config/versioning';
 import { Logger } from '../shared/logger';
 
 const logger = new Logger('ResponseMiddleware');
@@ -20,6 +21,8 @@ declare global {
   namespace Express {
     interface Request {
       responseEnhancement?: ResponseEnhancement;
+      apiVersion?: string;
+      requestedVersion?: string | undefined;
     }
     interface Response {
       apiSuccess<T>(data: T, meta?: any): void;
@@ -34,6 +37,28 @@ declare global {
       apiInternalError(message?: string, details?: any): void;
     }
   }
+}
+
+/**
+ * Extract and validate API version from request
+ */
+export function extractApiVersion(req: Request, res: Response, next: NextFunction): void {
+  const requestedVersion = apiVersionManager.extractVersionFromRequest(req);
+  const actualVersion = apiVersionManager.isVersionSupported(requestedVersion) 
+    ? requestedVersion 
+    : apiVersionManager.getDefaultVersion();
+
+  // Store versions in request for later use
+  req.apiVersion = actualVersion;
+  req.requestedVersion = requestedVersion !== actualVersion ? requestedVersion : undefined;
+
+  // Add version headers to all responses
+  const versionHeaders = apiVersionManager.getResponseHeaders(actualVersion, req.requestedVersion);
+  Object.entries(versionHeaders).forEach(([key, value]) => {
+    res.setHeader(key, value);
+  });
+
+  next();
 }
 
 /**
@@ -75,10 +100,11 @@ export function initializeResponseTracking(req: Request, res: Response, next: Ne
  */
 export function addResponseHelpers(req: Request, res: Response, next: NextFunction): void {
   const requestId = getRequestId(req);
+  const version = req.apiVersion;
 
   // Success response
   res.apiSuccess = function<T>(data: T, meta?: any) {
-    const response = ResponseBuilder.success(data, meta, requestId);
+    const response = ResponseBuilder.success(data, meta, requestId, version);
     return this.status(200).json(response);
   };
 
@@ -88,14 +114,15 @@ export function addResponseHelpers(req: Request, res: Response, next: NextFuncti
     
     if (error?.code && error?.message) {
       // Already formatted error
-      response = ResponseBuilder.error(error, undefined, requestId);
+      response = ResponseBuilder.error(error, undefined, requestId, version);
     } else if (error instanceof Error) {
       // Standard error object
       response = ResponseBuilder.internalError(
         error.message,
         undefined,
         process.env.NODE_ENV === 'development' ? error.stack : undefined,
-        requestId
+        requestId,
+        version
       );
     } else {
       // Unknown error format
@@ -103,7 +130,8 @@ export function addResponseHelpers(req: Request, res: Response, next: NextFuncti
         typeof error === 'string' ? error : 'Unknown error',
         error,
         undefined,
-        requestId
+        requestId,
+        version
       );
     }
 
@@ -112,43 +140,43 @@ export function addResponseHelpers(req: Request, res: Response, next: NextFuncti
 
   // Created response (201)
   res.apiCreated = function<T>(data: T) {
-    const response = ResponseBuilder.created(data, requestId);
+    const response = ResponseBuilder.created(data, requestId, version);
     return this.status(201).json(response);
   };
 
   // No content response (204)
   res.apiNoContent = function() {
-    const response = ResponseBuilder.noContent(requestId);
+    const response = ResponseBuilder.noContent(requestId, version);
     return this.status(204).json(response);
   };
 
   // Not found response (404)
   res.apiNotFound = function(resource: string, id?: string) {
-    const response = ResponseBuilder.notFound(resource, id, requestId);
+    const response = ResponseBuilder.notFound(resource, id, requestId, version);
     return this.status(404).json(response);
   };
 
   // Validation error response (422)
   res.apiValidationError = function(message: string, details?: any, field?: string) {
-    const response = ResponseBuilder.validationError(message, details, field, requestId);
+    const response = ResponseBuilder.validationError(message, details, field, requestId, version);
     return this.status(422).json(response);
   };
 
   // Unauthorized response (401)
   res.apiUnauthorized = function(message?: string) {
-    const response = ResponseBuilder.unauthorized(message, requestId);
+    const response = ResponseBuilder.unauthorized(message, requestId, version);
     return this.status(401).json(response);
   };
 
   // Forbidden response (403)
   res.apiForbidden = function(message?: string) {
-    const response = ResponseBuilder.forbidden(message, requestId);
+    const response = ResponseBuilder.forbidden(message, requestId, version);
     return this.status(403).json(response);
   };
 
   // Rate limited response (429)
   res.apiRateLimited = function(retryAfter?: number) {
-    const response = ResponseBuilder.rateLimited(retryAfter, requestId);
+    const response = ResponseBuilder.rateLimited(retryAfter, requestId, version);
     const headers: any = {};
     if (retryAfter) headers['Retry-After'] = retryAfter;
     return this.status(429).set(headers).json(response);
@@ -156,7 +184,7 @@ export function addResponseHelpers(req: Request, res: Response, next: NextFuncti
 
   // Internal server error response (500)
   res.apiInternalError = function(message?: string, details?: any) {
-    const response = ResponseBuilder.internalError(message, details, undefined, requestId);
+    const response = ResponseBuilder.internalError(message, details, undefined, requestId, version);
     return this.status(500).json(response);
   };
 
@@ -168,6 +196,7 @@ export function addResponseHelpers(req: Request, res: Response, next: NextFuncti
  */
 export function errorResponseHandler(error: any, req: Request, res: Response, next: NextFunction): void {
   const requestId = getRequestId(req);
+  const version = req.apiVersion;
   
   logger.error('Unhandled API error', {
     error: error.message,
@@ -176,6 +205,7 @@ export function errorResponseHandler(error: any, req: Request, res: Response, ne
     url: req.url,
     method: req.method,
     userId: (req as any).user?.userId,
+    version,
   });
 
   // If response already sent, delegate to Express default handler
@@ -199,7 +229,8 @@ export function errorResponseHandler(error: any, req: Request, res: Response, ne
     error.message || 'Internal server error',
     undefined,
     process.env.NODE_ENV === 'development' ? error.stack : undefined,
-    requestId
+    requestId,
+    version
   );
 
   res.status(statusCode).json(response);
@@ -209,7 +240,8 @@ export function errorResponseHandler(error: any, req: Request, res: Response, ne
  * Not found handler - for unmatched routes
  */
 export function notFoundHandler(req: Request, res: Response): void {
-  const response = ResponseBuilder.notFound('Route', req.originalUrl, getRequestId(req));
+  const version = req.apiVersion;
+  const response = ResponseBuilder.notFound('Route', req.originalUrl, getRequestId(req), version);
   res.status(404).json(response);
 }
 
@@ -239,6 +271,7 @@ export function trackCacheHit(req: Request, isHit: boolean): void {
  * Complete response middleware setup
  */
 export const responseMiddleware = [
+  extractApiVersion,
   initializeResponseTracking,
   addResponseHelpers,
 ];

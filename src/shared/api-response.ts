@@ -3,6 +3,8 @@
  * Ensures consistent response format across all endpoints
  */
 
+import { apiVersionManager } from '../config/versioning';
+
 export interface ApiResponse<T = any> {
   success: boolean;
   data?: T;
@@ -125,21 +127,20 @@ export enum ErrorCode {
  * Response Builder Utility Class
  */
 export class ResponseBuilder {
-  private static readonly API_VERSION = 'v1';
-
   /**
    * Create a successful response
    */
   static success<T>(
     data: T,
     meta?: ResponseMeta,
-    requestId?: string
+    requestId?: string,
+    version?: string
   ): ApiResponse<T> {
     const response: ApiResponse<T> = {
       success: true,
       data,
       timestamp: new Date().toISOString(),
-      version: this.API_VERSION,
+      version: version || apiVersionManager.getCurrentVersion(),
     };
 
     if (meta) response.meta = meta;
@@ -154,13 +155,14 @@ export class ResponseBuilder {
   static error(
     error: ApiError,
     meta?: ResponseMeta,
-    requestId?: string
+    requestId?: string,
+    version?: string
   ): ApiResponse {
     const response: ApiResponse = {
       success: false,
       error,
       timestamp: new Date().toISOString(),
-      version: this.API_VERSION,
+      version: version || apiVersionManager.getCurrentVersion(),
     };
 
     if (meta) response.meta = meta;
@@ -176,7 +178,8 @@ export class ResponseBuilder {
     items: T[],
     pagination: PaginationMeta,
     performance?: PerformanceMeta,
-    requestId?: string
+    requestId?: string,
+    version?: string
   ): ApiResponse<ListResponse<T>> {
     const meta: ResponseMeta = { pagination };
     if (performance) meta.performance = performance;
@@ -184,7 +187,8 @@ export class ResponseBuilder {
     return this.success(
       { items, pagination },
       meta,
-      requestId
+      requestId,
+      version
     );
   }
 
@@ -193,12 +197,14 @@ export class ResponseBuilder {
    */
   static created<T>(
     item: T,
-    requestId?: string
+    requestId?: string,
+    version?: string
   ): ApiResponse<CreateResponse<T>> {
     return this.success(
       { item, created: true },
       undefined,
-      requestId
+      requestId,
+      version
     );
   }
 
@@ -208,12 +214,13 @@ export class ResponseBuilder {
   static updated<T>(
     item: T,
     changes?: Partial<T>,
-    requestId?: string
+    requestId?: string,
+    version?: string
   ): ApiResponse<UpdateResponse<T>> {
     const data: UpdateResponse<T> = { item, updated: true };
     if (changes) data.changes = changes;
     
-    return this.success(data, undefined, requestId);
+    return this.success(data, undefined, requestId, version);
   }
 
   /**
@@ -221,20 +228,22 @@ export class ResponseBuilder {
    */
   static deleted(
     id: string,
-    requestId?: string
+    requestId?: string,
+    version?: string
   ): ApiResponse<DeleteResponse> {
     return this.success(
       { deleted: true, id },
       undefined,
-      requestId
+      requestId,
+      version
     );
   }
 
   /**
    * Create a no content response (204)
    */
-  static noContent(requestId?: string): ApiResponse<null> {
-    return this.success(null, undefined, requestId);
+  static noContent(requestId?: string, version?: string): ApiResponse<null> {
+    return this.success(null, undefined, requestId, version);
   }
 
   /**
@@ -244,18 +253,21 @@ export class ResponseBuilder {
     status: 'healthy' | 'unhealthy' | 'degraded',
     checks: HealthCheck[],
     uptime: number,
-    requestId?: string
+    requestId?: string,
+    version?: string
   ): ApiResponse<HealthResponse> {
+    const apiVersion = version || apiVersionManager.getCurrentVersion();
     return this.success(
       {
         status,
         timestamp: new Date().toISOString(),
-        version: this.API_VERSION,
+        version: apiVersion,
         uptime,
         checks,
       },
       undefined,
-      requestId
+      requestId,
+      apiVersion
     );
   }
 
@@ -267,12 +279,13 @@ export class ResponseBuilder {
     successful: number,
     failed: number,
     errors?: Array<{ index: number; error: ApiError }>,
-    requestId?: string
+    requestId?: string,
+    version?: string
   ): ApiResponse<BulkResponse<T>> {
     const data: BulkResponse<T> = { items, successful, failed };
     if (errors) data.errors = errors;
     
-    return this.success(data, undefined, requestId);
+    return this.success(data, undefined, requestId, version);
   }
 
   /**
@@ -282,7 +295,8 @@ export class ResponseBuilder {
     message: string,
     details?: any,
     field?: string,
-    requestId?: string
+    requestId?: string,
+    version?: string
   ): ApiResponse {
     const error: ApiError = {
       code: ErrorCode.VALIDATION_ERROR,
@@ -292,7 +306,7 @@ export class ResponseBuilder {
     if (details) error.details = details;
     if (field) error.field = field;
     
-    return this.error(error, undefined, requestId);
+    return this.error(error, undefined, requestId, version);
   }
 
   /**
@@ -301,7 +315,8 @@ export class ResponseBuilder {
   static notFound(
     resource: string,
     id?: string,
-    requestId?: string
+    requestId?: string,
+    version?: string
   ): ApiResponse {
     return this.error(
       {
@@ -310,7 +325,8 @@ export class ResponseBuilder {
         details: { resource, id },
       },
       undefined,
-      requestId
+      requestId,
+      version
     );
   }
 
@@ -319,7 +335,8 @@ export class ResponseBuilder {
    */
   static unauthorized(
     message = 'Authentication required',
-    requestId?: string
+    requestId?: string,
+    version?: string
   ): ApiResponse {
     return this.error(
       {
@@ -327,7 +344,8 @@ export class ResponseBuilder {
         message,
       },
       undefined,
-      requestId
+      requestId,
+      version
     );
   }
 
@@ -336,7 +354,8 @@ export class ResponseBuilder {
    */
   static forbidden(
     message = 'Access denied',
-    requestId?: string
+    requestId?: string,
+    version?: string
   ): ApiResponse {
     return this.error(
       {
@@ -344,7 +363,8 @@ export class ResponseBuilder {
         message,
       },
       undefined,
-      requestId
+      requestId,
+      version
     );
   }
 
@@ -353,7 +373,8 @@ export class ResponseBuilder {
    */
   static rateLimited(
     retryAfter?: number,
-    requestId?: string
+    requestId?: string,
+    version?: string
   ): ApiResponse {
     return this.error(
       {
@@ -362,7 +383,8 @@ export class ResponseBuilder {
         details: { retryAfter },
       },
       undefined,
-      requestId
+      requestId,
+      version
     );
   }
 
@@ -373,7 +395,8 @@ export class ResponseBuilder {
     message = 'Internal server error',
     details?: any,
     stack?: string,
-    requestId?: string
+    requestId?: string,
+    version?: string
   ): ApiResponse {
     const error: ApiError = {
       code: ErrorCode.INTERNAL_ERROR,
@@ -386,7 +409,7 @@ export class ResponseBuilder {
       error.stack = stack;
     }
 
-    return this.error(error, undefined, requestId);
+    return this.error(error, undefined, requestId, version);
   }
 }
 

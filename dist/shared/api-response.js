@@ -7,6 +7,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.ResponseBuilder = exports.ErrorCode = exports.HttpStatus = void 0;
 exports.calculatePagination = calculatePagination;
 exports.getRequestId = getRequestId;
+const versioning_1 = require("../config/versioning");
 // Standard HTTP status codes used in responses
 var HttpStatus;
 (function (HttpStatus) {
@@ -45,16 +46,15 @@ var ErrorCode;
  * Response Builder Utility Class
  */
 class ResponseBuilder {
-    static API_VERSION = 'v1';
     /**
      * Create a successful response
      */
-    static success(data, meta, requestId) {
+    static success(data, meta, requestId, version) {
         const response = {
             success: true,
             data,
             timestamp: new Date().toISOString(),
-            version: this.API_VERSION,
+            version: version || versioning_1.apiVersionManager.getCurrentVersion(),
         };
         if (meta)
             response.meta = meta;
@@ -65,12 +65,12 @@ class ResponseBuilder {
     /**
      * Create an error response
      */
-    static error(error, meta, requestId) {
+    static error(error, meta, requestId, version) {
         const response = {
             success: false,
             error,
             timestamp: new Date().toISOString(),
-            version: this.API_VERSION,
+            version: version || versioning_1.apiVersionManager.getCurrentVersion(),
         };
         if (meta)
             response.meta = meta;
@@ -81,64 +81,65 @@ class ResponseBuilder {
     /**
      * Create a paginated list response
      */
-    static list(items, pagination, performance, requestId) {
+    static list(items, pagination, performance, requestId, version) {
         const meta = { pagination };
         if (performance)
             meta.performance = performance;
-        return this.success({ items, pagination }, meta, requestId);
+        return this.success({ items, pagination }, meta, requestId, version);
     }
     /**
      * Create a creation response
      */
-    static created(item, requestId) {
-        return this.success({ item, created: true }, undefined, requestId);
+    static created(item, requestId, version) {
+        return this.success({ item, created: true }, undefined, requestId, version);
     }
     /**
      * Create an update response
      */
-    static updated(item, changes, requestId) {
+    static updated(item, changes, requestId, version) {
         const data = { item, updated: true };
         if (changes)
             data.changes = changes;
-        return this.success(data, undefined, requestId);
+        return this.success(data, undefined, requestId, version);
     }
     /**
      * Create a deletion response
      */
-    static deleted(id, requestId) {
-        return this.success({ deleted: true, id }, undefined, requestId);
+    static deleted(id, requestId, version) {
+        return this.success({ deleted: true, id }, undefined, requestId, version);
     }
     /**
      * Create a no content response (204)
      */
-    static noContent(requestId) {
-        return this.success(null, undefined, requestId);
+    static noContent(requestId, version) {
+        return this.success(null, undefined, requestId, version);
     }
     /**
      * Create a health check response
      */
-    static health(status, checks, uptime, requestId) {
+    static health(status, checks, uptime, requestId, version) {
+        const apiVersion = version || versioning_1.apiVersionManager.getCurrentVersion();
         return this.success({
             status,
             timestamp: new Date().toISOString(),
-            version: this.API_VERSION,
+            version: apiVersion,
             uptime,
             checks,
-        }, undefined, requestId);
+        }, undefined, requestId, apiVersion);
     }
     /**
      * Create bulk operation response
      */
-    static bulk(items, successful, failed, errors, requestId) {
+    static bulk(items, successful, failed, errors, requestId, version) {
         const data = { items, successful, failed };
         if (errors)
             data.errors = errors;
-        return this.success(data, undefined, requestId);
+        return this.success(data, undefined, requestId, version);
     }
     /**
      * Create validation error response
      */
-    static validationError(message, details, field, requestId) {
+    static validationError(message, details, field, requestId, version) {
         const error = {
             code: ErrorCode.VALIDATION_ERROR,
             message,
@@ -147,50 +148,50 @@ class ResponseBuilder {
             error.details = details;
         if (field)
             error.field = field;
-        return this.error(error, undefined, requestId);
+        return this.error(error, undefined, requestId, version);
     }
     /**
      * Create not found error response
      */
-    static notFound(resource, id, requestId) {
+    static notFound(resource, id, requestId, version) {
         return this.error({
             code: ErrorCode.NOT_FOUND_ERROR,
             message: `${resource}${id ? ` with id '${id}'` : ''} not found`,
             details: { resource, id },
-        }, undefined, requestId);
+        }, undefined, requestId, version);
     }
     /**
      * Create unauthorized error response
      */
-    static unauthorized(message = 'Authentication required', requestId) {
+    static unauthorized(message = 'Authentication required', requestId, version) {
         return this.error({
             code: ErrorCode.AUTHENTICATION_ERROR,
             message,
-        }, undefined, requestId);
+        }, undefined, requestId, version);
     }
     /**
      * Create forbidden error response
      */
-    static forbidden(message = 'Access denied', requestId) {
+    static forbidden(message = 'Access denied', requestId, version) {
         return this.error({
             code: ErrorCode.AUTHORIZATION_ERROR,
             message,
-        }, undefined, requestId);
+        }, undefined, requestId, version);
     }
     /**
      * Create rate limit error response
      */
-    static rateLimited(retryAfter, requestId) {
+    static rateLimited(retryAfter, requestId, version) {
         return this.error({
             code: ErrorCode.RATE_LIMIT_ERROR,
             message: 'Rate limit exceeded',
             details: { retryAfter },
-        }, undefined, requestId);
+        }, undefined, requestId, version);
     }
     /**
      * Create internal server error response
      */
-    static internalError(message = 'Internal server error', details, stack, requestId) {
+    static internalError(message = 'Internal server error', details, stack, requestId, version) {
         const error = {
             code: ErrorCode.INTERNAL_ERROR,
             message,
@@ -200,7 +201,7 @@ class ResponseBuilder {
         if (process.env.NODE_ENV === 'development' && stack) {
             error.stack = stack;
         }
-        return this.error(error, undefined, requestId);
+        return this.error(error, undefined, requestId, version);
     }
 }
 exports.ResponseBuilder = ResponseBuilder;

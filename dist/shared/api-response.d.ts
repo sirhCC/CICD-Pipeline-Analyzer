@@ -111,70 +111,69 @@ export declare enum ErrorCode {
  * Response Builder Utility Class
  */
 export declare class ResponseBuilder {
-    private static readonly API_VERSION;
     /**
      * Create a successful response
      */
-    static success<T>(data: T, meta?: ResponseMeta, requestId?: string): ApiResponse<T>;
+    static success<T>(data: T, meta?: ResponseMeta, requestId?: string, version?: string): ApiResponse<T>;
     /**
      * Create an error response
      */
-    static error(error: ApiError, meta?: ResponseMeta, requestId?: string): ApiResponse;
+    static error(error: ApiError, meta?: ResponseMeta, requestId?: string, version?: string): ApiResponse;
     /**
      * Create a paginated list response
      */
-    static list<T>(items: T[], pagination: PaginationMeta, performance?: PerformanceMeta, requestId?: string): ApiResponse<ListResponse<T>>;
+    static list<T>(items: T[], pagination: PaginationMeta, performance?: PerformanceMeta, requestId?: string, version?: string): ApiResponse<ListResponse<T>>;
     /**
      * Create a creation response
      */
-    static created<T>(item: T, requestId?: string): ApiResponse<CreateResponse<T>>;
+    static created<T>(item: T, requestId?: string, version?: string): ApiResponse<CreateResponse<T>>;
     /**
      * Create an update response
      */
-    static updated<T>(item: T, changes?: Partial<T>, requestId?: string): ApiResponse<UpdateResponse<T>>;
+    static updated<T>(item: T, changes?: Partial<T>, requestId?: string, version?: string): ApiResponse<UpdateResponse<T>>;
     /**
      * Create a deletion response
      */
-    static deleted(id: string, requestId?: string): ApiResponse<DeleteResponse>;
+    static deleted(id: string, requestId?: string, version?: string): ApiResponse<DeleteResponse>;
     /**
      * Create a no content response (204)
      */
-    static noContent(requestId?: string): ApiResponse<null>;
+    static noContent(requestId?: string, version?: string): ApiResponse<null>;
     /**
      * Create a health check response
      */
-    static health(status: 'healthy' | 'unhealthy' | 'degraded', checks: HealthCheck[], uptime: number, requestId?: string): ApiResponse<HealthResponse>;
+    static health(status: 'healthy' | 'unhealthy' | 'degraded', checks: HealthCheck[], uptime: number, requestId?: string, version?: string): ApiResponse<HealthResponse>;
     /**
      * Create bulk operation response
      */
     static bulk<T>(items: T[], successful: number, failed: number, errors?: Array<{
         index: number;
         error: ApiError;
-    }>, requestId?: string): ApiResponse<BulkResponse<T>>;
+    }>, requestId?: string, version?: string): ApiResponse<BulkResponse<T>>;
     /**
      * Create validation error response
      */
-    static validationError(message: string, details?: any, field?: string, requestId?: string): ApiResponse;
+    static validationError(message: string, details?: any, field?: string, requestId?: string, version?: string): ApiResponse;
     /**
      * Create not found error response
      */
-    static notFound(resource: string, id?: string, requestId?: string): ApiResponse;
+    static notFound(resource: string, id?: string, requestId?: string, version?: string): ApiResponse;
     /**
      * Create unauthorized error response
      */
-    static unauthorized(message?: string, requestId?: string): ApiResponse;
+    static unauthorized(message?: string, requestId?: string, version?: string): ApiResponse;
     /**
      * Create forbidden error response
      */
-    static forbidden(message?: string, requestId?: string): ApiResponse;
+    static forbidden(message?: string, requestId?: string, version?: string): ApiResponse;
     /**
      * Create rate limit error response
      */
-    static rateLimited(retryAfter?: number, requestId?: string): ApiResponse;
+    static rateLimited(retryAfter?: number, requestId?: string, version?: string): ApiResponse;
     /**
      * Create internal server error response
      */
-    static internalError(message?: string, details?: any, stack?: string, requestId?: string): ApiResponse;
+    static internalError(message?: string, details?: any, stack?: string, requestId?: string, version?: string): ApiResponse;
 }
 /**
  * Calculate pagination metadata

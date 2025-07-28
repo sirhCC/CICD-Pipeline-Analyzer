@@ -13,6 +13,8 @@ declare global {
     namespace Express {
         interface Request {
             responseEnhancement?: ResponseEnhancement;
+            apiVersion?: string;
+            requestedVersion?: string | undefined;
         }
         interface Response {
             apiSuccess<T>(data: T, meta?: any): void;
@@ -28,6 +30,10 @@ declare global {
         }
     }
 }
+/**
+ * Extract and validate API version from request
+ */
+export declare function extractApiVersion(req: Request, res: Response, next: NextFunction): void;
 /**
  * Initialize response enhancement tracking
  */
@@ -55,6 +61,6 @@ export declare function trackCacheHit(req: Request, isHit: boolean): void;
 /**
  * Complete response middleware setup
  */
-export declare const responseMiddleware: (typeof initializeResponseTracking)[];
+export declare const responseMiddleware: (typeof extractApiVersion)[];
 export default responseMiddleware;
 //# sourceMappingURL=response.d.ts.map
