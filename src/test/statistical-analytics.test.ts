@@ -3,14 +3,15 @@
  * Tests for the Phase 3 Statistical Analytics Engine
  */
 
-import { statisticalAnalyticsService, StatisticalDataPoint } from '../services/statistical-analytics.service';
+import { getStatisticalAnalyticsService, StatisticalDataPoint } from '../services/statistical-analytics.service';
 import { AppError } from '../middleware/error-handler';
 
 describe('StatisticalAnalyticsService', () => {
-  let service: typeof statisticalAnalyticsService;
+  let service: ReturnType<typeof getStatisticalAnalyticsService>;
 
   beforeEach(() => {
-    service = statisticalAnalyticsService;
+    // Use the lazy getter to avoid database initialization during import
+    service = getStatisticalAnalyticsService();
   });
 
   describe('detectAnomalies', () => {
