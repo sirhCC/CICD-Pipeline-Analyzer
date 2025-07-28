@@ -19,6 +19,7 @@ const database_1 = require("./core/database");
 const redis_1 = require("./core/redis");
 // Import middleware
 const response_1 = require("./middleware/response");
+const router_1 = require("./config/router");
 // import { errorHandler } from '@/middleware/error-handler';
 // import { requestLogger } from '@/middleware/request-logger';
 // import { rateLimiter } from '@/middleware/rate-limiter';
@@ -43,7 +44,7 @@ class Application {
             await this.initializeCoreServices();
             // Configure Express application
             this.configureMiddleware();
-            this.configureRoutes();
+            await this.configureRoutes();
             this.configureErrorHandling();
             // Initialize modules
             await this.initializeModules();
@@ -183,7 +184,7 @@ class Application {
     /**
      * Configure application routes
      */
-    configureRoutes() {
+    async configureRoutes() {
         this.logger.info('Configuring routes...');
         // Health check endpoint
         this.app.get('/health', async (req, res) => {
@@ -231,6 +232,14 @@ class Application {
         // this.app.use('/api/v1/pipelines', pipelineRoutes);
         // this.app.use('/api/v1/analysis', analysisRoutes);
         // this.app.use('/api/v1/auth', authRoutes);
+        // API version information endpoint
+        this.app.use('/api/version', (0, router_1.createVersionInfoRouter)());
+        // Create and register all versioned API routers
+        const versionedRouters = (0, router_1.createAllVersionedRouters)();
+        for (const { version, prefix, router } of versionedRouters) {
+            this.app.use(prefix, router);
+            this.logger.info(`Registered API router for ${version} at ${prefix}`);
+        }
         // Catch-all for unmatched routes
         this.app.use('*', (req, res) => {
             res.status(404).json({
