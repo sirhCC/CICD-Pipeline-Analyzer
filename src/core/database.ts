@@ -4,18 +4,15 @@
  */
 
 import { DataSource, QueryRunner, EntityManager } from 'typeorm';
-import { configManager } from '@/config';
+import { databaseConfigManager } from './database.config';
 import { Logger } from '@/shared/logger';
-
-// Import all entities
-import { Pipeline } from '@/entities/pipeline.entity';
-import { PipelineRun, PipelineRunStage } from '@/entities/pipeline-run.entity';
-import { User, UserSession, ApiKey } from '@/entities/user.entity';
 
 export class DatabaseManager {
   private static instance: DatabaseManager;
   private dataSource: DataSource | null = null;
   private logger: Logger;
+  private connectionRetries = 0;
+  private maxRetries = 3;
 
   private constructor() {
     this.logger = new Logger('DatabaseManager');
@@ -35,61 +32,14 @@ export class DatabaseManager {
     try {
       this.logger.info('Initializing database connection...');
       
-      const dbConfig = configManager.getDatabase();
+      // Validate configuration
+      databaseConfigManager.validateConfig();
       
-      this.dataSource = new DataSource({
-        type: dbConfig.type,
-        host: dbConfig.host,
-        port: dbConfig.port,
-        database: dbConfig.database,
-        username: dbConfig.username,
-        password: dbConfig.password,
-        ssl: dbConfig.ssl,
-        
-        // Connection Pool Configuration
-        extra: {
-          max: dbConfig.poolSize,
-          min: 2,
-          acquireTimeoutMillis: 30000,
-          createTimeoutMillis: 30000,
-          destroyTimeoutMillis: 5000,
-          idleTimeoutMillis: 30000,
-          reapIntervalMillis: 1000,
-          createRetryIntervalMillis: 2000,
-        },
+      // Create data source
+      const config = databaseConfigManager.createDataSourceConfig();
+      this.dataSource = new DataSource(config);
 
-        // Entity Configuration
-        entities: [
-          Pipeline,
-          PipelineRun,
-          PipelineRunStage,
-          User,
-          UserSession,
-          ApiKey
-        ],
-        
-        // Migration Configuration
-        migrations: ['src/migrations/**/*.ts'],
-        migrationsRun: false, // We'll run migrations manually
-        
-        // Development Configuration
-        synchronize: configManager.isDevelopment(), // Only in development
-        logging: configManager.isDevelopment() ? 'all' : ['error'],
-        
-        // Production Configuration
-        cache: {
-          type: 'redis',
-          options: {
-            host: configManager.getRedis().host,
-            port: configManager.getRedis().port,
-            ...(configManager.getRedis().password && { 
-              password: configManager.getRedis().password 
-            }),
-          },
-        },
-      });
-
-      await this.dataSource.initialize();
+      await this.connectWithRetry();
       
       this.logger.info('Database connection established successfully');
       
@@ -102,6 +52,33 @@ export class DatabaseManager {
     }
   }
 
+  /**
+   * Connect with retry logic
+   */
+  private async connectWithRetry(): Promise<void> {
+    while (this.connectionRetries < this.maxRetries) {
+      try {
+        await this.dataSource!.initialize();
+        this.connectionRetries = 0; // Reset on success
+        return;
+      } catch (error) {
+        this.connectionRetries++;
+        
+        if (this.connectionRetries >= this.maxRetries) {
+          this.logger.error('Max connection retries reached', error);
+          throw error;
+        }
+        
+        const delay = Math.min(1000 * Math.pow(2, this.connectionRetries), 10000);
+        this.logger.warn(`Database connection failed, retrying in ${delay}ms...`, {
+          attempt: this.connectionRetries,
+          maxRetries: this.maxRetries
+        });
+        
+        await new Promise(resolve => setTimeout(resolve, delay));
+      }
+    }
+  }
   /**
    * Get the data source instance
    */
@@ -272,7 +249,7 @@ export class DatabaseManager {
    * Clear all data (for testing)
    */
   public async clearDatabase(): Promise<void> {
-    if (configManager.isProduction()) {
+    if (process.env.NODE_ENV === 'production') {
       throw new Error('Cannot clear database in production environment');
     }
 
