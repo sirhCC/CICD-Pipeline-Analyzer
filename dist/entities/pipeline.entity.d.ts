@@ -28,6 +28,7 @@ export declare class Pipeline extends BaseEntity {
     isMonitored: boolean;
     webhookUrl?: string;
     webhookSecret?: string;
+    runs: any[];
     /**
      * Calculate and update success rate
      */

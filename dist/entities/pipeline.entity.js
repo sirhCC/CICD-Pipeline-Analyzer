@@ -41,9 +41,8 @@ let Pipeline = class Pipeline extends base_entity_1.BaseEntity {
     isMonitored;
     webhookUrl;
     webhookSecret;
-    // Relations will be added later
-    // @OneToMany(() => PipelineRun, run => run.pipeline, { cascade: true })
-    // runs!: PipelineRun[];
+    // Relations
+    runs;
     /**
      * Calculate and update success rate
      */
@@ -206,6 +205,10 @@ __decorate([
     (0, typeorm_1.Column)({ type: 'varchar', length: 255, nullable: true }),
     __metadata("design:type", String)
 ], Pipeline.prototype, "webhookSecret", void 0);
+__decorate([
+    (0, typeorm_1.OneToMany)('PipelineRun', 'pipeline', { cascade: true }),
+    __metadata("design:type", Array)
+], Pipeline.prototype, "runs", void 0);
 exports.Pipeline = Pipeline = __decorate([
     (0, typeorm_1.Entity)('pipelines'),
     (0, typeorm_1.Index)(['provider', 'externalId'], { unique: true }),
