@@ -28,6 +28,12 @@ export interface DatabaseConfig {
   idleTimeout: number;
   maxRetries: number;
   retryDelay: number;
+  // Security enhancements
+  enableSSLValidation: boolean;
+  enableQueryLogging: boolean;
+  enableConnectionAuditing: boolean;
+  maxConnections: number;
+  connectionAuditLog: boolean;
 }
 
 export interface CacheConfig {
@@ -81,7 +87,13 @@ export class DatabaseConfigManager {
       queryTimeout: 60000,
       idleTimeout: 300000, // 5 minutes
       maxRetries: 3,
-      retryDelay: 1000
+      retryDelay: 1000,
+      // Security enhancements
+      enableSSLValidation: configManager.isProduction(),
+      enableQueryLogging: !configManager.isProduction(),
+      enableConnectionAuditing: true,
+      maxConnections: (config.poolSize || this.getDefaultPoolSize()) * 2,
+      connectionAuditLog: true
     };
   }
 
@@ -90,11 +102,44 @@ export class DatabaseConfigManager {
    */
   private getSSLConfig(): boolean | object {
     if (configManager.isProduction()) {
-      return {
-        rejectUnauthorized: false, // For cloud databases
-        requestCert: false,
-        agent: false
+      const sslConfig: any = {
+        // Enable certificate validation in production
+        rejectUnauthorized: process.env.DB_SSL_REJECT_UNAUTHORIZED !== 'false',
+        
+        // Certificate authority
+        ...(process.env.DB_SSL_CA && { ca: process.env.DB_SSL_CA }),
+        
+        // Client certificate authentication
+        ...(process.env.DB_SSL_CERT && { cert: process.env.DB_SSL_CERT }),
+        ...(process.env.DB_SSL_KEY && { key: process.env.DB_SSL_KEY }),
+        
+        // Additional SSL options
+        checkServerIdentity: process.env.DB_SSL_CHECK_SERVER_IDENTITY !== 'false',
+        secureProtocol: 'TLSv1_2_method', // Force TLS 1.2+
+        ciphers: 'ECDHE+AESGCM:ECDHE+CHACHA20:DHE+AESGCM:DHE+CHACHA20:!aNULL:!MD5:!DSS',
+        honorCipherOrder: true
       };
+
+      // Custom server identity check for cloud providers
+      if (process.env.DB_SSL_CHECK_SERVER_IDENTITY === 'custom') {
+        sslConfig.checkServerIdentity = (host: string, cert: any) => {
+          // Custom validation logic for cloud databases
+          const allowedHosts = process.env.DB_SSL_ALLOWED_HOSTS?.split(',') || [];
+          if (allowedHosts.length > 0 && !allowedHosts.includes(host)) {
+            throw new Error(`SSL: Host ${host} not in allowed hosts list`);
+          }
+          return undefined; // Valid
+        };
+      }
+
+      logger.info('SSL enabled for production database', {
+        rejectUnauthorized: sslConfig.rejectUnauthorized,
+        hasCert: !!sslConfig.cert,
+        hasKey: !!sslConfig.key,
+        hasCA: !!sslConfig.ca
+      });
+
+      return sslConfig;
     }
     
     return false; // Development/test
@@ -190,10 +235,22 @@ export class DatabaseConfigManager {
         // Connection validation
         testOnBorrow: true,
         
+        // Security enhancements
+        ...(dbConfig.maxConnections && { absoluteMaxSize: dbConfig.maxConnections }),
+        
         // Additional PostgreSQL options
         application_name: 'cicd-pipeline-analyzer',
         statement_timeout: dbConfig.queryTimeout,
-        idle_in_transaction_session_timeout: 30000
+        idle_in_transaction_session_timeout: 30000,
+        
+        // Security settings
+        ...(configManager.isProduction() && {
+          // Production security options
+          tcp_keepalives_idle: 600,
+          tcp_keepalives_interval: 30,
+          tcp_keepalives_count: 3,
+          connect_timeout: 30
+        })
       },
 
       // Entity Configuration
@@ -306,7 +363,65 @@ export class DatabaseConfigManager {
       throw new Error(`Invalid pool size: ${dbConfig.poolSize}. Must be between 1 and 100.`);
     }
 
+    // Security validations
+    this.validateSecurity();
+
     logger.info('Database configuration validated successfully');
+  }
+
+  /**
+   * Validate security configuration
+   */
+  private validateSecurity(): void {
+    const dbConfig = this.getDatabaseConfig();
+
+    // Validate SSL in production
+    if (configManager.isProduction()) {
+      if (!dbConfig.ssl) {
+        logger.warn('SSL is disabled in production - this is a security risk');
+      } else if (dbConfig.enableSSLValidation && typeof dbConfig.ssl === 'object') {
+        const sslConfig = dbConfig.ssl as any;
+        if (sslConfig.rejectUnauthorized === false) {
+          logger.warn('SSL certificate validation is disabled - this reduces security');
+        }
+      }
+    }
+
+    // Validate password strength (basic check)
+    if (typeof dbConfig.password === 'string') {
+      const minPasswordLength = configManager.isTest() ? 4 : 8; // Relaxed for tests
+      
+      if (dbConfig.password.length < minPasswordLength) {
+        throw new Error(`Database password must be at least ${minPasswordLength} characters long`);
+      }
+      
+      // Check for common weak passwords (skip in test environment)
+      if (!configManager.isTest()) {
+        const weakPasswords = ['password', '123456', 'admin', 'postgres'];
+        if (weakPasswords.includes(dbConfig.password.toLowerCase())) {
+          throw new Error('Database password is too weak - avoid common passwords');
+        }
+      }
+    }
+
+    // Validate host for production
+    if (configManager.isProduction()) {
+      if (dbConfig.host === 'localhost' || dbConfig.host === '127.0.0.1') {
+        logger.warn('Using localhost in production - ensure this is intentional');
+      }
+    }
+
+    // Validate connection limits
+    if (dbConfig.maxConnections < dbConfig.poolSize) {
+      throw new Error(`maxConnections (${dbConfig.maxConnections}) must be >= poolSize (${dbConfig.poolSize})`);
+    }
+
+    logger.info('Security validation completed', {
+      sslEnabled: !!dbConfig.ssl,
+      sslValidation: dbConfig.enableSSLValidation,
+      auditingEnabled: dbConfig.enableConnectionAuditing,
+      environment: process.env.NODE_ENV
+    });
   }
 }
 
