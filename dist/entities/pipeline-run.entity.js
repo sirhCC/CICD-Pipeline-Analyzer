@@ -121,9 +121,9 @@ __decorate([
     __metadata("design:type", String)
 ], PipelineRunStage.prototype, "runId", void 0);
 __decorate([
-    (0, typeorm_1.ManyToOne)(() => PipelineRun, run => run.stages, { onDelete: 'CASCADE' }),
+    (0, typeorm_1.ManyToOne)('PipelineRun', 'stages', { onDelete: 'CASCADE' }),
     (0, typeorm_1.JoinColumn)({ name: 'runId' }),
-    __metadata("design:type", PipelineRun)
+    __metadata("design:type", Object)
 ], PipelineRunStage.prototype, "run", void 0);
 exports.PipelineRunStage = PipelineRunStage = __decorate([
     (0, typeorm_1.Entity)('pipeline_run_stages'),
@@ -363,7 +363,7 @@ __decorate([
     __metadata("design:type", pipeline_entity_1.Pipeline)
 ], PipelineRun.prototype, "pipeline", void 0);
 __decorate([
-    (0, typeorm_1.OneToMany)(() => PipelineRunStage, stage => stage.run, { cascade: true }),
+    (0, typeorm_1.OneToMany)('PipelineRunStage', 'run', { cascade: true }),
     __metadata("design:type", Array)
 ], PipelineRun.prototype, "stages", void 0);
 exports.PipelineRun = PipelineRun = __decorate([
