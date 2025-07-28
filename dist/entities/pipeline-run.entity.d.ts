@@ -21,7 +21,7 @@ export declare class PipelineRunStage extends BaseEntity {
     resources?: Record<string, any>;
     artifacts?: Record<string, any>;
     runId: string;
-    run: PipelineRun;
+    run: any;
     /**
      * Calculate stage duration
      */
@@ -81,7 +81,7 @@ export declare class PipelineRun extends BaseEntity {
     rawData?: string;
     pipelineId: string;
     pipeline: Pipeline;
-    stages: PipelineRunStage[];
+    stages: any[];
     /**
      * Calculate run duration
      */
