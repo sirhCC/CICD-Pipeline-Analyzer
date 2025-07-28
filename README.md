@@ -453,15 +453,6 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ---
 
-## 📞 Support
-
-- 📧 **Email**: [support@cicd-analyzer.com](mailto:support@cicd-analyzer.com)
-- 💬 **Discord**: [Join our community](https://discord.gg/cicd-analyzer)
-- 📖 **Documentation**: [docs.cicd-analyzer.com](https://docs.cicd-analyzer.com)
-- 🐛 **Issues**: [GitHub Issues](https://github.com/sirhCC/CICDpa/issues)
-
----
-
 <div align="center">
 
 **Made with 🚀 for the DevOps Community**
