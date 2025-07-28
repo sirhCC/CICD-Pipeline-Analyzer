@@ -639,12 +639,6 @@ This project is licensed under the **MIT License** - see the [LICENSE](LICENSE) 
 
 <div align="center">
 
-## 🌟 **Star History**
-
-[![Star History Chart](https://api.star-history.com/svg?repos=your-username/cicd-pipeline-analyzer&type=Date)](https://star-history.com/#your-username/cicd-pipeline-analyzer&Date)
-
----
-
 ### 💖 **Made with Love by Developers, for Developers**
 
 **Current Status**: ✅ **Phase 3 Complete** - Statistical Analytics Implemented
