@@ -835,11 +835,17 @@ export class StatisticalAnalyticsService {
   private pipelineRunRepo: Repository<PipelineRun> | undefined;
 
   private initializePipelineRepositories(): void {
-    if (!this.pipelineRepo) {
-      this.pipelineRepo = repositoryFactory.getRepository(Pipeline);
-    }
-    if (!this.pipelineRunRepo) {
-      this.pipelineRunRepo = repositoryFactory.getRepository(PipelineRun);
+    try {
+      if (!this.pipelineRepo) {
+        this.pipelineRepo = repositoryFactory.getRepository(Pipeline);
+      }
+      if (!this.pipelineRunRepo) {
+        this.pipelineRunRepo = repositoryFactory.getRepository(PipelineRun);
+      }
+    } catch (error) {
+      // Gracefully handle database not being initialized
+      this.logger.warn('Database not available for pipeline integration', { error: error instanceof Error ? error.message : String(error) });
+      throw new AppError('Database not available for pipeline operations', 503);
     }
   }
 
@@ -1055,5 +1061,16 @@ export class StatisticalAnalyticsService {
   }
 }
 
-// Export singleton instance
+// Export lazy singleton instance getter to avoid database initialization at module import time
+let _instance: StatisticalAnalyticsService | undefined;
+
+export const getStatisticalAnalyticsService = (): StatisticalAnalyticsService => {
+  if (!_instance) {
+    _instance = StatisticalAnalyticsService.getInstance();
+  }
+  return _instance;
+};
+
+// Export singleton instance for production use  
+// Create instance without triggering database initialization
 export const statisticalAnalyticsService = StatisticalAnalyticsService.getInstance();
