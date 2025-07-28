@@ -11,6 +11,12 @@ import { Logger } from '@/shared/logger';
 import { Pipeline } from '@/entities/pipeline.entity';
 import { PipelineRun, PipelineRunStage } from '@/entities/pipeline-run.entity';
 import { User, UserSession, ApiKey } from '@/entities/user.entity';
+import { 
+  PipelineMetrics, 
+  FailurePattern, 
+  OptimizationRecommendation, 
+  AnalyticsAlert 
+} from '@/entities/pipeline-metrics.entity';
 
 const logger = new Logger('DatabaseConfig');
 
@@ -260,7 +266,11 @@ export class DatabaseConfigManager {
         PipelineRunStage,
         User,
         UserSession,
-        ApiKey
+        ApiKey,
+        PipelineMetrics,
+        FailurePattern,
+        OptimizationRecommendation,
+        AnalyticsAlert
       ],
 
       // Migration Configuration
