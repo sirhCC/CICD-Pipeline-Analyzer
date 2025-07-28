@@ -8,6 +8,7 @@ This directory contains comprehensive documentation for the CI/CD Pipeline Analy
 
 - **[Project Instructions](PROJECT_INSTRUCTIONS.md)** - Project overview, requirements, and implementation guidelines
 - **[Development Guide](DEVELOPMENT.md)** - Development setup, workflow, and contribution guidelines
+- **[Contributing Guide](CONTRIBUTING.md)** - How to contribute to the project
 - **[Database Documentation](DATABASE.md)** - Complete database layer implementation guide
 
 ### Technical Reference
