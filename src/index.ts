@@ -13,6 +13,8 @@ import { Logger } from './shared/logger';
 import { moduleManager } from './core/module-manager';
 import { databaseManager } from './core/database';
 import { redisManager } from './core/redis';
+import { databaseInitializer } from './core/database-init';
+import { enhancedDatabaseService } from './services/database.enhanced';
 
 // Import middleware
 import { responseMiddleware } from './middleware/response';
@@ -141,13 +143,12 @@ class Application {
   private async initializeCoreServices(): Promise<void> {
     this.logger.info('Initializing core services...');
 
-    // Initialize database
-    await databaseManager.initialize();
-
-    // Run database migrations
-    if (!configManager.isTest()) {
-      await databaseManager.runMigrations();
-    }
+    // Initialize database with enhanced initialization
+    await databaseInitializer.initialize({
+      runMigrations: !configManager.isTest(),
+      seedData: configManager.isDevelopment(),
+      enableMonitoring: true
+    });
 
     // Initialize Redis cache
     await redisManager.initialize();
@@ -352,11 +353,12 @@ class Application {
    */
   private async getHealthStatus(): Promise<any> {
     const checks = await Promise.allSettled([
-      databaseManager.healthCheck(),
+      enhancedDatabaseService.getHealthStatus(),
       redisManager.healthCheck(),
     ]);
 
-    const dbHealthy = checks[0].status === 'fulfilled' && checks[0].value;
+    const dbHealth = checks[0].status === 'fulfilled' ? checks[0].value : null;
+    const dbHealthy = dbHealth?.isHealthy || false;
     const redisHealthy = checks[1].status === 'fulfilled' && checks[1].value;
 
     const overall = dbHealthy && redisHealthy ? 'healthy' : 'degraded';
@@ -369,6 +371,12 @@ class Application {
         redis: redisHealthy ? 'healthy' : 'unhealthy',
       },
       modules: moduleManager.getModuleStatus(),
+      database: dbHealth ? {
+        connectionStats: dbHealth.connectionStats,
+        performanceMetrics: dbHealth.performanceMetrics,
+        recommendations: dbHealth.recommendations,
+        uptime: dbHealth.uptime
+      } : null
     };
   }
 

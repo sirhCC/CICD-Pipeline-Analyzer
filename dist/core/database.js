@@ -6,16 +6,14 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.databaseManager = exports.DatabaseManager = void 0;
 const typeorm_1 = require("typeorm");
-const config_1 = require("@/config");
+const database_config_1 = require("./database.config");
 const logger_1 = require("@/shared/logger");
-// Import all entities
-const pipeline_entity_1 = require("@/entities/pipeline.entity");
-const pipeline_run_entity_1 = require("@/entities/pipeline-run.entity");
-const user_entity_1 = require("@/entities/user.entity");
 class DatabaseManager {
     static instance;
     dataSource = null;
     logger;
+    connectionRetries = 0;
+    maxRetries = 3;
     constructor() {
         this.logger = new logger_1.Logger('DatabaseManager');
     }
@@ -31,54 +29,12 @@ class DatabaseManager {
     async initialize() {
         try {
             this.logger.info('Initializing database connection...');
-            const dbConfig = config_1.configManager.getDatabase();
-            this.dataSource = new typeorm_1.DataSource({
-                type: dbConfig.type,
-                host: dbConfig.host,
-                port: dbConfig.port,
-                database: dbConfig.database,
-                username: dbConfig.username,
-                password: dbConfig.password,
-                ssl: dbConfig.ssl,
-                // Connection Pool Configuration
-                extra: {
-                    max: dbConfig.poolSize,
-                    min: 2,
-                    acquireTimeoutMillis: 30000,
-                    createTimeoutMillis: 30000,
-                    destroyTimeoutMillis: 5000,
-                    idleTimeoutMillis: 30000,
-                    reapIntervalMillis: 1000,
-                    createRetryIntervalMillis: 2000,
-                },
-                // Entity Configuration
-                entities: [
-                    pipeline_entity_1.Pipeline,
-                    pipeline_run_entity_1.PipelineRun,
-                    pipeline_run_entity_1.PipelineRunStage,
-                    user_entity_1.User,
-                    user_entity_1.UserSession,
-                    user_entity_1.ApiKey
-                ],
-                // Migration Configuration
-                migrations: ['src/migrations/**/*.ts'],
-                migrationsRun: false, // We'll run migrations manually
-                // Development Configuration
-                synchronize: config_1.configManager.isDevelopment(), // Only in development
-                logging: config_1.configManager.isDevelopment() ? 'all' : ['error'],
-                // Production Configuration
-                cache: {
-                    type: 'redis',
-                    options: {
-                        host: config_1.configManager.getRedis().host,
-                        port: config_1.configManager.getRedis().port,
-                        ...(config_1.configManager.getRedis().password && {
-                            password: config_1.configManager.getRedis().password
-                        }),
-                    },
-                },
-            });
-            await this.dataSource.initialize();
+            // Validate configuration
+            database_config_1.databaseConfigManager.validateConfig();
+            // Create data source
+            const config = database_config_1.databaseConfigManager.createDataSourceConfig();
+            this.dataSource = new typeorm_1.DataSource(config);
+            await this.connectWithRetry();
             this.logger.info('Database connection established successfully');
             // Run health check
             await this.healthCheck();
@@ -86,6 +42,31 @@ class DatabaseManager {
         catch (error) {
             this.logger.error('Failed to initialize database', error);
             throw error;
+        }
+    }
+    /**
+     * Connect with retry logic
+     */
+    async connectWithRetry() {
+        while (this.connectionRetries < this.maxRetries) {
+            try {
+                await this.dataSource.initialize();
+                this.connectionRetries = 0; // Reset on success
+                return;
+            }
+            catch (error) {
+                this.connectionRetries++;
+                if (this.connectionRetries >= this.maxRetries) {
+                    this.logger.error('Max connection retries reached', error);
+                    throw error;
+                }
+                const delay = Math.min(1000 * Math.pow(2, this.connectionRetries), 10000);
+                this.logger.warn(`Database connection failed, retrying in ${delay}ms...`, {
+                    attempt: this.connectionRetries,
+                    maxRetries: this.maxRetries
+                });
+                await new Promise(resolve => setTimeout(resolve, delay));
+            }
         }
     }
     /**
@@ -235,7 +216,7 @@ class DatabaseManager {
      * Clear all data (for testing)
      */
     async clearDatabase() {
-        if (config_1.configManager.isProduction()) {
+        if (process.env.NODE_ENV === 'production') {
             throw new Error('Cannot clear database in production environment');
         }
         try {

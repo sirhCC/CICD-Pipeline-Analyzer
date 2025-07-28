@@ -5,7 +5,9 @@
  */
 Object.defineProperty(exports, "__esModule", { value: true });
 const commander_1 = require("commander");
-const database_service_1 = require("@/services/database.service");
+const database_enhanced_1 = require("@/services/database.enhanced");
+const database_init_1 = require("@/core/database-init");
+const factory_enhanced_1 = require("@/repositories/factory.enhanced");
 const config_1 = require("@/config");
 const logger_1 = require("@/shared/logger");
 const logger = new logger_1.Logger('DatabaseCLI');
@@ -20,7 +22,10 @@ commander_1.program
     .action(async () => {
     try {
         logger.info('Initializing database...');
-        await database_service_1.databaseService.initialize();
+        await database_init_1.databaseInitializer.initialize({
+            runMigrations: true,
+            enableMonitoring: true
+        });
         logger.info('Database initialized successfully');
         process.exit(0);
     }
@@ -36,7 +41,8 @@ commander_1.program
     .action(async () => {
     try {
         logger.info('Running migrations...');
-        await database_service_1.databaseService.runMigrations();
+        await database_enhanced_1.enhancedDatabaseService.initialize();
+        await database_enhanced_1.enhancedDatabaseService.runMigrations();
         logger.info('Migrations completed successfully');
         process.exit(0);
     }
@@ -74,8 +80,8 @@ commander_1.program
                 lastName: options.adminLastName || 'User'
             };
         }
-        await database_service_1.databaseService.initialize();
-        await database_service_1.databaseService.seedDatabase(seedOptions);
+        await database_init_1.databaseInitializer.initialize();
+        await database_enhanced_1.enhancedDatabaseService.seedDatabase(seedOptions);
         logger.info('Database seeded successfully');
         process.exit(0);
     }
@@ -91,15 +97,15 @@ commander_1.program
     .action(async () => {
     try {
         logger.info('Checking database health...');
-        await database_service_1.databaseService.initialize();
-        const health = await database_service_1.databaseService.getHealthStatus();
+        await database_enhanced_1.enhancedDatabaseService.initialize();
+        const health = await database_enhanced_1.enhancedDatabaseService.getHealthStatus();
         console.log('\n=== Database Health Status ===');
         console.log(`Connected: ${health.isConnected ? '✅' : '❌'}`);
         console.log(`Users: ${health.entityCounts.users}`);
         console.log(`Pipelines: ${health.entityCounts.pipelines}`);
         console.log(`Pipeline Runs: ${health.entityCounts.pipelineRuns}`);
         console.log(`Migrations Executed: ${health.migrations.executed}`);
-        console.log(`Pool Stats:`, health.poolStats);
+        console.log(`Pool Stats:`, health.connectionStats);
         process.exit(0);
     }
     catch (error) {
@@ -111,15 +117,17 @@ commander_1.program
 commander_1.program
     .command('maintenance')
     .description('Perform database maintenance')
-    .action(async () => {
+    .option('--days <days>', 'Days of data to keep (default: 90)', '90')
+    .action(async (options) => {
     try {
         logger.info('Performing database maintenance...');
-        await database_service_1.databaseService.initialize();
-        const result = await database_service_1.databaseService.performMaintenance();
+        await database_enhanced_1.enhancedDatabaseService.initialize();
+        const daysToKeep = parseInt(options.days, 10);
+        await database_enhanced_1.enhancedDatabaseService.cleanupOldData(daysToKeep);
+        const stats = await database_enhanced_1.enhancedDatabaseService.getStatistics();
         console.log('\n=== Maintenance Results ===');
-        console.log(`Deleted old runs: ${result.deletedOldRuns}`);
-        console.log(`Deleted inactive users: ${result.deletedInactiveUsers}`);
-        console.log(`Optimized tables: ${result.optimizedTables.join(', ')}`);
+        console.log(`Cleaned up data older than ${daysToKeep} days`);
+        console.log(`Current statistics:`, stats);
         process.exit(0);
     }
     catch (error) {
@@ -135,8 +143,8 @@ commander_1.program
     .action(async (options) => {
     try {
         logger.info('Creating database backup...');
-        await database_service_1.databaseService.initialize();
-        const backupPath = await database_service_1.databaseService.createBackup(options.path);
+        await database_enhanced_1.enhancedDatabaseService.initialize();
+        const backupPath = await database_enhanced_1.enhancedDatabaseService.createBackup();
         console.log(`\n✅ Database backup created: ${backupPath}`);
         process.exit(0);
     }
@@ -161,8 +169,14 @@ commander_1.program
     }
     try {
         logger.warn('Clearing all database data...');
-        await database_service_1.databaseService.initialize();
-        await database_service_1.databaseService.clearAllData();
+        await database_enhanced_1.enhancedDatabaseService.initialize();
+        // Clear all data using repositories
+        const userRepo = factory_enhanced_1.repositoryFactory.getRepository('User');
+        const pipelineRunRepo = factory_enhanced_1.repositoryFactory.getRepository('PipelineRun');
+        const pipelineRepo = factory_enhanced_1.repositoryFactory.getRepository('Pipeline');
+        await pipelineRunRepo.clear();
+        await pipelineRepo.clear();
+        await userRepo.clear();
         console.log('\n⚠️  All database data cleared');
         process.exit(0);
     }
@@ -185,8 +199,8 @@ commander_1.program
         console.log(`Username: ${dbConfig.username}`);
         console.log(`SSL: ${dbConfig.ssl ? '✅' : '❌'}`);
         try {
-            await database_service_1.databaseService.initialize();
-            const health = await database_service_1.databaseService.getHealthStatus();
+            await database_enhanced_1.enhancedDatabaseService.initialize();
+            const health = await database_enhanced_1.enhancedDatabaseService.getHealthStatus();
             console.log('\n=== Connection Status ===');
             console.log(`Status: ${health.isConnected ? '✅ Connected' : '❌ Disconnected'}`);
             console.log(`Entity Counts: ${JSON.stringify(health.entityCounts, null, 2)}`);

@@ -17,6 +17,8 @@ const logger_1 = require("./shared/logger");
 const module_manager_1 = require("./core/module-manager");
 const database_1 = require("./core/database");
 const redis_1 = require("./core/redis");
+const database_init_1 = require("./core/database-init");
+const database_enhanced_1 = require("./services/database.enhanced");
 // Import middleware
 const response_1 = require("./middleware/response");
 const router_1 = require("./config/router");
@@ -124,12 +126,12 @@ class Application {
      */
     async initializeCoreServices() {
         this.logger.info('Initializing core services...');
-        // Initialize database
-        await database_1.databaseManager.initialize();
-        // Run database migrations
-        if (!config_1.configManager.isTest()) {
-            await database_1.databaseManager.runMigrations();
-        }
+        // Initialize database with enhanced initialization
+        await database_init_1.databaseInitializer.initialize({
+            runMigrations: !config_1.configManager.isTest(),
+            seedData: config_1.configManager.isDevelopment(),
+            enableMonitoring: true
+        });
         // Initialize Redis cache
         await redis_1.redisManager.initialize();
         this.logger.info('Core services initialized successfully');
@@ -298,10 +300,11 @@ class Application {
      */
     async getHealthStatus() {
         const checks = await Promise.allSettled([
-            database_1.databaseManager.healthCheck(),
+            database_enhanced_1.enhancedDatabaseService.getHealthStatus(),
             redis_1.redisManager.healthCheck(),
         ]);
-        const dbHealthy = checks[0].status === 'fulfilled' && checks[0].value;
+        const dbHealth = checks[0].status === 'fulfilled' ? checks[0].value : null;
+        const dbHealthy = dbHealth?.isHealthy || false;
         const redisHealthy = checks[1].status === 'fulfilled' && checks[1].value;
         const overall = dbHealthy && redisHealthy ? 'healthy' : 'degraded';
         return {
@@ -312,6 +315,12 @@ class Application {
                 redis: redisHealthy ? 'healthy' : 'unhealthy',
             },
             modules: module_manager_1.moduleManager.getModuleStatus(),
+            database: dbHealth ? {
+                connectionStats: dbHealth.connectionStats,
+                performanceMetrics: dbHealth.performanceMetrics,
+                recommendations: dbHealth.recommendations,
+                uptime: dbHealth.uptime
+            } : null
         };
     }
     /**

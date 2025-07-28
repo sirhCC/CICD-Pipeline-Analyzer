@@ -5,7 +5,9 @@
  */
 
 import { program } from 'commander';
-import { databaseService } from '@/services/database.service';
+import { enhancedDatabaseService } from '@/services/database.enhanced';
+import { databaseInitializer } from '@/core/database-init';
+import { repositoryFactory } from '@/repositories/factory.enhanced';
 import { configManager } from '@/config';
 import { Logger } from '@/shared/logger';
 
@@ -23,7 +25,10 @@ program
   .action(async () => {
     try {
       logger.info('Initializing database...');
-      await databaseService.initialize();
+      await databaseInitializer.initialize({
+        runMigrations: true,
+        enableMonitoring: true
+      });
       logger.info('Database initialized successfully');
       process.exit(0);
     } catch (error) {
@@ -39,7 +44,8 @@ program
   .action(async () => {
     try {
       logger.info('Running migrations...');
-      await databaseService.runMigrations();
+      await enhancedDatabaseService.initialize();
+      await enhancedDatabaseService.runMigrations();
       logger.info('Migrations completed successfully');
       process.exit(0);
     } catch (error) {
@@ -80,8 +86,8 @@ program
         };
       }
 
-      await databaseService.initialize();
-      await databaseService.seedDatabase(seedOptions);
+      await databaseInitializer.initialize();
+      await enhancedDatabaseService.seedDatabase(seedOptions);
       logger.info('Database seeded successfully');
       process.exit(0);
     } catch (error) {
@@ -97,8 +103,8 @@ program
   .action(async () => {
     try {
       logger.info('Checking database health...');
-      await databaseService.initialize();
-      const health = await databaseService.getHealthStatus();
+      await enhancedDatabaseService.initialize();
+      const health = await enhancedDatabaseService.getHealthStatus();
       
       console.log('\n=== Database Health Status ===');
       console.log(`Connected: ${health.isConnected ? '✅' : '❌'}`);
@@ -106,7 +112,7 @@ program
       console.log(`Pipelines: ${health.entityCounts.pipelines}`);
       console.log(`Pipeline Runs: ${health.entityCounts.pipelineRuns}`);
       console.log(`Migrations Executed: ${health.migrations.executed}`);
-      console.log(`Pool Stats:`, health.poolStats);
+      console.log(`Pool Stats:`, health.connectionStats);
       
       process.exit(0);
     } catch (error) {
@@ -119,16 +125,20 @@ program
 program
   .command('maintenance')
   .description('Perform database maintenance')
-  .action(async () => {
+  .option('--days <days>', 'Days of data to keep (default: 90)', '90')
+  .action(async (options) => {
     try {
       logger.info('Performing database maintenance...');
-      await databaseService.initialize();
-      const result = await databaseService.performMaintenance();
+      await enhancedDatabaseService.initialize();
+      
+      const daysToKeep = parseInt(options.days, 10);
+      await enhancedDatabaseService.cleanupOldData(daysToKeep);
+      
+      const stats = await enhancedDatabaseService.getStatistics();
       
       console.log('\n=== Maintenance Results ===');
-      console.log(`Deleted old runs: ${result.deletedOldRuns}`);
-      console.log(`Deleted inactive users: ${result.deletedInactiveUsers}`);
-      console.log(`Optimized tables: ${result.optimizedTables.join(', ')}`);
+      console.log(`Cleaned up data older than ${daysToKeep} days`);
+      console.log(`Current statistics:`, stats);
       
       process.exit(0);
     } catch (error) {
@@ -145,8 +155,8 @@ program
   .action(async (options) => {
     try {
       logger.info('Creating database backup...');
-      await databaseService.initialize();
-      const backupPath = await databaseService.createBackup(options.path);
+      await enhancedDatabaseService.initialize();
+      const backupPath = await enhancedDatabaseService.createBackup();
       
       console.log(`\n✅ Database backup created: ${backupPath}`);
       process.exit(0);
@@ -174,8 +184,16 @@ program
 
     try {
       logger.warn('Clearing all database data...');
-      await databaseService.initialize();
-      await databaseService.clearAllData();
+      await enhancedDatabaseService.initialize();
+      
+      // Clear all data using repositories
+      const userRepo = repositoryFactory.getRepository('User');
+      const pipelineRunRepo = repositoryFactory.getRepository('PipelineRun');
+      const pipelineRepo = repositoryFactory.getRepository('Pipeline');
+      
+      await pipelineRunRepo.clear();
+      await pipelineRepo.clear();
+      await userRepo.clear();
       
       console.log('\n⚠️  All database data cleared');
       process.exit(0);
@@ -201,8 +219,8 @@ program
       console.log(`SSL: ${dbConfig.ssl ? '✅' : '❌'}`);
       
       try {
-        await databaseService.initialize();
-        const health = await databaseService.getHealthStatus();
+        await enhancedDatabaseService.initialize();
+        const health = await enhancedDatabaseService.getHealthStatus();
         
         console.log('\n=== Connection Status ===');
         console.log(`Status: ${health.isConnected ? '✅ Connected' : '❌ Disconnected'}`);

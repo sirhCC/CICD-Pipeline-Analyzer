@@ -7,12 +7,18 @@ export declare class DatabaseManager {
     private static instance;
     private dataSource;
     private logger;
+    private connectionRetries;
+    private maxRetries;
     private constructor();
     static getInstance(): DatabaseManager;
     /**
      * Initialize database connection
      */
     initialize(): Promise<void>;
+    /**
+     * Connect with retry logic
+     */
+    private connectWithRetry;
     /**
      * Get the data source instance
      */
