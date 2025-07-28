@@ -32,7 +32,7 @@ var UserRole;
     UserRole["ADMIN"] = "admin";
     UserRole["ANALYST"] = "analyst";
     UserRole["VIEWER"] = "viewer";
-    UserRole["API_USER"] = "api_user";
+    UserRole["DEVELOPER"] = "developer";
 })(UserRole || (exports.UserRole = UserRole = {}));
 var Permission;
 (function (Permission) {
@@ -75,8 +75,9 @@ const ROLE_PERMISSIONS = {
         Permission.REPORTS_READ,
         Permission.USERS_READ
     ],
-    [UserRole.API_USER]: [
+    [UserRole.DEVELOPER]: [
         Permission.PIPELINES_READ,
+        Permission.PIPELINES_WRITE,
         Permission.PIPELINES_ANALYZE,
         Permission.REPORTS_READ
     ]
@@ -268,7 +269,7 @@ const authenticateJWT = (req, res, next) => {
                 req.user = {
                     userId: decoded.userId,
                     email: `api-key-${decoded.keyId}`,
-                    role: UserRole.API_USER,
+                    role: UserRole.DEVELOPER,
                     permissions: decoded.permissions,
                     sessionId: `api-${decoded.keyId}`,
                     isApiKey: true,

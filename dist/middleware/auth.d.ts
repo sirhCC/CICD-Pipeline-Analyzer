@@ -65,7 +65,7 @@ export declare enum UserRole {
     ADMIN = "admin",
     ANALYST = "analyst",
     VIEWER = "viewer",
-    API_USER = "api_user"
+    DEVELOPER = "developer"
 }
 export declare enum Permission {
     PIPELINES_READ = "pipelines:read",
