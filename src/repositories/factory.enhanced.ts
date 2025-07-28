@@ -213,7 +213,8 @@ export class EnhancedRepositoryFactory {
 // Export singleton instance
 export const repositoryFactory = EnhancedRepositoryFactory.getInstance();
 
-// Export repository instances for backward compatibility
-export const userRepository = repositoryFactory.getUserRepository();
-export const pipelineRepository = repositoryFactory.getPipelineRepository();
-export const pipelineRunRepository = repositoryFactory.getPipelineRunRepository();
+// Export repository getter functions for backward compatibility
+// These create repositories on-demand rather than at module import time
+export const getUserRepository = () => repositoryFactory.getUserRepository();
+export const getPipelineRepository = () => repositoryFactory.getPipelineRepository();
+export const getPipelineRunRepository = () => repositoryFactory.getPipelineRunRepository();
