@@ -495,18 +495,36 @@ spec:
 
 ## 🤝 Contributing
 
-We welcome contributions! Please see our [Contributing Guide](CONTRIBUTING.md) for details.
+We welcome contributions from the community! Whether you're fixing bugs, adding features, improving documentation, or helping with testing, your contributions are appreciated.
 
-### Development Setup
+### Quick Start for Contributors
+
+1. **Read our [Contributing Guide](docs/CONTRIBUTING.md)** - Comprehensive guide with all the details
+2. **Check the [Issues](https://github.com/sirhCC/CICDpa/issues)** - Find something to work on
+3. **Join the conversation** - Comment on issues or start discussions
+
+### Development Workflow
 
 1. Fork the repository
 2. Create a feature branch: `git checkout -b feature/amazing-feature`
-3. Make your changes
+3. Make your changes following our [coding standards](docs/CONTRIBUTING.md#coding-standards)
 4. Add tests for new functionality
 5. Ensure all tests pass: `npm test`
-6. Commit your changes: `git commit -m 'Add amazing feature'`
+6. Commit with [conventional commits](docs/CONTRIBUTING.md#commit-your-changes): `git commit -m 'feat: add amazing feature'`
 7. Push to the branch: `git push origin feature/amazing-feature`
-8. Open a Pull Request
+8. Open a Pull Request with detailed description
+
+### Ways to Contribute
+
+- 🐛 **Bug Reports** - Help us identify and fix issues
+- ✨ **Feature Requests** - Suggest new functionality
+- 💡 **Code Contributions** - Implement features or fix bugs
+- 📚 **Documentation** - Improve our guides and docs
+- 🧪 **Testing** - Add test coverage or find edge cases
+- 🎨 **UI/UX** - Enhance user experience
+- 🔍 **Code Review** - Help review pull requests
+
+For detailed guidelines, please see our **[Contributing Guide](docs/CONTRIBUTING.md)**.
 
 ### Code Quality
 
