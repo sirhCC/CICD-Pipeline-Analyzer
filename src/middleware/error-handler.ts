@@ -290,7 +290,7 @@ export const asyncHandler = (fn: Function) => {
  * 404 Not Found handler
  */
 export const notFoundHandler = (req: Request, res: Response, next: NextFunction): void => {
-  const error = new NotFoundError(`Route ${req.method} ${req.originalUrl} not found`);
+  const error = new NotFoundError(`Route ${req.method} ${req.originalUrl}`);
   next(error);
 };
 
