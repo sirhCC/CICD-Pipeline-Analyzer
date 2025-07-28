@@ -102,7 +102,7 @@ curl -H "Authorization: Bearer <token>" \
 ### Environment Variables
 
 | Variable | Description | Default |
-|----------|-------------|---------|
+| --- | --- | --- |
 | `PORT` | Server port | `3000` |
 | `DATABASE_URL` | PostgreSQL connection string | Required |
 | `REDIS_URL` | Redis connection string | Required |
