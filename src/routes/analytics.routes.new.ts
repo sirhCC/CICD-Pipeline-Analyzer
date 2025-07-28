@@ -84,7 +84,7 @@ router.get('/dashboard',
     });
 
     res.json(ResponseBuilder.success(dashboard, {
-      performance: { duration: Date.now() - (req as any).startTime }
+      performance: { executionTime: Date.now() - (req as any).startTime }
     }));
   })
 );
@@ -108,10 +108,10 @@ router.get('/pipelines/:pipelineId/metrics',
       userId: (req as any).user?.userId 
     });
 
-    const metrics = await analyticsService.calculateMetrics(pipelineId, period as 'hourly' | 'daily' | 'weekly' | 'monthly');
+    const metrics = await analyticsService.calculateMetrics(pipelineId!, period as 'hourly' | 'daily' | 'weekly' | 'monthly');
 
     res.json(ResponseBuilder.success(metrics, {
-      performance: { duration: Date.now() - (req as any).startTime }
+      performance: { executionTime: Date.now() - (req as any).startTime }
     }));
   })
 );
@@ -134,7 +134,7 @@ router.get('/pipelines/:pipelineId/patterns',
     const patterns = await analyticsService.detectFailurePatterns(pipelineId);
 
     res.json(ResponseBuilder.success(patterns, {
-      performance: { duration: Date.now() - (req as any).startTime }
+      performance: { executionTime: Date.now() - (req as any).startTime }
     }));
   })
 );
@@ -153,7 +153,7 @@ router.get('/patterns',
     const patterns = await analyticsService.detectFailurePatterns();
 
     res.json(ResponseBuilder.success(patterns, {
-      performance: { duration: Date.now() - (req as any).startTime }
+      performance: { executionTime: Date.now() - (req as any).startTime }
     }));
   })
 );
@@ -173,10 +173,10 @@ router.get('/pipelines/:pipelineId/recommendations',
       userId: (req as any).user?.userId 
     });
 
-    const recommendations = await analyticsService.generateOptimizationRecommendations(pipelineId);
+    const recommendations = await analyticsService.generateOptimizationRecommendations(pipelineId!);
 
     res.json(ResponseBuilder.success(recommendations, {
-      performance: { duration: Date.now() - (req as any).startTime }
+      performance: { executionTime: Date.now() - (req as any).startTime }
     }));
   })
 );
@@ -195,7 +195,7 @@ router.get('/alerts',
     const alerts = await analyticsService.generateAlerts();
 
     res.json(ResponseBuilder.success(alerts, {
-      performance: { duration: Date.now() - (req as any).startTime }
+      performance: { executionTime: Date.now() - (req as any).startTime }
     }));
   })
 );
@@ -219,7 +219,7 @@ router.put('/alerts/:alertId',
       userId: (req as any).user?.userId 
     });
 
-    const updatedAlert = await analyticsService.updateAlert(alertId, {
+    const updatedAlert = await analyticsService.updateAlert(alertId!, {
       acknowledged,
       acknowledgedBy
     });
@@ -275,7 +275,7 @@ router.get('/health',
 
     res.status(isHealthy ? 200 : 503).json(
       ResponseBuilder.success(health, {
-        performance: { duration: Date.now() - (req as any).startTime }
+        performance: { executionTime: Date.now() - (req as any).startTime }
       })
     );
   })
