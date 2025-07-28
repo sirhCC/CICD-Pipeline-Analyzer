@@ -5,6 +5,7 @@
 
 import { DataSource, QueryRunner, EntityManager } from 'typeorm';
 import { databaseConfigManager } from './database.config';
+import { databaseSecurityManager } from './database-security';
 import { Logger } from '@/shared/logger';
 
 export class DatabaseManager {
@@ -60,9 +61,25 @@ export class DatabaseManager {
       try {
         await this.dataSource!.initialize();
         this.connectionRetries = 0; // Reset on success
+        
+        // Log successful connection
+        const options = this.dataSource!.options as any;
+        databaseSecurityManager.logConnectionAttempt(true, {
+          database: options.database || 'unknown',
+          host: options.host || 'unknown'
+        });
+        
         return;
       } catch (error) {
         this.connectionRetries++;
+        
+        // Log failed connection attempt
+        const options = this.dataSource!.options as any;
+        databaseSecurityManager.logConnectionAttempt(false, {
+          database: options.database || 'unknown',
+          host: options.host || 'unknown',
+          error: error instanceof Error ? error.message : String(error)
+        });
         
         if (this.connectionRetries >= this.maxRetries) {
           this.logger.error('Max connection retries reached', error);
@@ -210,9 +227,15 @@ export class DatabaseManager {
   }
 
   /**
-   * Execute raw SQL query with logging
+   * Execute raw SQL query with logging and security analysis
    */
   public async query<T = unknown>(sql: string, parameters?: unknown[]): Promise<T> {
+    // Analyze query for security issues
+    databaseSecurityManager.analyzeQuery(sql, {
+      host: 'internal',
+      user: 'system'
+    });
+
     const timer = this.logger.startTimer('database_query');
     
     try {
@@ -225,6 +248,20 @@ export class DatabaseManager {
     } catch (error) {
       timer();
       this.logger.error('Database query failed', error, { sql, parameters });
+      
+      // Log potential security errors
+      if (error instanceof Error) {
+        databaseSecurityManager.logSecurityEvent({
+          type: 'error',
+          severity: 'medium',
+          message: 'Database query execution failed',
+          details: {
+            query: sql.substring(0, 200) + (sql.length > 200 ? '...' : ''),
+            error: error.message
+          }
+        });
+      }
+      
       throw error;
     }
   }
