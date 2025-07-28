@@ -315,7 +315,7 @@ describe('JWT Authentication Middleware Tests', () => {
       const apiKey = authService.generateApiKey({
         keyId: 'api-key-123',
         userId: testUserId,
-        permissions: getRolePermissions(UserRole.API_USER),
+        permissions: getRolePermissions(UserRole.DEVELOPER),
         rateLimit: 1000
       });
       
@@ -559,7 +559,7 @@ describe('JWT Authentication Middleware Tests', () => {
       expect(getRolePermissions(UserRole.ADMIN)).toEqual(ROLE_PERMISSIONS[UserRole.ADMIN]);
       expect(getRolePermissions(UserRole.ANALYST)).toEqual(ROLE_PERMISSIONS[UserRole.ANALYST]);
       expect(getRolePermissions(UserRole.VIEWER)).toEqual(ROLE_PERMISSIONS[UserRole.VIEWER]);
-      expect(getRolePermissions(UserRole.API_USER)).toEqual(ROLE_PERMISSIONS[UserRole.API_USER]);
+      expect(getRolePermissions(UserRole.DEVELOPER)).toEqual(ROLE_PERMISSIONS[UserRole.DEVELOPER]);
     });
 
     test('should return empty array for invalid role', () => {

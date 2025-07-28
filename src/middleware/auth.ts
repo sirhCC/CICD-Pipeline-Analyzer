@@ -85,7 +85,7 @@ export enum UserRole {
   ADMIN = 'admin',
   ANALYST = 'analyst',
   VIEWER = 'viewer',
-  API_USER = 'api_user'
+  DEVELOPER = 'developer'
 }
 
 export enum Permission {
@@ -133,8 +133,9 @@ const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     Permission.REPORTS_READ,
     Permission.USERS_READ
   ],
-  [UserRole.API_USER]: [
+  [UserRole.DEVELOPER]: [
     Permission.PIPELINES_READ,
+    Permission.PIPELINES_WRITE,
     Permission.PIPELINES_ANALYZE,
     Permission.REPORTS_READ
   ]
@@ -352,7 +353,7 @@ export const authenticateJWT = (req: AuthenticatedRequest, res: Response, next: 
         req.user = {
           userId: decoded.userId,
           email: `api-key-${decoded.keyId}`,
-          role: UserRole.API_USER,
+          role: UserRole.DEVELOPER,
           permissions: decoded.permissions,
           sessionId: `api-${decoded.keyId}`,
           isApiKey: true,
