@@ -351,7 +351,7 @@ export interface ServerConfig {
 }
 
 export interface DatabaseConfig {
-  type: 'postgres' | 'mysql' | 'sqlite';
+  type: 'postgres' | 'mysql';
   host: string;
   port: number;
   database: string;

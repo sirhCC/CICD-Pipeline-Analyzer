@@ -1,0 +1,362 @@
+"use strict";
+/**
+ * CI/CD Pipeline Analyzer - Main Application Entry Point
+ * Enterprise-grade modular architecture with comprehensive error handling
+ */
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.Application = void 0;
+const express_1 = __importDefault(require("express"));
+const helmet_1 = __importDefault(require("helmet"));
+const cors_1 = __importDefault(require("cors"));
+const compression_1 = __importDefault(require("compression"));
+const config_1 = require("./config");
+const logger_1 = require("./shared/logger");
+const module_manager_1 = require("./core/module-manager");
+const database_1 = require("./core/database");
+const redis_1 = require("./core/redis");
+// Import middleware (will be created)
+// import { errorHandler } from './middleware/error-handler';
+// import { requestLogger } from './middleware/request-logger';
+// import { rateLimiter } from './middleware/rate-limiter';
+// import { auth } from './middleware/auth';
+class Application {
+    app;
+    logger;
+    server;
+    constructor() {
+        this.app = (0, express_1.default)();
+        this.logger = new logger_1.Logger('Application');
+    }
+    /**
+     * Initialize the application
+     */
+    async initialize() {
+        try {
+            this.logger.info('Starting CI/CD Pipeline Analyzer...');
+            // Validate configuration
+            this.validateConfiguration();
+            // Initialize core services
+            await this.initializeCoreServices();
+            // Configure Express application
+            this.configureMiddleware();
+            this.configureRoutes();
+            this.configureErrorHandling();
+            // Initialize modules
+            await this.initializeModules();
+            this.logger.info('Application initialized successfully');
+        }
+        catch (error) {
+            this.logger.error('Failed to initialize application', error);
+            throw error;
+        }
+    }
+    /**
+     * Start the application server
+     */
+    async start() {
+        try {
+            const config = config_1.configManager.getServer();
+            this.server = this.app.listen(config.port, config.host, () => {
+                this.logger.info(`Server started successfully`, {
+                    host: config.host,
+                    port: config.port,
+                    environment: process.env.NODE_ENV,
+                    version: process.env.npm_package_version || '1.0.0',
+                });
+            });
+            // Graceful shutdown handlers
+            this.setupGracefulShutdown();
+        }
+        catch (error) {
+            this.logger.error('Failed to start server', error);
+            throw error;
+        }
+    }
+    /**
+     * Stop the application server
+     */
+    async stop() {
+        try {
+            this.logger.info('Shutting down application...');
+            // Close server
+            if (this.server) {
+                await new Promise((resolve) => {
+                    this.server.close(() => {
+                        this.logger.info('Server closed');
+                        resolve();
+                    });
+                });
+            }
+            // Shutdown modules
+            await module_manager_1.moduleManager.shutdown();
+            // Close database connections
+            await database_1.databaseManager.close();
+            // Close Redis connection
+            await redis_1.redisManager.close();
+            this.logger.info('Application shutdown complete');
+        }
+        catch (error) {
+            this.logger.error('Error during shutdown', error);
+            throw error;
+        }
+    }
+    /**
+     * Validate application configuration
+     */
+    validateConfiguration() {
+        this.logger.info('Validating configuration...');
+        try {
+            config_1.configManager.validateConfiguration();
+            this.logger.info('Configuration validation passed');
+        }
+        catch (error) {
+            this.logger.error('Configuration validation failed', error);
+            throw error;
+        }
+    }
+    /**
+     * Initialize core services (database, cache, etc.)
+     */
+    async initializeCoreServices() {
+        this.logger.info('Initializing core services...');
+        // Initialize database
+        await database_1.databaseManager.initialize();
+        // Run database migrations
+        if (!config_1.configManager.isTest()) {
+            await database_1.databaseManager.runMigrations();
+        }
+        // Initialize Redis cache
+        await redis_1.redisManager.initialize();
+        this.logger.info('Core services initialized successfully');
+    }
+    /**
+     * Configure Express middleware
+     */
+    configureMiddleware() {
+        this.logger.info('Configuring middleware...');
+        const config = config_1.configManager.getServer();
+        // Security middleware
+        if (config.security.helmet) {
+            this.app.use((0, helmet_1.default)({
+                contentSecurityPolicy: {
+                    directives: {
+                        defaultSrc: ["'self'"],
+                        styleSrc: ["'self'", "'unsafe-inline'"],
+                        scriptSrc: ["'self'"],
+                        imgSrc: ["'self'", "data:", "https:"],
+                    },
+                },
+                hsts: {
+                    maxAge: 31536000,
+                    includeSubDomains: true,
+                    preload: true,
+                },
+            }));
+        }
+        // CORS middleware
+        this.app.use((0, cors_1.default)({
+            origin: config.cors.origin,
+            credentials: config.cors.credentials,
+            optionsSuccessStatus: config.cors.optionsSuccessStatus,
+        }));
+        // Compression middleware
+        if (config.security.compression) {
+            this.app.use((0, compression_1.default)());
+        }
+        // Body parsing middleware
+        this.app.use(express_1.default.json({ limit: '10mb' }));
+        this.app.use(express_1.default.urlencoded({ extended: true, limit: '10mb' }));
+        // Request logging middleware (will be implemented)
+        // this.app.use(requestLogger);
+        // Rate limiting middleware (will be implemented)
+        // if (config.security.rateLimiting) {
+        //   this.app.use(rateLimiter);
+        // }
+        this.logger.info('Middleware configured successfully');
+    }
+    /**
+     * Configure application routes
+     */
+    configureRoutes() {
+        this.logger.info('Configuring routes...');
+        // Health check endpoint
+        this.app.get('/health', async (req, res) => {
+            try {
+                const health = await this.getHealthStatus();
+                const statusCode = health.status === 'healthy' ? 200 : 503;
+                res.status(statusCode).json(health);
+            }
+            catch (error) {
+                this.logger.error('Health check failed', error);
+                res.status(503).json({
+                    status: 'unhealthy',
+                    error: 'Health check failed',
+                });
+            }
+        });
+        // API version endpoint
+        this.app.get('/version', (req, res) => {
+            res.json({
+                name: 'CI/CD Pipeline Analyzer',
+                version: process.env.npm_package_version || '1.0.0',
+                environment: process.env.NODE_ENV,
+                timestamp: new Date().toISOString(),
+            });
+        });
+        // Configuration endpoint (development only)
+        if (config_1.configManager.isDevelopment()) {
+            this.app.get('/config', (req, res) => {
+                const config = config_1.configManager.get();
+                // Remove sensitive information
+                const sanitized = {
+                    ...config,
+                    database: { ...config.database, password: '[REDACTED]' },
+                    auth: { ...config.auth, jwtSecret: '[REDACTED]' },
+                };
+                res.json(sanitized);
+            });
+        }
+        // Module status endpoint
+        this.app.get('/modules', (req, res) => {
+            const status = module_manager_1.moduleManager.getModuleStatus();
+            res.json(status);
+        });
+        // API routes (will be implemented)
+        // this.app.use('/api/v1/pipelines', pipelineRoutes);
+        // this.app.use('/api/v1/analysis', analysisRoutes);
+        // this.app.use('/api/v1/auth', authRoutes);
+        // Catch-all for unmatched routes
+        this.app.use('*', (req, res) => {
+            res.status(404).json({
+                error: 'Not Found',
+                message: `Route ${req.method} ${req.originalUrl} not found`,
+                timestamp: new Date().toISOString(),
+            });
+        });
+        this.logger.info('Routes configured successfully');
+    }
+    /**
+     * Configure error handling middleware
+     */
+    configureErrorHandling() {
+        this.logger.info('Configuring error handling...');
+        // Global error handler
+        this.app.use((error, req, res, next) => {
+            this.logger.error('Unhandled request error', error, {
+                method: req.method,
+                url: req.url,
+                userAgent: req.get('User-Agent'),
+                ip: req.ip,
+            });
+            const statusCode = error.statusCode || 500;
+            const message = config_1.configManager.isDevelopment()
+                ? error.message
+                : 'Internal Server Error';
+            res.status(statusCode).json({
+                error: message,
+                timestamp: new Date().toISOString(),
+                requestId: req.headers['x-request-id'] || 'unknown',
+            });
+        });
+        this.logger.info('Error handling configured successfully');
+    }
+    /**
+     * Initialize application modules
+     */
+    async initializeModules() {
+        this.logger.info('Initializing application modules...');
+        // Register core modules (will be implemented)
+        // moduleManager.registerModule({
+        //   name: 'github-actions-provider',
+        //   version: '1.0.0',
+        //   type: 'provider',
+        //   factory: () => import('@/providers/github-actions').then(m => m.createGitHubActionsProvider()),
+        //   dependencies: [],
+        //   optional: false,
+        // });
+        // Initialize all registered modules
+        await module_manager_1.moduleManager.initializeModules();
+        this.logger.info('Application modules initialized successfully');
+    }
+    /**
+     * Get application health status
+     */
+    async getHealthStatus() {
+        const checks = await Promise.allSettled([
+            database_1.databaseManager.healthCheck(),
+            redis_1.redisManager.healthCheck(),
+        ]);
+        const dbHealthy = checks[0].status === 'fulfilled' && checks[0].value;
+        const redisHealthy = checks[1].status === 'fulfilled' && checks[1].value;
+        const overall = dbHealthy && redisHealthy ? 'healthy' : 'degraded';
+        return {
+            status: overall,
+            timestamp: new Date().toISOString(),
+            services: {
+                database: dbHealthy ? 'healthy' : 'unhealthy',
+                redis: redisHealthy ? 'healthy' : 'unhealthy',
+            },
+            modules: module_manager_1.moduleManager.getModuleStatus(),
+        };
+    }
+    /**
+     * Setup graceful shutdown handlers
+     */
+    setupGracefulShutdown() {
+        const signals = ['SIGTERM', 'SIGINT', 'SIGUSR2'];
+        signals.forEach((signal) => {
+            process.on(signal, async () => {
+                this.logger.info(`Received ${signal}, shutting down gracefully...`);
+                try {
+                    await this.stop();
+                    process.exit(0);
+                }
+                catch (error) {
+                    this.logger.error('Error during graceful shutdown', error);
+                    process.exit(1);
+                }
+            });
+        });
+        // Handle uncaught exceptions
+        process.on('uncaughtException', (error) => {
+            this.logger.error('Uncaught exception', error);
+            process.exit(1);
+        });
+        // Handle unhandled rejections
+        process.on('unhandledRejection', (reason, promise) => {
+            this.logger.error('Unhandled rejection', reason, { promise });
+            process.exit(1);
+        });
+    }
+    /**
+     * Get Express application instance
+     */
+    getApp() {
+        return this.app;
+    }
+}
+exports.Application = Application;
+// === Application Bootstrap ===
+async function bootstrap() {
+    const app = new Application();
+    try {
+        await app.initialize();
+        await app.start();
+    }
+    catch (error) {
+        console.error('Failed to start application:', error);
+        process.exit(1);
+    }
+}
+// Start the application if this file is run directly
+if (require.main === module) {
+    bootstrap().catch((error) => {
+        console.error('Bootstrap error:', error);
+        process.exit(1);
+    });
+}
+exports.default = bootstrap;
+//# sourceMappingURL=index.js.map
