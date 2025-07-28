@@ -8,10 +8,10 @@ exports.databaseManager = exports.DatabaseManager = void 0;
 const typeorm_1 = require("typeorm");
 const config_1 = require("../config");
 const logger_1 = require("../shared/logger");
-// Database entities will be imported here as they're created
-// import { Pipeline } from '@/entities/Pipeline';
-// import { PipelineStage } from '@/entities/PipelineStage';
-// import { User } from '@/entities/User';
+// Import all entities
+const pipeline_entity_1 = require("../entities/pipeline.entity");
+const pipeline_run_entity_1 = require("../entities/pipeline-run.entity");
+const user_entity_1 = require("../entities/user.entity");
 class DatabaseManager {
     static instance;
     dataSource = null;
@@ -53,10 +53,15 @@ class DatabaseManager {
                 },
                 // Entity Configuration
                 entities: [
-                // './src/entities/**/*.ts' // Will be uncommented when entities are created
+                    pipeline_entity_1.Pipeline,
+                    pipeline_run_entity_1.PipelineRun,
+                    pipeline_run_entity_1.PipelineRunStage,
+                    user_entity_1.User,
+                    user_entity_1.UserSession,
+                    user_entity_1.ApiKey
                 ],
                 // Migration Configuration
-                migrations: ['./src/migrations/**/*.ts'],
+                migrations: ['src/migrations/**/*.ts'],
                 migrationsRun: false, // We'll run migrations manually
                 // Development Configuration
                 synchronize: config_1.configManager.isDevelopment(), // Only in development
