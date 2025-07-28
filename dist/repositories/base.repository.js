@@ -4,8 +4,8 @@
  */
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.BaseRepository = void 0;
-const database_1 = require("../core/database");
-const logger_1 = require("../shared/logger");
+const database_1 = require("@/core/database");
+const logger_1 = require("@/shared/logger");
 class BaseRepository {
     repository;
     logger;

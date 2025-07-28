@@ -17,11 +17,12 @@ const logger_1 = require("./shared/logger");
 const module_manager_1 = require("./core/module-manager");
 const database_1 = require("./core/database");
 const redis_1 = require("./core/redis");
-// Import middleware (will be created)
-// import { errorHandler } from './middleware/error-handler';
-// import { requestLogger } from './middleware/request-logger';
-// import { rateLimiter } from './middleware/rate-limiter';
-// import { auth } from './middleware/auth';
+// Import middleware
+const response_1 = require("./middleware/response");
+// import { errorHandler } from '@/middleware/error-handler';
+// import { requestLogger } from '@/middleware/request-logger';
+// import { rateLimiter } from '@/middleware/rate-limiter';
+// import { auth } from '@/middleware/auth';
 class Application {
     app;
     logger;
@@ -169,6 +170,8 @@ class Application {
         // Body parsing middleware
         this.app.use(express_1.default.json({ limit: '10mb' }));
         this.app.use(express_1.default.urlencoded({ extended: true, limit: '10mb' }));
+        // Response standardization middleware
+        this.app.use(response_1.responseMiddleware);
         // Request logging middleware (will be implemented)
         // this.app.use(requestLogger);
         // Rate limiting middleware (will be implemented)

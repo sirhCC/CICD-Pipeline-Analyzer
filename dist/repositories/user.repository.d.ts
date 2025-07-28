@@ -2,8 +2,8 @@
  * User Repository - Database operations for User entities
  */
 import { BaseRepository, PaginationOptions, PaginationResult } from './base.repository';
-import { User } from '../entities/user.entity';
-import { UserRole } from '../types';
+import { User } from '@/entities/user.entity';
+import { UserRole } from '@/types';
 export interface UserSearchOptions {
     role?: UserRole;
     isActive?: boolean;

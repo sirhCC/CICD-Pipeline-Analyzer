@@ -14,7 +14,8 @@ import { moduleManager } from './core/module-manager';
 import { databaseManager } from './core/database';
 import { redisManager } from './core/redis';
 
-// Import middleware (will be created)
+// Import middleware
+import { responseMiddleware } from './middleware/response';
 // import { errorHandler } from '@/middleware/error-handler';
 // import { requestLogger } from '@/middleware/request-logger';
 // import { rateLimiter } from '@/middleware/rate-limiter';
@@ -195,6 +196,9 @@ class Application {
     // Body parsing middleware
     this.app.use(express.json({ limit: '10mb' }));
     this.app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+
+    // Response standardization middleware
+    this.app.use(responseMiddleware);
 
     // Request logging middleware (will be implemented)
     // this.app.use(requestLogger);

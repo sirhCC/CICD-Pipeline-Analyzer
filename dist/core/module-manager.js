@@ -5,7 +5,7 @@
  */
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.moduleManager = exports.ModuleManager = void 0;
-const logger_1 = require("../shared/logger");
+const logger_1 = require("@/shared/logger");
 class ModuleManager {
     static instance;
     modules = new Map();

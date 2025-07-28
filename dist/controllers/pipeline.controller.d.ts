@@ -6,7 +6,7 @@ import { Response, NextFunction } from 'express';
 import { AuthenticatedRequest } from '../middleware/auth';
 export declare const pipelineController: {
     /**
-     * List pipelines with basic pagination
+     * List pipelines with standardized pagination and filtering
      */
     listPipelines(req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void>;
     /**

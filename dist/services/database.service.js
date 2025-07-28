@@ -4,11 +4,11 @@
  */
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.databaseService = exports.DatabaseService = void 0;
-const database_1 = require("../core/database");
-const logger_1 = require("../shared/logger");
-const repositories_1 = require("../repositories");
-const config_1 = require("../config");
-const types_1 = require("../types");
+const database_1 = require("@/core/database");
+const logger_1 = require("@/shared/logger");
+const repositories_1 = require("@/repositories");
+const config_1 = require("@/config");
+const types_1 = require("@/types");
 class DatabaseService {
     static instance;
     logger;

@@ -2,7 +2,7 @@
  * Enterprise Configuration Management
  * Modular, type-safe configuration with environment validation
  */
-import type { AppConfig } from '../types';
+import type { AppConfig } from '@/types';
 declare const appConfig: AppConfig;
 export declare class ConfigManager {
     private static instance;

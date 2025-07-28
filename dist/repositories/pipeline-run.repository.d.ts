@@ -2,8 +2,8 @@
  * Pipeline Run Repository - Database operations for Pipeline Run entities
  */
 import { BaseRepository, PaginationOptions, PaginationResult } from './base.repository';
-import { PipelineRun } from '../entities/pipeline-run.entity';
-import { PipelineStatus } from '../types';
+import { PipelineRun } from '@/entities/pipeline-run.entity';
+import { PipelineStatus } from '@/types';
 export interface PipelineRunSearchOptions {
     pipelineId?: string;
     status?: PipelineStatus;

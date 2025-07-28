@@ -10,7 +10,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.configManager = exports.ConfigManager = void 0;
 const dotenv_1 = require("dotenv");
 const joi_1 = __importDefault(require("joi"));
-const types_1 = require("../types");
+const types_1 = require("@/types");
 // Load environment variables
 (0, dotenv_1.config)();
 // === Environment Validation Schema ===

@@ -25,7 +25,7 @@ exports.validation = exports.apiSchemas = exports.pipelineSchemas = exports.comm
 exports.validateRequest = validateRequest;
 exports.validateFileUpload = validateFileUpload;
 const joi_1 = __importDefault(require("joi"));
-const logger_1 = require("../shared/logger");
+const logger_1 = require("@/shared/logger");
 const error_handler_1 = require("./error-handler");
 // Default validation options
 const defaultOptions = {

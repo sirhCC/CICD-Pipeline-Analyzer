@@ -10,51 +10,63 @@ import { Logger } from '../shared/logger';
 import { ValidationError, NotFoundError, AuthorizationError } from '../middleware/error-handler';
 import { providerFactory } from '../providers/factory';
 import { PipelineProvider, PipelineStatus } from '../types';
+import { calculatePagination } from '../shared/api-response';
+import { trackDatabaseQuery } from '../middleware/response';
 
 const logger = new Logger('PipelineController');
 
 export const pipelineController = {
   /**
-   * List pipelines with basic pagination
+   * List pipelines with standardized pagination and filtering
    */
   async listPipelines(req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> {
     try {
-      const page = parseInt(req.query.page as string) || 1;
-      const limit = parseInt(req.query.limit as string) || 20;
+      const page = Math.max(1, parseInt(req.query.page as string) || 1);
+      const limit = Math.min(100, Math.max(1, parseInt(req.query.limit as string) || 20));
+      const provider = req.query.provider as PipelineProvider;
+      const status = req.query.status as PipelineStatus;
+      const repository = req.query.repository as string;
 
-      // For now, just get basic list without complex filtering
+      // Track database query for performance metrics
+      trackDatabaseQuery(req);
+
+      // Build filter options
+      const where: any = {};
+      if (provider) where.provider = provider;
+      if (status) where.status = status;
+      if (repository) where.repository = repository;
+
+      // Get total count for pagination
+      const total = await pipelineRepository.count(where);
+      trackDatabaseQuery(req);
+
+      // Get paginated results
       const pipelines = await pipelineRepository.findMany({
+        where,
         take: limit,
         skip: (page - 1) * limit,
         order: { createdAt: 'DESC' }
       });
+      trackDatabaseQuery(req);
 
-      logger.info('Pipelines listed', {
+      const pagination = calculatePagination(page, limit, total);
+
+      logger.info('Pipelines listed successfully', {
         userId: req.user?.userId,
         count: pipelines.length,
+        total,
         page,
-        limit
+        limit,
+        filters: { provider, status, repository }
       });
 
-      res.json({
-        success: true,
-        data: {
-          pipelines,
-          pagination: {
-            page,
-            limit,
-            total: pipelines.length, // Simplified for now
-            totalPages: Math.ceil(pipelines.length / limit)
-          }
-        },
-        metadata: {
-          requestId: req.headers['x-request-id'] || 'unknown',
-          timestamp: new Date(),
-          processingTime: 0,
-          version: '1.0.0'
-        }
-      });
+      // Use standardized response format
+      res.apiSuccess({ items: pipelines, pagination });
     } catch (error) {
+      logger.error('Failed to list pipelines', {
+        error: error instanceof Error ? error.message : String(error),
+        userId: req.user?.userId
+      });
       next(error);
     }
   },

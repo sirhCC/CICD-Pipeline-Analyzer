@@ -2,7 +2,7 @@
  * Core Module Manager - Enterprise Modular Architecture
  * Manages the lifecycle and dependencies of all modules
  */
-import type { Module, ProviderModule, AnalysisModule } from '../types';
+import type { Module, ProviderModule, AnalysisModule } from '@/types';
 export interface ModuleDefinition {
     name: string;
     version: string;

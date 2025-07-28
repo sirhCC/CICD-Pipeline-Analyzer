@@ -59,26 +59,17 @@ exports.authController = {
                 email: user.email,
                 ip: req.ip
             });
-            res.json({
-                success: true,
-                data: {
-                    user: {
-                        id: user.id,
-                        email: user.email,
-                        firstName: user.firstName,
-                        lastName: user.lastName,
-                        role: user.role,
-                        permissions: user.permissions
-                    },
-                    accessToken,
-                    ...(rememberMe ? {} : { refreshToken })
+            res.apiSuccess({
+                user: {
+                    id: user.id,
+                    email: user.email,
+                    firstName: user.firstName,
+                    lastName: user.lastName,
+                    role: user.role,
+                    permissions: user.permissions
                 },
-                metadata: {
-                    requestId: req.headers['x-request-id'] || 'unknown',
-                    timestamp: new Date(),
-                    processingTime: 0,
-                    version: '1.0.0'
-                }
+                accessToken,
+                ...(rememberMe ? {} : { refreshToken })
             });
         }
         catch (error) {
@@ -112,22 +103,13 @@ exports.authController = {
                 userId: user.id,
                 email: user.email
             });
-            res.status(201).json({
-                success: true,
-                data: {
-                    user: {
-                        id: user.id,
-                        email: user.email,
-                        firstName: user.firstName,
-                        lastName: user.lastName,
-                        role: user.role
-                    }
-                },
-                metadata: {
-                    requestId: req.headers['x-request-id'] || 'unknown',
-                    timestamp: new Date(),
-                    processingTime: 0,
-                    version: '1.0.0'
+            res.apiCreated({
+                user: {
+                    id: user.id,
+                    email: user.email,
+                    firstName: user.firstName,
+                    lastName: user.lastName,
+                    role: user.role
                 }
             });
         }
@@ -158,16 +140,7 @@ exports.authController = {
                 permissions: user.permissions || [],
                 sessionId: decoded.sessionId
             });
-            res.json({
-                success: true,
-                data: { accessToken },
-                metadata: {
-                    requestId: req.headers['x-request-id'] || 'unknown',
-                    timestamp: new Date(),
-                    processingTime: 0,
-                    version: '1.0.0'
-                }
-            });
+            res.apiSuccess({ accessToken });
         }
         catch (error) {
             next(error);
@@ -182,25 +155,16 @@ exports.authController = {
             if (!user) {
                 throw new error_handler_1.NotFoundError('User');
             }
-            res.json({
-                success: true,
-                data: {
-                    user: {
-                        id: user.id,
-                        email: user.email,
-                        firstName: user.firstName,
-                        lastName: user.lastName,
-                        role: user.role,
-                        permissions: user.permissions,
-                        createdAt: user.createdAt,
-                        lastLoginAt: user.lastLoginAt
-                    }
-                },
-                metadata: {
-                    requestId: req.headers['x-request-id'] || 'unknown',
-                    timestamp: new Date(),
-                    processingTime: 0,
-                    version: '1.0.0'
+            res.apiSuccess({
+                user: {
+                    id: user.id,
+                    email: user.email,
+                    firstName: user.firstName,
+                    lastName: user.lastName,
+                    role: user.role,
+                    permissions: user.permissions,
+                    createdAt: user.createdAt,
+                    lastLoginAt: user.lastLoginAt
                 }
             });
         }
@@ -221,16 +185,7 @@ exports.authController = {
             if (!user) {
                 throw new error_handler_1.NotFoundError('User');
             }
-            res.json({
-                success: true,
-                data: { user },
-                metadata: {
-                    requestId: req.headers['x-request-id'] || 'unknown',
-                    timestamp: new Date(),
-                    processingTime: 0,
-                    version: '1.0.0'
-                }
-            });
+            res.apiSuccess({ user });
         }
         catch (error) {
             next(error);
@@ -253,16 +208,7 @@ exports.authController = {
                 userId: req.user.userId,
                 sessionId: req.user.sessionId
             });
-            res.json({
-                success: true,
-                data: { message: 'Logged out successfully' },
-                metadata: {
-                    requestId: req.headers['x-request-id'] || 'unknown',
-                    timestamp: new Date(),
-                    processingTime: 0,
-                    version: '1.0.0'
-                }
-            });
+            res.apiSuccess({ message: 'Logged out successfully' });
         }
         catch (error) {
             next(error);
@@ -285,16 +231,7 @@ exports.authController = {
                 expiresAt: key.expiresAt,
                 createdAt: key.createdAt
             })) || [];
-            res.json({
-                success: true,
-                data: { apiKeys },
-                metadata: {
-                    requestId: req.headers['x-request-id'] || 'unknown',
-                    timestamp: new Date(),
-                    processingTime: 0,
-                    version: '1.0.0'
-                }
-            });
+            res.apiSuccess({ apiKeys });
         }
         catch (error) {
             next(error);
@@ -316,18 +253,9 @@ exports.authController = {
             });
             // Save to database (implementation depends on your ApiKey entity)
             // const savedKey = await apiKeyRepository.create({ ... });
-            res.json({
-                success: true,
-                data: {
-                    apiKey,
-                    message: 'API key created successfully. Store it securely as it won\'t be shown again.'
-                },
-                metadata: {
-                    requestId: req.headers['x-request-id'] || 'unknown',
-                    timestamp: new Date(),
-                    processingTime: 0,
-                    version: '1.0.0'
-                }
+            res.apiCreated({
+                apiKey,
+                message: 'API key created successfully. Store it securely as it won\'t be shown again.'
             });
         }
         catch (error) {
@@ -342,16 +270,7 @@ exports.authController = {
             const { keyId } = req.params;
             // Implementation depends on your ApiKey repository
             // await apiKeyRepository.deleteByIdAndUserId(keyId, req.user!.userId);
-            res.json({
-                success: true,
-                data: { message: 'API key revoked successfully' },
-                metadata: {
-                    requestId: req.headers['x-request-id'] || 'unknown',
-                    timestamp: new Date(),
-                    processingTime: 0,
-                    version: '1.0.0'
-                }
-            });
+            res.apiSuccess({ message: 'API key revoked successfully' });
         }
         catch (error) {
             next(error);
@@ -363,18 +282,9 @@ exports.authController = {
     async listUsers(req, res, next) {
         try {
             // For Phase 1, return a simplified response
-            res.json({
-                success: true,
-                data: {
-                    users: [],
-                    message: 'User management will be implemented in Phase 2'
-                },
-                metadata: {
-                    requestId: req.headers['x-request-id'] || 'unknown',
-                    timestamp: new Date(),
-                    processingTime: 0,
-                    version: '1.0.0'
-                }
+            res.apiSuccess({
+                users: [],
+                message: 'User management will be implemented in Phase 2'
             });
         }
         catch (error) {
@@ -397,16 +307,7 @@ exports.authController = {
                 targetUserId: userId,
                 newRole: role
             });
-            res.json({
-                success: true,
-                data: { message: 'User role management will be implemented in Phase 2' },
-                metadata: {
-                    requestId: req.headers['x-request-id'] || 'unknown',
-                    timestamp: new Date(),
-                    processingTime: 0,
-                    version: '1.0.0'
-                }
-            });
+            res.apiSuccess({ message: 'User role management will be implemented in Phase 2' });
         }
         catch (error) {
             next(error);

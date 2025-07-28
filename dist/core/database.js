@@ -6,12 +6,12 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.databaseManager = exports.DatabaseManager = void 0;
 const typeorm_1 = require("typeorm");
-const config_1 = require("../config");
-const logger_1 = require("../shared/logger");
+const config_1 = require("@/config");
+const logger_1 = require("@/shared/logger");
 // Import all entities
-const pipeline_entity_1 = require("../entities/pipeline.entity");
-const pipeline_run_entity_1 = require("../entities/pipeline-run.entity");
-const user_entity_1 = require("../entities/user.entity");
+const pipeline_entity_1 = require("@/entities/pipeline.entity");
+const pipeline_run_entity_1 = require("@/entities/pipeline-run.entity");
+const user_entity_1 = require("@/entities/user.entity");
 class DatabaseManager {
     static instance;
     dataSource = null;

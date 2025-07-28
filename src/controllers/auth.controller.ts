@@ -75,26 +75,17 @@ export const authController = {
         ip: req.ip 
       });
 
-      res.json({
-        success: true,
-        data: {
-          user: {
-            id: user.id,
-            email: user.email,
-            firstName: user.firstName,
-            lastName: user.lastName,
-            role: user.role,
-            permissions: user.permissions
-          },
-          accessToken,
-          ...(rememberMe ? {} : { refreshToken })
+      res.apiSuccess({
+        user: {
+          id: user.id,
+          email: user.email,
+          firstName: user.firstName,
+          lastName: user.lastName,
+          role: user.role,
+          permissions: user.permissions
         },
-        metadata: {
-          requestId: req.headers['x-request-id'] || 'unknown',
-          timestamp: new Date(),
-          processingTime: 0,
-          version: '1.0.0'
-        }
+        accessToken,
+        ...(rememberMe ? {} : { refreshToken })
       });
     } catch (error) {
       next(error);
@@ -133,22 +124,13 @@ export const authController = {
         email: user.email 
       });
 
-      res.status(201).json({
-        success: true,
-        data: {
-          user: {
-            id: user.id,
-            email: user.email,
-            firstName: user.firstName,
-            lastName: user.lastName,
-            role: user.role
-          }
-        },
-        metadata: {
-          requestId: req.headers['x-request-id'] || 'unknown',
-          timestamp: new Date(),
-          processingTime: 0,
-          version: '1.0.0'
+      res.apiCreated({
+        user: {
+          id: user.id,
+          email: user.email,
+          firstName: user.firstName,
+          lastName: user.lastName,
+          role: user.role
         }
       });
     } catch (error) {
@@ -184,16 +166,7 @@ export const authController = {
         sessionId: decoded.sessionId
       });
 
-      res.json({
-        success: true,
-        data: { accessToken },
-        metadata: {
-          requestId: req.headers['x-request-id'] || 'unknown',
-          timestamp: new Date(),
-          processingTime: 0,
-          version: '1.0.0'
-        }
-      });
+      res.apiSuccess({ accessToken });
     } catch (error) {
       next(error);
     }
@@ -209,25 +182,16 @@ export const authController = {
         throw new NotFoundError('User');
       }
 
-      res.json({
-        success: true,
-        data: {
-          user: {
-            id: user.id,
-            email: user.email,
-            firstName: user.firstName,
-            lastName: user.lastName,
-            role: user.role,
-            permissions: user.permissions,
-            createdAt: user.createdAt,
-            lastLoginAt: user.lastLoginAt
-          }
-        },
-        metadata: {
-          requestId: req.headers['x-request-id'] || 'unknown',
-          timestamp: new Date(),
-          processingTime: 0,
-          version: '1.0.0'
+      res.apiSuccess({
+        user: {
+          id: user.id,
+          email: user.email,
+          firstName: user.firstName,
+          lastName: user.lastName,
+          role: user.role,
+          permissions: user.permissions,
+          createdAt: user.createdAt,
+          lastLoginAt: user.lastLoginAt
         }
       });
     } catch (error) {
@@ -251,16 +215,7 @@ export const authController = {
         throw new NotFoundError('User');
       }
 
-      res.json({
-        success: true,
-        data: { user },
-        metadata: {
-          requestId: req.headers['x-request-id'] || 'unknown',
-          timestamp: new Date(),
-          processingTime: 0,
-          version: '1.0.0'
-        }
-      });
+      res.apiSuccess({ user });
     } catch (error) {
       next(error);
     }
@@ -286,16 +241,7 @@ export const authController = {
         sessionId: req.user!.sessionId 
       });
 
-      res.json({
-        success: true,
-        data: { message: 'Logged out successfully' },
-        metadata: {
-          requestId: req.headers['x-request-id'] || 'unknown',
-          timestamp: new Date(),
-          processingTime: 0,
-          version: '1.0.0'
-        }
-      });
+      res.apiSuccess({ message: 'Logged out successfully' });
     } catch (error) {
       next(error);
     }
@@ -320,16 +266,7 @@ export const authController = {
         createdAt: key.createdAt
       })) || [];
 
-      res.json({
-        success: true,
-        data: { apiKeys },
-        metadata: {
-          requestId: req.headers['x-request-id'] || 'unknown',
-          timestamp: new Date(),
-          processingTime: 0,
-          version: '1.0.0'
-        }
-      });
+      res.apiSuccess({ apiKeys });
     } catch (error) {
       next(error);
     }
@@ -354,18 +291,9 @@ export const authController = {
       // Save to database (implementation depends on your ApiKey entity)
       // const savedKey = await apiKeyRepository.create({ ... });
 
-      res.json({
-        success: true,
-        data: { 
-          apiKey,
-          message: 'API key created successfully. Store it securely as it won\'t be shown again.'
-        },
-        metadata: {
-          requestId: req.headers['x-request-id'] || 'unknown',
-          timestamp: new Date(),
-          processingTime: 0,
-          version: '1.0.0'
-        }
+      res.apiCreated({ 
+        apiKey,
+        message: 'API key created successfully. Store it securely as it won\'t be shown again.'
       });
     } catch (error) {
       next(error);
@@ -382,16 +310,7 @@ export const authController = {
       // Implementation depends on your ApiKey repository
       // await apiKeyRepository.deleteByIdAndUserId(keyId, req.user!.userId);
 
-      res.json({
-        success: true,
-        data: { message: 'API key revoked successfully' },
-        metadata: {
-          requestId: req.headers['x-request-id'] || 'unknown',
-          timestamp: new Date(),
-          processingTime: 0,
-          version: '1.0.0'
-        }
-      });
+      res.apiSuccess({ message: 'API key revoked successfully' });
     } catch (error) {
       next(error);
     }
@@ -403,18 +322,9 @@ export const authController = {
   async listUsers(req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> {
     try {
       // For Phase 1, return a simplified response
-      res.json({
-        success: true,
-        data: { 
-          users: [],
-          message: 'User management will be implemented in Phase 2'
-        },
-        metadata: {
-          requestId: req.headers['x-request-id'] || 'unknown',
-          timestamp: new Date(),
-          processingTime: 0,
-          version: '1.0.0'
-        }
+      res.apiSuccess({ 
+        users: [],
+        message: 'User management will be implemented in Phase 2'
       });
     } catch (error) {
       next(error);
@@ -440,16 +350,7 @@ export const authController = {
         newRole: role 
       });
 
-      res.json({
-        success: true,
-        data: { message: 'User role management will be implemented in Phase 2' },
-        metadata: {
-          requestId: req.headers['x-request-id'] || 'unknown',
-          timestamp: new Date(),
-          processingTime: 0,
-          version: '1.0.0'
-        }
-      });
+      res.apiSuccess({ message: 'User role management will be implemented in Phase 2' });
     } catch (error) {
       next(error);
     }

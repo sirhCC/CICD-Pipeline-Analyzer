@@ -5,7 +5,7 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.UserRepository = void 0;
 const base_repository_1 = require("./base.repository");
-const user_entity_1 = require("../entities/user.entity");
+const user_entity_1 = require("@/entities/user.entity");
 class UserRepository extends base_repository_1.BaseRepository {
     constructor() {
         super(user_entity_1.User);

@@ -6,8 +6,8 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.redisManager = exports.RedisManager = void 0;
 const redis_1 = require("redis");
-const config_1 = require("../config");
-const logger_1 = require("../shared/logger");
+const config_1 = require("@/config");
+const logger_1 = require("@/shared/logger");
 class RedisManager {
     static instance;
     client = null;
