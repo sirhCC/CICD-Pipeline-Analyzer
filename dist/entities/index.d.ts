@@ -5,6 +5,7 @@ export { BaseEntity } from './base.entity';
 export { Pipeline } from './pipeline.entity';
 export { PipelineRun, PipelineRunStage } from './pipeline-run.entity';
 export { User, UserSession, ApiKey } from './user.entity';
+export { PipelineMetrics, FailurePattern, OptimizationRecommendation, AnalyticsAlert } from './pipeline-metrics.entity';
 export declare const entities: string[];
 export declare const entityMetadata: {
     Pipeline: {

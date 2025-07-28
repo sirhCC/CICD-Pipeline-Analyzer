@@ -15,6 +15,7 @@ const versioning_1 = require("../config/versioning");
 const logger_1 = require("../shared/logger");
 const auth_routes_1 = __importDefault(require("../routes/auth.routes"));
 const pipeline_routes_1 = __importDefault(require("../routes/pipeline.routes"));
+const analytics_routes_1 = __importDefault(require("../routes/analytics.routes"));
 const logger = new logger_1.Logger('VersionedRouter');
 /**
  * Create a versioned router with specified configuration
@@ -75,20 +76,10 @@ function createVersionedRouter(config) {
         router.use('/pipelines', pipeline_routes_1.default);
         logger.debug(`Registered pipeline routes for ${config.version}`);
     }
-    // Placeholder for future route modules
+    // Analytics routes (Phase 2 - Implemented)
     if (config.routes.analytics) {
-        router.use('/analytics', (req, res) => {
-            res.status(501).json({
-                success: false,
-                error: {
-                    code: 'NOT_IMPLEMENTED',
-                    message: 'Analytics endpoints will be available in Phase 2',
-                },
-                timestamp: new Date().toISOString(),
-                version: config.version,
-            });
-        });
-        logger.debug(`Registered analytics placeholder for ${config.version}`);
+        router.use('/analytics', analytics_routes_1.default);
+        logger.debug(`Registered analytics routes for ${config.version}`);
     }
     if (config.routes.admin) {
         router.use('/admin', (req, res) => {

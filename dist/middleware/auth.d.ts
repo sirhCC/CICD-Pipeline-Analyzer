@@ -83,7 +83,9 @@ export declare enum Permission {
     API_KEYS_DELETE = "api_keys:delete",
     REPORTS_READ = "reports:read",
     REPORTS_WRITE = "reports:write",
-    REPORTS_EXPORT = "reports:export"
+    REPORTS_EXPORT = "reports:export",
+    ANALYTICS_READ = "analytics:read",
+    ANALYTICS_WRITE = "analytics:write"
 }
 declare const ROLE_PERMISSIONS: Record<UserRole, Permission[]>;
 /**

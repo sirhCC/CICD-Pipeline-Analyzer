@@ -363,4 +363,8 @@ export interface LoggingConfig {
     maxSize?: string;
     maxFiles?: number;
 }
+import { Request, ParamsDictionary } from 'express-serve-static-core';
+import { ParsedQs } from 'qs';
+export interface TypedRequest<TParams extends ParamsDictionary = ParamsDictionary, TQuery extends ParsedQs = ParsedQs, TBody = any> extends Request<TParams, any, TBody, TQuery> {
+}
 //# sourceMappingURL=index.d.ts.map

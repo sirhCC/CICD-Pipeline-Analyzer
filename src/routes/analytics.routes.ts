@@ -7,6 +7,7 @@ import { requestLoggers } from '../middleware/request-logger';
 import { ResponseBuilder } from '../shared/api-response';
 import { Logger } from '../shared/logger';
 import { TypedRequest } from '../types';
+import { statisticalAnalyticsRoutes } from './statistical-analytics.routes';
 import Joi from 'joi';
 
 const router = Router();
@@ -312,5 +313,8 @@ router.get('/health',
     }));
   })
 );
+
+// Mount statistical analytics routes
+router.use('/statistical', statisticalAnalyticsRoutes);
 
 export default router;

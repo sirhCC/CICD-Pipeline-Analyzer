@@ -11,6 +11,7 @@ const logger_1 = require("../shared/logger");
 const pipeline_entity_1 = require("../entities/pipeline.entity");
 const pipeline_run_entity_1 = require("../entities/pipeline-run.entity");
 const user_entity_1 = require("../entities/user.entity");
+const pipeline_metrics_entity_1 = require("../entities/pipeline-metrics.entity");
 const logger = new logger_1.Logger('DatabaseConfig');
 class DatabaseConfigManager {
     static instance;
@@ -190,7 +191,11 @@ class DatabaseConfigManager {
                 pipeline_run_entity_1.PipelineRunStage,
                 user_entity_1.User,
                 user_entity_1.UserSession,
-                user_entity_1.ApiKey
+                user_entity_1.ApiKey,
+                pipeline_metrics_entity_1.PipelineMetrics,
+                pipeline_metrics_entity_1.FailurePattern,
+                pipeline_metrics_entity_1.OptimizationRecommendation,
+                pipeline_metrics_entity_1.AnalyticsAlert
             ],
             // Migration Configuration
             migrations: migrationConfig.enabled ? [`${migrationConfig.directory}/${migrationConfig.pattern}`] : [],

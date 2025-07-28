@@ -13,3 +13,17 @@ export type {
   OptimizationResult,
   AlertResult
 } from './analytics.service';
+
+export { 
+  StatisticalAnalyticsService, 
+  statisticalAnalyticsService 
+} from './statistical-analytics.service';
+export type { 
+  StatisticalDataPoint,
+  AnomalyDetectionResult,
+  TrendAnalysisResult,
+  BenchmarkResult,
+  SLAMonitoringResult,
+  CostAnalysisResult,
+  StatisticalAnalyticsConfig
+} from './statistical-analytics.service';

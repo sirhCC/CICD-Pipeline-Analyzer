@@ -113,7 +113,11 @@ export enum Permission {
   // Reports and exports
   REPORTS_READ = 'reports:read',
   REPORTS_WRITE = 'reports:write',
-  REPORTS_EXPORT = 'reports:export'
+  REPORTS_EXPORT = 'reports:export',
+  
+  // Analytics permissions
+  ANALYTICS_READ = 'analytics:read',
+  ANALYTICS_WRITE = 'analytics:write'
 }
 
 // Role to permissions mapping
@@ -126,18 +130,23 @@ const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     Permission.REPORTS_READ,
     Permission.REPORTS_WRITE,
     Permission.REPORTS_EXPORT,
-    Permission.USERS_READ
+    Permission.USERS_READ,
+    Permission.ANALYTICS_READ,
+    Permission.ANALYTICS_WRITE
   ],
   [UserRole.VIEWER]: [
     Permission.PIPELINES_READ,
     Permission.REPORTS_READ,
-    Permission.USERS_READ
+    Permission.USERS_READ,
+    Permission.ANALYTICS_READ
   ],
   [UserRole.DEVELOPER]: [
     Permission.PIPELINES_READ,
     Permission.PIPELINES_WRITE,
     Permission.PIPELINES_ANALYZE,
-    Permission.REPORTS_READ
+    Permission.REPORTS_READ,
+    Permission.ANALYTICS_READ,
+    Permission.ANALYTICS_WRITE
   ]
 };
 
