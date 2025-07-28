@@ -51,8 +51,20 @@ class RepositoryFactory {
     }
 }
 exports.RepositoryFactory = RepositoryFactory;
-// Convenience exports
-exports.pipelineRepository = RepositoryFactory.getPipelineRepository();
-exports.pipelineRunRepository = RepositoryFactory.getPipelineRunRepository();
-exports.userRepository = RepositoryFactory.getUserRepository();
+// Lazy convenience exports using getters
+exports.pipelineRepository = new Proxy({}, {
+    get(target, prop) {
+        return RepositoryFactory.getPipelineRepository()[prop];
+    }
+});
+exports.pipelineRunRepository = new Proxy({}, {
+    get(target, prop) {
+        return RepositoryFactory.getPipelineRunRepository()[prop];
+    }
+});
+exports.userRepository = new Proxy({}, {
+    get(target, prop) {
+        return RepositoryFactory.getUserRepository()[prop];
+    }
+});
 //# sourceMappingURL=index.js.map
