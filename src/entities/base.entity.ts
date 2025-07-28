@@ -6,7 +6,7 @@ import {
   PrimaryGeneratedColumn, 
   CreateDateColumn, 
   UpdateDateColumn, 
-  Version,
+  VersionColumn,
   Column,
 } from 'typeorm';
 
@@ -24,7 +24,7 @@ export abstract class BaseEntity {
   @UpdateDateColumn({ type: 'timestamptz' })
   updatedAt!: Date;
 
-  @Version()
+  @VersionColumn()
   version!: number;
 
   @Column({ type: 'boolean', default: false })
@@ -46,7 +46,7 @@ export abstract class BaseEntity {
    */
   restore(): void {
     this.isDeleted = false;
-    this.deletedAt = undefined;
+    delete (this as any).deletedAt;
   }
 }
 

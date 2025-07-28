@@ -70,6 +70,7 @@ export interface ProviderConfig {
 
 // === Status Enums ===
 export enum PipelineStatus {
+  UNKNOWN = 'unknown',
   PENDING = 'pending',
   RUNNING = 'running',
   SUCCESS = 'success',
@@ -77,6 +78,12 @@ export enum PipelineStatus {
   CANCELLED = 'cancelled',
   SKIPPED = 'skipped',
   TIMEOUT = 'timeout',
+}
+
+export enum PipelineVisibility {
+  PUBLIC = 'public',
+  PRIVATE = 'private',
+  INTERNAL = 'internal',
 }
 
 export enum StageStatus {

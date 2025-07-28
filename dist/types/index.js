@@ -4,7 +4,7 @@
  * Enterprise-grade type safety across all modules
  */
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.UserRole = exports.ImpactLevel = exports.Priority = exports.OptimizationType = exports.BottleneckType = exports.StageType = exports.JobStatus = exports.StageStatus = exports.PipelineStatus = exports.PipelineProvider = void 0;
+exports.UserRole = exports.ImpactLevel = exports.Priority = exports.OptimizationType = exports.BottleneckType = exports.StageType = exports.JobStatus = exports.StageStatus = exports.PipelineVisibility = exports.PipelineStatus = exports.PipelineProvider = void 0;
 // === Provider Types ===
 var PipelineProvider;
 (function (PipelineProvider) {
@@ -19,6 +19,7 @@ var PipelineProvider;
 // === Status Enums ===
 var PipelineStatus;
 (function (PipelineStatus) {
+    PipelineStatus["UNKNOWN"] = "unknown";
     PipelineStatus["PENDING"] = "pending";
     PipelineStatus["RUNNING"] = "running";
     PipelineStatus["SUCCESS"] = "success";
@@ -27,6 +28,12 @@ var PipelineStatus;
     PipelineStatus["SKIPPED"] = "skipped";
     PipelineStatus["TIMEOUT"] = "timeout";
 })(PipelineStatus || (exports.PipelineStatus = PipelineStatus = {}));
+var PipelineVisibility;
+(function (PipelineVisibility) {
+    PipelineVisibility["PUBLIC"] = "public";
+    PipelineVisibility["PRIVATE"] = "private";
+    PipelineVisibility["INTERNAL"] = "internal";
+})(PipelineVisibility || (exports.PipelineVisibility = PipelineVisibility = {}));
 var StageStatus;
 (function (StageStatus) {
     StageStatus["PENDING"] = "pending";

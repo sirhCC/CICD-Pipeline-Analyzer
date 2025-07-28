@@ -61,6 +61,7 @@ export interface ProviderConfig {
     retryConfig: RetryConfig;
 }
 export declare enum PipelineStatus {
+    UNKNOWN = "unknown",
     PENDING = "pending",
     RUNNING = "running",
     SUCCESS = "success",
@@ -68,6 +69,11 @@ export declare enum PipelineStatus {
     CANCELLED = "cancelled",
     SKIPPED = "skipped",
     TIMEOUT = "timeout"
+}
+export declare enum PipelineVisibility {
+    PUBLIC = "public",
+    PRIVATE = "private",
+    INTERNAL = "internal"
 }
 export declare enum StageStatus {
     PENDING = "pending",
