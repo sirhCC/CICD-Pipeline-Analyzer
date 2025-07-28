@@ -199,7 +199,7 @@ npm run test:coverage
 
 ### Project Structure
 
-```
+```text
 src/
 ├── cli/              # CLI tools
 ├── config/           # Configuration
@@ -241,6 +241,7 @@ npm run build
 4. Add tests
 
 Example:
+
 ```typescript
 export class CustomProvider extends BaseProvider {
   async fetchPipelineData(config: PipelineConfig): Promise<PipelineData> {
@@ -276,16 +277,19 @@ The application provides REST endpoints that can be integrated with visualizatio
 ### Production Setup
 
 1. **Environment**
+
    ```bash
    NODE_ENV=production
    ```
 
 2. **Database**
+
    ```bash
    npm run db:migrate
    ```
 
 3. **Build and Start**
+
    ```bash
    npm run build
    npm start
