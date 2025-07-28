@@ -14,6 +14,11 @@
 
 import { Logger } from '@/shared/logger';
 import { AppError } from '@/middleware/error-handler';
+import { Repository } from 'typeorm';
+import { PipelineRun } from '@/entities/pipeline-run.entity';
+import { Pipeline } from '@/entities/pipeline.entity';
+import { repositoryFactory } from '@/repositories/factory.enhanced';
+import { PipelineStatus } from '@/types';
 
 export interface StatisticalDataPoint {
   timestamp: Date;
@@ -820,6 +825,233 @@ export class StatisticalAnalyticsService {
     if (confidenceLevel >= 0.95) return 1.96;
     if (confidenceLevel >= 0.90) return 1.645;
     return 1.96; // Default to 95%
+  }
+
+  /**
+   * Pipeline Integration Methods
+   */
+
+  private pipelineRepo: Repository<Pipeline> | undefined;
+  private pipelineRunRepo: Repository<PipelineRun> | undefined;
+
+  private initializePipelineRepositories(): void {
+    if (!this.pipelineRepo) {
+      this.pipelineRepo = repositoryFactory.getRepository(Pipeline);
+    }
+    if (!this.pipelineRunRepo) {
+      this.pipelineRunRepo = repositoryFactory.getRepository(PipelineRun);
+    }
+  }
+
+  /**
+   * Extract statistical data points from pipeline runs
+   */
+  public async extractPipelineDataPoints(
+    pipelineId: string,
+    metric: 'duration' | 'cpu' | 'memory' | 'success_rate' | 'test_coverage' = 'duration',
+    periodDays: number = 30
+  ): Promise<StatisticalDataPoint[]> {
+    this.initializePipelineRepositories();
+
+    if (!this.pipelineRepo || !this.pipelineRunRepo) {
+      throw new AppError('Failed to initialize pipeline repositories', 500);
+    }
+
+    const pipeline = await this.pipelineRepo.findOne({ where: { id: pipelineId } });
+    if (!pipeline) {
+      throw new AppError('Pipeline not found', 404);
+    }
+
+    const startDate = new Date();
+    startDate.setDate(startDate.getDate() - periodDays);
+
+    const runs = await this.pipelineRunRepo.find({
+      where: { 
+        pipelineId,
+        startedAt: { $gte: startDate } as any
+      },
+      order: { startedAt: 'ASC' }
+    });
+
+    this.logger.info('Extracted pipeline runs for analysis', {
+      pipelineId,
+      runsCount: runs.length,
+      metric,
+      periodDays
+    });
+
+    return this.convertRunsToDataPoints(runs, metric);
+  }
+
+  /**
+   * Convert pipeline runs to statistical data points based on metric type
+   */
+  private convertRunsToDataPoints(
+    runs: PipelineRun[], 
+    metric: 'duration' | 'cpu' | 'memory' | 'success_rate' | 'test_coverage'
+  ): StatisticalDataPoint[] {
+    const dataPoints: StatisticalDataPoint[] = [];
+
+    for (const run of runs) {
+      let value: number | null = null;
+      
+      switch (metric) {
+        case 'duration':
+          value = run.duration ?? null;
+          break;
+        case 'cpu':
+          value = run.resources?.maxCpu ?? null;
+          break;
+        case 'memory':
+          value = run.resources?.maxMemory ?? null;
+          break;
+        case 'success_rate':
+          value = run.status === PipelineStatus.SUCCESS ? 1 : 0;
+          break;
+        case 'test_coverage':
+          value = run.testResults?.coverage ?? null;
+          break;
+      }
+
+      if (value !== null && value !== undefined && run.startedAt) {
+        dataPoints.push({
+          timestamp: run.startedAt,
+          value,
+          metadata: {
+            status: run.status,
+            pipelineId: run.pipelineId,
+            runId: run.id,
+            metric,
+            branch: run.branch,
+            triggeredBy: run.triggeredBy
+          }
+        });
+      }
+    }
+
+    return dataPoints;
+  }
+
+  /**
+   * Analyze pipeline anomalies with integration
+   */
+  public async analyzePipelineAnomalies(
+    pipelineId: string,
+    metric: 'duration' | 'cpu' | 'memory' | 'success_rate' | 'test_coverage' = 'duration',
+    method: 'z-score' | 'percentile' | 'iqr' | 'all' = 'all',
+    periodDays: number = 30
+  ): Promise<AnomalyDetectionResult[]> {
+    const dataPoints = await this.extractPipelineDataPoints(pipelineId, metric, periodDays);
+    
+    if (dataPoints.length < this.config.anomalyDetection.minDataPoints) {
+      throw new AppError(
+        `Insufficient pipeline data points for anomaly detection. Found ${dataPoints.length}, need at least ${this.config.anomalyDetection.minDataPoints}`,
+        400
+      );
+    }
+
+    return this.detectAnomalies(dataPoints, method);
+  }
+
+  /**
+   * Analyze pipeline trends with integration
+   */
+  public async analyzePipelineTrends(
+    pipelineId: string,
+    metric: 'duration' | 'cpu' | 'memory' | 'success_rate' | 'test_coverage' = 'duration',
+    periodDays: number = 30
+  ): Promise<TrendAnalysisResult> {
+    const dataPoints = await this.extractPipelineDataPoints(pipelineId, metric, periodDays);
+    
+    if (dataPoints.length < this.config.trendAnalysis.minDataPoints) {
+      throw new AppError(
+        `Insufficient pipeline data points for trend analysis. Found ${dataPoints.length}, need at least ${this.config.trendAnalysis.minDataPoints}`,
+        400
+      );
+    }
+
+    return this.analyzeTrend(dataPoints);
+  }
+
+  /**
+   * Benchmark pipeline performance with integration
+   */
+  public async benchmarkPipelinePerformance(
+    pipelineId: string,
+    metric: 'duration' | 'cpu' | 'memory' | 'success_rate' | 'test_coverage' = 'duration',
+    periodDays: number = 30
+  ): Promise<BenchmarkResult> {
+    const dataPoints = await this.extractPipelineDataPoints(pipelineId, metric, periodDays);
+    
+    if (dataPoints.length < this.config.benchmarking.minSamples) {
+      throw new AppError(
+        `Insufficient pipeline data points for benchmarking. Found ${dataPoints.length}, need at least ${this.config.benchmarking.minSamples}`,
+        400
+      );
+    }
+
+    // Use the most recent run as current value
+    const currentValue = dataPoints[dataPoints.length - 1]?.value || 0;
+    return this.generateBenchmark(currentValue, dataPoints, 'pipeline');
+  }
+
+  /**
+   * Monitor pipeline SLA compliance with integration
+   */
+  public async monitorPipelineSLA(
+    pipelineId: string,
+    slaTarget: number,
+    metric: 'duration' | 'cpu' | 'memory' | 'success_rate' | 'test_coverage' = 'duration',
+    periodDays: number = 30
+  ): Promise<SLAMonitoringResult> {
+    const dataPoints = await this.extractPipelineDataPoints(pipelineId, metric, periodDays);
+    
+    if (dataPoints.length === 0) {
+      throw new AppError('No pipeline data available for SLA monitoring', 400);
+    }
+
+    // Use the most recent run as current value
+    const currentValue = dataPoints[dataPoints.length - 1]?.value || 0;
+    return this.monitorSLA(currentValue, slaTarget, dataPoints, 'performance');
+  }
+
+  /**
+   * Analyze pipeline cost trends with integration
+   */
+  public async analyzePipelineCostTrends(
+    pipelineId: string,
+    periodDays: number = 30
+  ): Promise<CostAnalysisResult> {
+    const dataPoints = await this.extractPipelineDataPoints(pipelineId, 'duration', periodDays);
+    
+    if (dataPoints.length === 0) {
+      throw new AppError('No pipeline data available for cost analysis', 400);
+    }
+
+    // Get the most recent run for resource usage analysis
+    this.initializePipelineRepositories();
+    
+    if (!this.pipelineRunRepo) {
+      throw new AppError('Failed to initialize pipeline repositories', 500);
+    }
+    
+    const recentRun = await this.pipelineRunRepo.findOne({
+      where: { pipelineId },
+      order: { startedAt: 'DESC' }
+    });
+
+    if (!recentRun || !recentRun.duration) {
+      throw new AppError('No recent pipeline run data available for cost analysis', 400);
+    }
+
+    const resourceUsage = {
+      cpu: recentRun.resources?.maxCpu || 50,
+      memory: recentRun.resources?.maxMemory || 50,
+      storage: 25, // Default storage usage
+      network: 10  // Default network usage
+    };
+
+    return this.analyzeCosts(recentRun.duration / 60, resourceUsage, dataPoints);
   }
 }
 
