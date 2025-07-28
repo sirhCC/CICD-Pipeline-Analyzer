@@ -62,7 +62,7 @@ export declare class EnhancedRepositoryFactory {
     initializeRepositories(): Promise<void>;
 }
 export declare const repositoryFactory: EnhancedRepositoryFactory;
-export declare const userRepository: UserRepository;
-export declare const pipelineRepository: PipelineRepository;
-export declare const pipelineRunRepository: PipelineRunRepository;
+export declare const getUserRepository: () => UserRepository;
+export declare const getPipelineRepository: () => PipelineRepository;
+export declare const getPipelineRunRepository: () => PipelineRunRepository;
 //# sourceMappingURL=factory.enhanced.d.ts.map

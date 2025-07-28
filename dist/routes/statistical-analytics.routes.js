@@ -246,4 +246,266 @@ router.get('/health', auth_1.authenticateJWT, (0, auth_1.requireRole)(auth_1.Use
         }));
     }
 }));
+/**
+ * Pipeline-Specific Statistical Analytics Endpoints
+ * These endpoints integrate the statistical engine with real pipeline data
+ */
+// Validation schemas for pipeline-specific endpoints
+const pipelineAnalysisSchema = joi_1.default.object({
+    metric: joi_1.default.string().valid('duration', 'cpu', 'memory', 'success_rate', 'test_coverage').default('duration'),
+    method: joi_1.default.string().valid('z-score', 'percentile', 'iqr', 'all').default('all'),
+    periodDays: joi_1.default.number().integer().min(1).max(365).default(30)
+});
+const pipelineTrendSchema = joi_1.default.object({
+    metric: joi_1.default.string().valid('duration', 'cpu', 'memory', 'success_rate', 'test_coverage').default('duration'),
+    periodDays: joi_1.default.number().integer().min(1).max(365).default(30)
+});
+const pipelineBenchmarkSchema = joi_1.default.object({
+    metric: joi_1.default.string().valid('duration', 'cpu', 'memory', 'success_rate', 'test_coverage').default('duration'),
+    periodDays: joi_1.default.number().integer().min(1).max(365).default(30)
+});
+const pipelineSlaSchema = joi_1.default.object({
+    slaTarget: joi_1.default.number().min(0).required(),
+    metric: joi_1.default.string().valid('duration', 'cpu', 'memory', 'success_rate', 'test_coverage').default('duration'),
+    periodDays: joi_1.default.number().integer().min(1).max(365).default(30)
+});
+const pipelineCostSchema = joi_1.default.object({
+    periodDays: joi_1.default.number().integer().min(1).max(365).default(30)
+});
+const pipelineParamsSchema = joi_1.default.object({
+    pipelineId: joi_1.default.string().uuid().required()
+});
+/**
+ * POST /analytics/statistical/pipelines/:pipelineId/anomalies
+ * Detect anomalies in pipeline execution data
+ */
+router.post('/pipelines/:pipelineId/anomalies', auth_1.authenticateJWT, (0, auth_1.requirePermission)(auth_1.Permission.ANALYTICS_READ), (0, request_validation_1.validateRequest)({
+    params: pipelineParamsSchema,
+    body: pipelineAnalysisSchema
+}), (0, error_handler_1.asyncHandler)(async (req, res) => {
+    const { pipelineId } = req.params;
+    const { metric, method, periodDays } = req.body;
+    if (!pipelineId) {
+        throw new error_handler_1.AppError('Pipeline ID is required', 400);
+    }
+    logger.info('Pipeline anomaly detection requested', {
+        pipelineId,
+        metric,
+        method,
+        periodDays,
+        userId: req.user?.userId
+    });
+    const results = await statistical_analytics_service_1.statisticalAnalyticsService.analyzePipelineAnomalies(pipelineId, metric, method, periodDays);
+    logger.info('Pipeline anomaly detection completed', {
+        pipelineId,
+        anomaliesFound: results.length,
+        userId: req.user?.userId
+    });
+    res.json(api_response_1.ResponseBuilder.success({
+        pipelineId,
+        metric,
+        anomalies: results,
+        summary: {
+            periodDays,
+            anomaliesDetected: results.length,
+            criticalAnomalies: results.filter(a => a.severity === 'critical').length,
+            highSeverityAnomalies: results.filter(a => a.severity === 'high').length,
+            method
+        }
+    }));
+}));
+/**
+ * POST /analytics/statistical/pipelines/:pipelineId/trends
+ * Analyze trends in pipeline performance over time
+ */
+router.post('/pipelines/:pipelineId/trends', auth_1.authenticateJWT, (0, auth_1.requirePermission)(auth_1.Permission.ANALYTICS_READ), (0, request_validation_1.validateRequest)({
+    params: pipelineParamsSchema,
+    body: pipelineTrendSchema
+}), (0, error_handler_1.asyncHandler)(async (req, res) => {
+    const { pipelineId } = req.params;
+    const { metric, periodDays } = req.body;
+    if (!pipelineId) {
+        throw new error_handler_1.AppError('Pipeline ID is required', 400);
+    }
+    logger.info('Pipeline trend analysis requested', {
+        pipelineId,
+        metric,
+        periodDays,
+        userId: req.user?.userId
+    });
+    const result = await statistical_analytics_service_1.statisticalAnalyticsService.analyzePipelineTrends(pipelineId, metric, periodDays);
+    logger.info('Pipeline trend analysis completed', {
+        pipelineId,
+        trend: result.trend,
+        correlation: result.correlation,
+        userId: req.user?.userId
+    });
+    res.json(api_response_1.ResponseBuilder.success({
+        pipelineId,
+        metric,
+        trend: result,
+        interpretation: {
+            direction: result.trend,
+            strength: result.correlation > 0.8 ? 'strong' : result.correlation > 0.5 ? 'moderate' : 'weak',
+            reliability: result.rSquared > 0.8 ? 'high' : result.rSquared > 0.5 ? 'medium' : 'low',
+            significance: Math.abs(result.slope) > 0.1 ? 'significant' : 'minimal'
+        },
+        summary: {
+            periodDays,
+            changeRate: result.changeRate,
+            volatility: result.volatility
+        }
+    }));
+}));
+/**
+ * POST /analytics/statistical/pipelines/:pipelineId/benchmark
+ * Benchmark current pipeline performance against historical data
+ */
+router.post('/pipelines/:pipelineId/benchmark', auth_1.authenticateJWT, (0, auth_1.requirePermission)(auth_1.Permission.ANALYTICS_READ), (0, request_validation_1.validateRequest)({
+    params: pipelineParamsSchema,
+    body: pipelineBenchmarkSchema
+}), (0, error_handler_1.asyncHandler)(async (req, res) => {
+    const { pipelineId } = req.params;
+    const { metric, periodDays } = req.body;
+    if (!pipelineId) {
+        throw new error_handler_1.AppError('Pipeline ID is required', 400);
+    }
+    logger.info('Pipeline benchmark analysis requested', {
+        pipelineId,
+        metric,
+        periodDays,
+        userId: req.user?.userId
+    });
+    const result = await statistical_analytics_service_1.statisticalAnalyticsService.benchmarkPipelinePerformance(pipelineId, metric, periodDays);
+    logger.info('Pipeline benchmark analysis completed', {
+        pipelineId,
+        performance: result.performance,
+        percentile: result.percentile,
+        userId: req.user?.userId
+    });
+    res.json(api_response_1.ResponseBuilder.success({
+        pipelineId,
+        metric,
+        benchmark: result,
+        summary: {
+            periodDays,
+            currentValue: result.currentValue,
+            benchmark: result.benchmark,
+            performance: result.performance,
+            deviationPercent: result.deviationPercent
+        }
+    }));
+}));
+/**
+ * POST /analytics/statistical/pipelines/:pipelineId/sla
+ * Monitor pipeline SLA compliance
+ */
+router.post('/pipelines/:pipelineId/sla', auth_1.authenticateJWT, (0, auth_1.requirePermission)(auth_1.Permission.ANALYTICS_READ), (0, request_validation_1.validateRequest)({
+    params: pipelineParamsSchema,
+    body: pipelineSlaSchema
+}), (0, error_handler_1.asyncHandler)(async (req, res) => {
+    const { pipelineId } = req.params;
+    const { slaTarget, metric, periodDays } = req.body;
+    if (!pipelineId) {
+        throw new error_handler_1.AppError('Pipeline ID is required', 400);
+    }
+    logger.info('Pipeline SLA monitoring requested', {
+        pipelineId,
+        slaTarget,
+        metric,
+        periodDays,
+        userId: req.user?.userId
+    });
+    const result = await statistical_analytics_service_1.statisticalAnalyticsService.monitorPipelineSLA(pipelineId, slaTarget, metric, periodDays);
+    logger.info('Pipeline SLA monitoring completed', {
+        pipelineId,
+        violated: result.violated,
+        violationPercent: result.violationPercent,
+        userId: req.user?.userId
+    });
+    res.json(api_response_1.ResponseBuilder.success({
+        pipelineId,
+        metric,
+        sla: result,
+        summary: {
+            periodDays,
+            slaTarget,
+            actualValue: result.actualValue,
+            violated: result.violated,
+            violationPercent: result.violationPercent,
+            severity: result.severity
+        }
+    }));
+}));
+/**
+ * POST /analytics/statistical/pipelines/:pipelineId/cost
+ * Analyze pipeline cost trends and optimization opportunities
+ */
+router.post('/pipelines/:pipelineId/cost', auth_1.authenticateJWT, (0, auth_1.requirePermission)(auth_1.Permission.ANALYTICS_READ), (0, request_validation_1.validateRequest)({
+    params: pipelineParamsSchema,
+    body: pipelineCostSchema
+}), (0, error_handler_1.asyncHandler)(async (req, res) => {
+    const { pipelineId } = req.params;
+    const { periodDays } = req.body;
+    if (!pipelineId) {
+        throw new error_handler_1.AppError('Pipeline ID is required', 400);
+    }
+    logger.info('Pipeline cost analysis requested', {
+        pipelineId,
+        periodDays,
+        userId: req.user?.userId
+    });
+    const result = await statistical_analytics_service_1.statisticalAnalyticsService.analyzePipelineCostTrends(pipelineId, periodDays);
+    logger.info('Pipeline cost analysis completed', {
+        pipelineId,
+        totalCost: result.totalCost,
+        optimizationOpportunities: result.optimizationOpportunities.length,
+        userId: req.user?.userId
+    });
+    res.json(api_response_1.ResponseBuilder.success({
+        pipelineId,
+        cost: result,
+        summary: {
+            periodDays,
+            totalCost: result.totalCost,
+            costPerMinute: result.costPerMinute,
+            optimizationOpportunities: result.optimizationOpportunities.length,
+            potentialSavings: result.optimizationOpportunities.reduce((sum, opp) => sum + opp.potentialSavings, 0),
+            efficiencyScore: result.efficiency.score
+        }
+    }));
+}));
+// === WebSocket Endpoints ===
+/**
+ * GET /websocket/info - Get WebSocket connection information
+ * Returns WebSocket server details for client connections
+ */
+router.get('/websocket/info', auth_1.authenticateJWT, (0, auth_1.requirePermission)(auth_1.Permission.ANALYTICS_READ), (0, error_handler_1.asyncHandler)(async (req, res) => {
+    logger.info('WebSocket info requested', {
+        userId: req.user?.userId
+    });
+    const protocol = req.secure ? 'wss' : 'ws';
+    const host = req.get('host') || 'localhost';
+    res.json(api_response_1.ResponseBuilder.success({
+        websocketUrl: `${protocol}://${host}`,
+        features: [
+            'real-time statistical updates',
+            'anomaly detection alerts',
+            'trend analysis notifications',
+            'SLA violation alerts',
+            'cost optimization insights'
+        ],
+        authentication: {
+            required: true,
+            method: 'JWT token via query parameter or auth header',
+            permissions: ['read:analytics', 'read:pipelines']
+        },
+        subscriptionTypes: [
+            'pipeline-specific analytics',
+            'global anomaly alerts',
+            'cost threshold warnings',
+            'trend degradation notifications'
+        ]
+    }));
+}));
 //# sourceMappingURL=statistical-analytics.routes.js.map

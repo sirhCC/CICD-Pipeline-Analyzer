@@ -13,9 +13,13 @@
  * @version 1.0.0
  */
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.statisticalAnalyticsService = exports.StatisticalAnalyticsService = void 0;
+exports.statisticalAnalyticsService = exports.getStatisticalAnalyticsService = exports.StatisticalAnalyticsService = void 0;
 const logger_1 = require("../shared/logger");
 const error_handler_1 = require("../middleware/error-handler");
+const pipeline_run_entity_1 = require("../entities/pipeline-run.entity");
+const pipeline_entity_1 = require("../entities/pipeline.entity");
+const factory_enhanced_1 = require("../repositories/factory.enhanced");
+const types_1 = require("../types");
 class StatisticalAnalyticsService {
     static instance;
     logger;
@@ -583,8 +587,180 @@ class StatisticalAnalyticsService {
             return 1.645;
         return 1.96; // Default to 95%
     }
+    /**
+     * Pipeline Integration Methods
+     */
+    pipelineRepo;
+    pipelineRunRepo;
+    initializePipelineRepositories() {
+        try {
+            if (!this.pipelineRepo) {
+                this.pipelineRepo = factory_enhanced_1.repositoryFactory.getRepository(pipeline_entity_1.Pipeline);
+            }
+            if (!this.pipelineRunRepo) {
+                this.pipelineRunRepo = factory_enhanced_1.repositoryFactory.getRepository(pipeline_run_entity_1.PipelineRun);
+            }
+        }
+        catch (error) {
+            // Gracefully handle database not being initialized
+            this.logger.warn('Database not available for pipeline integration', { error: error instanceof Error ? error.message : String(error) });
+            throw new error_handler_1.AppError('Database not available for pipeline operations', 503);
+        }
+    }
+    /**
+     * Extract statistical data points from pipeline runs
+     */
+    async extractPipelineDataPoints(pipelineId, metric = 'duration', periodDays = 30) {
+        this.initializePipelineRepositories();
+        if (!this.pipelineRepo || !this.pipelineRunRepo) {
+            throw new error_handler_1.AppError('Failed to initialize pipeline repositories', 500);
+        }
+        const pipeline = await this.pipelineRepo.findOne({ where: { id: pipelineId } });
+        if (!pipeline) {
+            throw new error_handler_1.AppError('Pipeline not found', 404);
+        }
+        const startDate = new Date();
+        startDate.setDate(startDate.getDate() - periodDays);
+        const runs = await this.pipelineRunRepo.find({
+            where: {
+                pipelineId,
+                startedAt: { $gte: startDate }
+            },
+            order: { startedAt: 'ASC' }
+        });
+        this.logger.info('Extracted pipeline runs for analysis', {
+            pipelineId,
+            runsCount: runs.length,
+            metric,
+            periodDays
+        });
+        return this.convertRunsToDataPoints(runs, metric);
+    }
+    /**
+     * Convert pipeline runs to statistical data points based on metric type
+     */
+    convertRunsToDataPoints(runs, metric) {
+        const dataPoints = [];
+        for (const run of runs) {
+            let value = null;
+            switch (metric) {
+                case 'duration':
+                    value = run.duration ?? null;
+                    break;
+                case 'cpu':
+                    value = run.resources?.maxCpu ?? null;
+                    break;
+                case 'memory':
+                    value = run.resources?.maxMemory ?? null;
+                    break;
+                case 'success_rate':
+                    value = run.status === types_1.PipelineStatus.SUCCESS ? 1 : 0;
+                    break;
+                case 'test_coverage':
+                    value = run.testResults?.coverage ?? null;
+                    break;
+            }
+            if (value !== null && value !== undefined && run.startedAt) {
+                dataPoints.push({
+                    timestamp: run.startedAt,
+                    value,
+                    metadata: {
+                        status: run.status,
+                        pipelineId: run.pipelineId,
+                        runId: run.id,
+                        metric,
+                        branch: run.branch,
+                        triggeredBy: run.triggeredBy
+                    }
+                });
+            }
+        }
+        return dataPoints;
+    }
+    /**
+     * Analyze pipeline anomalies with integration
+     */
+    async analyzePipelineAnomalies(pipelineId, metric = 'duration', method = 'all', periodDays = 30) {
+        const dataPoints = await this.extractPipelineDataPoints(pipelineId, metric, periodDays);
+        if (dataPoints.length < this.config.anomalyDetection.minDataPoints) {
+            throw new error_handler_1.AppError(`Insufficient pipeline data points for anomaly detection. Found ${dataPoints.length}, need at least ${this.config.anomalyDetection.minDataPoints}`, 400);
+        }
+        return this.detectAnomalies(dataPoints, method);
+    }
+    /**
+     * Analyze pipeline trends with integration
+     */
+    async analyzePipelineTrends(pipelineId, metric = 'duration', periodDays = 30) {
+        const dataPoints = await this.extractPipelineDataPoints(pipelineId, metric, periodDays);
+        if (dataPoints.length < this.config.trendAnalysis.minDataPoints) {
+            throw new error_handler_1.AppError(`Insufficient pipeline data points for trend analysis. Found ${dataPoints.length}, need at least ${this.config.trendAnalysis.minDataPoints}`, 400);
+        }
+        return this.analyzeTrend(dataPoints);
+    }
+    /**
+     * Benchmark pipeline performance with integration
+     */
+    async benchmarkPipelinePerformance(pipelineId, metric = 'duration', periodDays = 30) {
+        const dataPoints = await this.extractPipelineDataPoints(pipelineId, metric, periodDays);
+        if (dataPoints.length < this.config.benchmarking.minSamples) {
+            throw new error_handler_1.AppError(`Insufficient pipeline data points for benchmarking. Found ${dataPoints.length}, need at least ${this.config.benchmarking.minSamples}`, 400);
+        }
+        // Use the most recent run as current value
+        const currentValue = dataPoints[dataPoints.length - 1]?.value || 0;
+        return this.generateBenchmark(currentValue, dataPoints, 'pipeline');
+    }
+    /**
+     * Monitor pipeline SLA compliance with integration
+     */
+    async monitorPipelineSLA(pipelineId, slaTarget, metric = 'duration', periodDays = 30) {
+        const dataPoints = await this.extractPipelineDataPoints(pipelineId, metric, periodDays);
+        if (dataPoints.length === 0) {
+            throw new error_handler_1.AppError('No pipeline data available for SLA monitoring', 400);
+        }
+        // Use the most recent run as current value
+        const currentValue = dataPoints[dataPoints.length - 1]?.value || 0;
+        return this.monitorSLA(currentValue, slaTarget, dataPoints, 'performance');
+    }
+    /**
+     * Analyze pipeline cost trends with integration
+     */
+    async analyzePipelineCostTrends(pipelineId, periodDays = 30) {
+        const dataPoints = await this.extractPipelineDataPoints(pipelineId, 'duration', periodDays);
+        if (dataPoints.length === 0) {
+            throw new error_handler_1.AppError('No pipeline data available for cost analysis', 400);
+        }
+        // Get the most recent run for resource usage analysis
+        this.initializePipelineRepositories();
+        if (!this.pipelineRunRepo) {
+            throw new error_handler_1.AppError('Failed to initialize pipeline repositories', 500);
+        }
+        const recentRun = await this.pipelineRunRepo.findOne({
+            where: { pipelineId },
+            order: { startedAt: 'DESC' }
+        });
+        if (!recentRun || !recentRun.duration) {
+            throw new error_handler_1.AppError('No recent pipeline run data available for cost analysis', 400);
+        }
+        const resourceUsage = {
+            cpu: recentRun.resources?.maxCpu || 50,
+            memory: recentRun.resources?.maxMemory || 50,
+            storage: 25, // Default storage usage
+            network: 10 // Default network usage
+        };
+        return this.analyzeCosts(recentRun.duration / 60, resourceUsage, dataPoints);
+    }
 }
 exports.StatisticalAnalyticsService = StatisticalAnalyticsService;
-// Export singleton instance
+// Export lazy singleton instance getter to avoid database initialization at module import time
+let _instance;
+const getStatisticalAnalyticsService = () => {
+    if (!_instance) {
+        _instance = StatisticalAnalyticsService.getInstance();
+    }
+    return _instance;
+};
+exports.getStatisticalAnalyticsService = getStatisticalAnalyticsService;
+// Export singleton instance for production use  
+// Create instance without triggering database initialization
 exports.statisticalAnalyticsService = StatisticalAnalyticsService.getInstance();
 //# sourceMappingURL=statistical-analytics.service.js.map

@@ -3,10 +3,13 @@
  * Enterprise-grade modular architecture with comprehensive error handling
  */
 import express from 'express';
+import { WebSocketService } from './services/websocket.service';
 declare class Application {
     private app;
     private logger;
     private server;
+    private httpServer;
+    private webSocketService;
     constructor();
     /**
      * Initialize the application
@@ -56,6 +59,10 @@ declare class Application {
      * Get Express application instance
      */
     getApp(): express.Application;
+    /**
+     * Get WebSocket service instance
+     */
+    getWebSocketService(): WebSocketService | null;
 }
 declare function bootstrap(): Promise<void>;
 export { Application };

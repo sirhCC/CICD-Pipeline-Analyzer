@@ -187,6 +187,41 @@ export declare class StatisticalAnalyticsService {
     private generateCostOptimizations;
     private calculateEfficiencyScore;
     private getTValue;
+    /**
+     * Pipeline Integration Methods
+     */
+    private pipelineRepo;
+    private pipelineRunRepo;
+    private initializePipelineRepositories;
+    /**
+     * Extract statistical data points from pipeline runs
+     */
+    extractPipelineDataPoints(pipelineId: string, metric?: 'duration' | 'cpu' | 'memory' | 'success_rate' | 'test_coverage', periodDays?: number): Promise<StatisticalDataPoint[]>;
+    /**
+     * Convert pipeline runs to statistical data points based on metric type
+     */
+    private convertRunsToDataPoints;
+    /**
+     * Analyze pipeline anomalies with integration
+     */
+    analyzePipelineAnomalies(pipelineId: string, metric?: 'duration' | 'cpu' | 'memory' | 'success_rate' | 'test_coverage', method?: 'z-score' | 'percentile' | 'iqr' | 'all', periodDays?: number): Promise<AnomalyDetectionResult[]>;
+    /**
+     * Analyze pipeline trends with integration
+     */
+    analyzePipelineTrends(pipelineId: string, metric?: 'duration' | 'cpu' | 'memory' | 'success_rate' | 'test_coverage', periodDays?: number): Promise<TrendAnalysisResult>;
+    /**
+     * Benchmark pipeline performance with integration
+     */
+    benchmarkPipelinePerformance(pipelineId: string, metric?: 'duration' | 'cpu' | 'memory' | 'success_rate' | 'test_coverage', periodDays?: number): Promise<BenchmarkResult>;
+    /**
+     * Monitor pipeline SLA compliance with integration
+     */
+    monitorPipelineSLA(pipelineId: string, slaTarget: number, metric?: 'duration' | 'cpu' | 'memory' | 'success_rate' | 'test_coverage', periodDays?: number): Promise<SLAMonitoringResult>;
+    /**
+     * Analyze pipeline cost trends with integration
+     */
+    analyzePipelineCostTrends(pipelineId: string, periodDays?: number): Promise<CostAnalysisResult>;
 }
+export declare const getStatisticalAnalyticsService: () => StatisticalAnalyticsService;
 export declare const statisticalAnalyticsService: StatisticalAnalyticsService;
 //# sourceMappingURL=statistical-analytics.service.d.ts.map

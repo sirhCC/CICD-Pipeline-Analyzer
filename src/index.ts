@@ -7,6 +7,7 @@ import express from 'express';
 import helmet from 'helmet';
 import cors from 'cors';
 import compression from 'compression';
+import { createServer } from 'http';
 
 import { configManager } from './config';
 import { Logger } from './shared/logger';
@@ -15,6 +16,7 @@ import { databaseManager } from './core/database';
 import { redisManager } from './core/redis';
 import { databaseInitializer } from './core/database-init';
 import { enhancedDatabaseService } from './services/database.enhanced';
+import { WebSocketService } from './services/websocket.service';
 
 // Import middleware
 import { responseMiddleware } from './middleware/response';
@@ -28,6 +30,8 @@ class Application {
   private app: express.Application;
   private logger: Logger;
   private server: any;
+  private httpServer: any;
+  private webSocketService: WebSocketService | null = null;
 
   constructor() {
     this.app = express();
@@ -70,12 +74,29 @@ class Application {
     try {
       const config = configManager.getServer();
       
-      this.server = this.app.listen(config.port, config.host, () => {
+      // Create HTTP server
+      this.httpServer = createServer(this.app);
+      
+      // Initialize WebSocket service
+      this.webSocketService = new WebSocketService(this.httpServer, {
+        cors: {
+          origin: config.cors.origin,
+          credentials: config.cors.credentials
+        },
+        heartbeatInterval: 30000,
+        clientTimeout: 60000,
+        maxConnections: 1000,
+        enableAuth: true,
+        enableMetrics: true
+      });
+      
+      this.server = this.httpServer.listen(config.port, config.host, () => {
         this.logger.info(`Server started successfully`, {
           host: config.host,
           port: config.port,
           environment: process.env.NODE_ENV,
           version: process.env.npm_package_version || '1.0.0',
+          websocket: 'enabled'
         });
       });
 
@@ -94,6 +115,12 @@ class Application {
   public async stop(): Promise<void> {
     try {
       this.logger.info('Shutting down application...');
+
+      // Shutdown WebSocket service
+      if (this.webSocketService) {
+        await this.webSocketService.close();
+        this.webSocketService = null;
+      }
 
       // Close server
       if (this.server) {
@@ -418,6 +445,13 @@ class Application {
    */
   public getApp(): express.Application {
     return this.app;
+  }
+
+  /**
+   * Get WebSocket service instance
+   */
+  public getWebSocketService(): WebSocketService | null {
+    return this.webSocketService;
   }
 }
 

@@ -74,7 +74,7 @@ router.get('/dashboard', (0, auth_1.requirePermission)(auth_1.Permission.PIPELIN
         pipelineId: pipelineId
     });
     res.json(api_response_1.ResponseBuilder.success(dashboard, {
-        performance: { duration: Date.now() - req.startTime }
+        performance: { executionTime: Date.now() - req.startTime }
     }));
 }));
 /**
@@ -92,7 +92,7 @@ router.get('/pipelines/:pipelineId/metrics', (0, auth_1.requirePermission)(auth_
     });
     const metrics = await analyticsService.calculateMetrics(pipelineId, period);
     res.json(api_response_1.ResponseBuilder.success(metrics, {
-        performance: { duration: Date.now() - req.startTime }
+        performance: { executionTime: Date.now() - req.startTime }
     }));
 }));
 /**
@@ -107,7 +107,7 @@ router.get('/pipelines/:pipelineId/patterns', (0, auth_1.requirePermission)(auth
     });
     const patterns = await analyticsService.detectFailurePatterns(pipelineId);
     res.json(api_response_1.ResponseBuilder.success(patterns, {
-        performance: { duration: Date.now() - req.startTime }
+        performance: { executionTime: Date.now() - req.startTime }
     }));
 }));
 /**
@@ -120,7 +120,7 @@ router.get('/patterns', (0, auth_1.requirePermission)(auth_1.Permission.SYSTEM_M
     });
     const patterns = await analyticsService.detectFailurePatterns();
     res.json(api_response_1.ResponseBuilder.success(patterns, {
-        performance: { duration: Date.now() - req.startTime }
+        performance: { executionTime: Date.now() - req.startTime }
     }));
 }));
 /**
@@ -135,7 +135,7 @@ router.get('/pipelines/:pipelineId/recommendations', (0, auth_1.requirePermissio
     });
     const recommendations = await analyticsService.generateOptimizationRecommendations(pipelineId);
     res.json(api_response_1.ResponseBuilder.success(recommendations, {
-        performance: { duration: Date.now() - req.startTime }
+        performance: { executionTime: Date.now() - req.startTime }
     }));
 }));
 /**
@@ -148,7 +148,7 @@ router.get('/alerts', (0, auth_1.requirePermission)(auth_1.Permission.PIPELINES_
     });
     const alerts = await analyticsService.generateAlerts();
     res.json(api_response_1.ResponseBuilder.success(alerts, {
-        performance: { duration: Date.now() - req.startTime }
+        performance: { executionTime: Date.now() - req.startTime }
     }));
 }));
 /**
@@ -204,7 +204,7 @@ router.get('/health', (0, auth_1.requirePermission)(auth_1.Permission.SYSTEM_MET
     const health = await analyticsService.healthCheck();
     const isHealthy = health.status === 'healthy';
     res.status(isHealthy ? 200 : 503).json(api_response_1.ResponseBuilder.success(health, {
-        performance: { duration: Date.now() - req.startTime }
+        performance: { executionTime: Date.now() - req.startTime }
     }));
 }));
 exports.default = router;

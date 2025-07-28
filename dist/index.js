@@ -12,6 +12,7 @@ const express_1 = __importDefault(require("express"));
 const helmet_1 = __importDefault(require("helmet"));
 const cors_1 = __importDefault(require("cors"));
 const compression_1 = __importDefault(require("compression"));
+const http_1 = require("http");
 const config_1 = require("./config");
 const logger_1 = require("./shared/logger");
 const module_manager_1 = require("./core/module-manager");
@@ -19,6 +20,7 @@ const database_1 = require("./core/database");
 const redis_1 = require("./core/redis");
 const database_init_1 = require("./core/database-init");
 const database_enhanced_1 = require("./services/database.enhanced");
+const websocket_service_1 = require("./services/websocket.service");
 // Import middleware
 const response_1 = require("./middleware/response");
 const router_1 = require("./config/router");
@@ -30,6 +32,8 @@ class Application {
     app;
     logger;
     server;
+    httpServer;
+    webSocketService = null;
     constructor() {
         this.app = (0, express_1.default)();
         this.logger = new logger_1.Logger('Application');
@@ -63,12 +67,27 @@ class Application {
     async start() {
         try {
             const config = config_1.configManager.getServer();
-            this.server = this.app.listen(config.port, config.host, () => {
+            // Create HTTP server
+            this.httpServer = (0, http_1.createServer)(this.app);
+            // Initialize WebSocket service
+            this.webSocketService = new websocket_service_1.WebSocketService(this.httpServer, {
+                cors: {
+                    origin: config.cors.origin,
+                    credentials: config.cors.credentials
+                },
+                heartbeatInterval: 30000,
+                clientTimeout: 60000,
+                maxConnections: 1000,
+                enableAuth: true,
+                enableMetrics: true
+            });
+            this.server = this.httpServer.listen(config.port, config.host, () => {
                 this.logger.info(`Server started successfully`, {
                     host: config.host,
                     port: config.port,
                     environment: process.env.NODE_ENV,
                     version: process.env.npm_package_version || '1.0.0',
+                    websocket: 'enabled'
                 });
             });
             // Graceful shutdown handlers
@@ -85,6 +104,11 @@ class Application {
     async stop() {
         try {
             this.logger.info('Shutting down application...');
+            // Shutdown WebSocket service
+            if (this.webSocketService) {
+                await this.webSocketService.close();
+                this.webSocketService = null;
+            }
             // Close server
             if (this.server) {
                 await new Promise((resolve) => {
@@ -357,6 +381,12 @@ class Application {
      */
     getApp() {
         return this.app;
+    }
+    /**
+     * Get WebSocket service instance
+     */
+    getWebSocketService() {
+        return this.webSocketService;
     }
 }
 exports.Application = Application;

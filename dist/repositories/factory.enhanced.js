@@ -4,7 +4,7 @@
  * Provides centralized repository creation and management
  */
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.pipelineRunRepository = exports.pipelineRepository = exports.userRepository = exports.repositoryFactory = exports.EnhancedRepositoryFactory = void 0;
+exports.getPipelineRunRepository = exports.getPipelineRepository = exports.getUserRepository = exports.repositoryFactory = exports.EnhancedRepositoryFactory = void 0;
 const database_1 = require("../core/database");
 const database_monitor_1 = require("../core/database-monitor");
 const logger_1 = require("../shared/logger");
@@ -166,8 +166,12 @@ class EnhancedRepositoryFactory {
 exports.EnhancedRepositoryFactory = EnhancedRepositoryFactory;
 // Export singleton instance
 exports.repositoryFactory = EnhancedRepositoryFactory.getInstance();
-// Export repository instances for backward compatibility
-exports.userRepository = exports.repositoryFactory.getUserRepository();
-exports.pipelineRepository = exports.repositoryFactory.getPipelineRepository();
-exports.pipelineRunRepository = exports.repositoryFactory.getPipelineRunRepository();
+// Export repository getter functions for backward compatibility
+// These create repositories on-demand rather than at module import time
+const getUserRepository = () => exports.repositoryFactory.getUserRepository();
+exports.getUserRepository = getUserRepository;
+const getPipelineRepository = () => exports.repositoryFactory.getPipelineRepository();
+exports.getPipelineRepository = getPipelineRepository;
+const getPipelineRunRepository = () => exports.repositoryFactory.getPipelineRunRepository();
+exports.getPipelineRunRepository = getPipelineRunRepository;
 //# sourceMappingURL=factory.enhanced.js.map

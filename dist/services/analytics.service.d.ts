@@ -164,5 +164,18 @@ export declare class AnalyticsService {
     private storeAlerts;
     private generateSummary;
     private calculateHealthScore;
+    /**
+     * Health check for analytics service
+     */
+    healthCheck(): Promise<{
+        status: 'healthy' | 'degraded' | 'unhealthy';
+        checks: Record<string, {
+            status: 'pass' | 'fail';
+            message?: string;
+            duration?: number;
+        }>;
+        uptime: number;
+        version: string;
+    }>;
 }
 //# sourceMappingURL=analytics.service.d.ts.map

@@ -785,6 +785,62 @@ class AnalyticsService {
         }
         return Math.max(0, Math.min(100, score));
     }
+    /**
+     * Health check for analytics service
+     */
+    async healthCheck() {
+        const startTime = Date.now();
+        const checks = {};
+        // Check repository access
+        try {
+            const checkStart = Date.now();
+            await factory_enhanced_1.repositoryFactory.getPipelineRepository().count();
+            checks.database = {
+                status: 'pass',
+                duration: Date.now() - checkStart
+            };
+        }
+        catch (error) {
+            checks.database = {
+                status: 'fail',
+                message: error instanceof Error ? error.message : 'Database connection failed',
+                duration: Date.now() - startTime
+            };
+        }
+        // Check service status
+        checks.service = {
+            status: 'pass',
+            message: 'Analytics service operational'
+        };
+        // Check metrics calculation capability
+        try {
+            const checkStart = Date.now();
+            // Try a simple calculation
+            const testData = [1, 2, 3, 4, 5];
+            const avg = testData.reduce((a, b) => a + b, 0) / testData.length;
+            checks.calculations = {
+                status: 'pass',
+                duration: Date.now() - checkStart,
+                message: `Sample calculation result: ${avg}`
+            };
+        }
+        catch (error) {
+            checks.calculations = {
+                status: 'fail',
+                message: 'Mathematical calculations failed'
+            };
+        }
+        // Determine overall status
+        const failedChecks = Object.values(checks).filter(check => check.status === 'fail');
+        const status = failedChecks.length === 0 ? 'healthy' :
+            failedChecks.length <= 1 ? 'degraded' : 'unhealthy';
+        return {
+            status,
+            checks,
+            uptime: process.uptime(),
+            version: process.env.npm_package_version || '1.0.0'
+        };
+    }
 }
 exports.AnalyticsService = AnalyticsService;
 //# sourceMappingURL=analytics.service.js.map

@@ -617,4 +617,45 @@ router.post('/pipelines/:pipelineId/cost',
   })
 );
 
+// === WebSocket Endpoints ===
+
+/**
+ * GET /websocket/info - Get WebSocket connection information
+ * Returns WebSocket server details for client connections
+ */
+router.get('/websocket/info',
+  authenticateJWT,
+  requirePermission(Permission.ANALYTICS_READ),
+  asyncHandler(async (req: Request, res: Response) => {
+    logger.info('WebSocket info requested', {
+      userId: (req as any).user?.userId
+    });
+
+    const protocol = req.secure ? 'wss' : 'ws';
+    const host = req.get('host') || 'localhost';
+    
+    res.json(ResponseBuilder.success({
+      websocketUrl: `${protocol}://${host}`,
+      features: [
+        'real-time statistical updates',
+        'anomaly detection alerts',
+        'trend analysis notifications',
+        'SLA violation alerts',
+        'cost optimization insights'
+      ],
+      authentication: {
+        required: true,
+        method: 'JWT token via query parameter or auth header',
+        permissions: ['read:analytics', 'read:pipelines']
+      },
+      subscriptionTypes: [
+        'pipeline-specific analytics',
+        'global anomaly alerts',
+        'cost threshold warnings',
+        'trend degradation notifications'
+      ]
+    }));
+  })
+);
+
 export { router as statisticalAnalyticsRoutes };
