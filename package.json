@@ -50,6 +50,8 @@
   },
   "dependencies": {
     "@types/axios": "^0.9.36",
+    "@types/socket.io": "^3.0.1",
+    "@types/ws": "^8.18.1",
     "axios": "^1.11.0",
     "bcryptjs": "^2.4.3",
     "bull": "^4.11.5",
@@ -66,9 +68,11 @@
     "lodash": "^4.17.21",
     "pg": "^8.11.3",
     "redis": "^4.6.10",
+    "socket.io": "^4.8.1",
     "typeorm": "^0.3.17",
     "uuid": "^9.0.1",
-    "winston": "^3.11.0"
+    "winston": "^3.11.0",
+    "ws": "^8.18.3"
   },
   "devDependencies": {
     "@types/bcryptjs": "^2.4.6",
