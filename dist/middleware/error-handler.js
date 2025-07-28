@@ -254,7 +254,7 @@ exports.asyncHandler = asyncHandler;
  * 404 Not Found handler
  */
 const notFoundHandler = (req, res, next) => {
-    const error = new NotFoundError(`Route ${req.method} ${req.originalUrl} not found`);
+    const error = new NotFoundError(`Route ${req.method} ${req.originalUrl}`);
     next(error);
 };
 exports.notFoundHandler = notFoundHandler;
