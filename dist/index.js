@@ -21,6 +21,7 @@ const redis_1 = require("./core/redis");
 const database_init_1 = require("./core/database-init");
 const database_enhanced_1 = require("./services/database.enhanced");
 const websocket_service_1 = require("./services/websocket.service");
+const background_job_service_1 = require("./services/background-job.service");
 // Import middleware
 const response_1 = require("./middleware/response");
 const router_1 = require("./config/router");
@@ -81,6 +82,9 @@ class Application {
                 enableAuth: true,
                 enableMetrics: true
             });
+            // Connect WebSocket service to background job service for real-time alerts
+            const backgroundJobService = (0, background_job_service_1.getBackgroundJobService)();
+            backgroundJobService.setWebSocketService(this.webSocketService);
             this.server = this.httpServer.listen(config.port, config.host, () => {
                 this.logger.info(`Server started successfully`, {
                     host: config.host,
@@ -104,6 +108,14 @@ class Application {
     async stop() {
         try {
             this.logger.info('Shutting down application...');
+            // Shutdown background job service
+            try {
+                const backgroundJobService = (0, background_job_service_1.getBackgroundJobService)();
+                await backgroundJobService.shutdown();
+            }
+            catch (error) {
+                this.logger.warn('Background job service not initialized or already shut down');
+            }
             // Shutdown WebSocket service
             if (this.webSocketService) {
                 await this.webSocketService.close();
@@ -158,6 +170,15 @@ class Application {
         });
         // Initialize Redis cache
         await redis_1.redisManager.initialize();
+        // Initialize background job service
+        (0, background_job_service_1.createBackgroundJobService)({
+            maxConcurrentJobs: 5,
+            defaultRetryAttempts: 3,
+            jobTimeout: 300000, // 5 minutes
+            enableRealTimeAlerts: true,
+            historicalDataRetention: 30,
+            enableMetrics: true
+        });
         this.logger.info('Core services initialized successfully');
     }
     /**

@@ -10,6 +10,7 @@ import { validateRequest } from '@/middleware/request-validation';
 import { ResponseBuilder } from '@/shared/api-response';
 import { Logger } from '@/shared/logger';
 import { statisticalAnalyticsService, StatisticalDataPoint } from '@/services/statistical-analytics.service';
+import { getBackgroundJobService } from '@/services/background-job.service';
 import Joi from 'joi';
 
 const router = Router();
@@ -337,6 +338,31 @@ const pipelineCostSchema = Joi.object({
   periodDays: Joi.number().integer().min(1).max(365).default(30)
 });
 
+// Job Management Schemas
+const jobCreationSchema = Joi.object({
+  name: Joi.string().min(1).max(100).required(),
+  type: Joi.string().valid('anomaly_detection', 'trend_analysis', 'sla_monitoring', 'cost_analysis', 'full_analysis').required(),
+  schedule: Joi.string().required(), // cron expression
+  enabled: Joi.boolean().default(true),
+  pipelineId: Joi.string().uuid().optional(),
+  parameters: Joi.object({
+    metric: Joi.string().valid('duration', 'cpu', 'memory', 'success_rate', 'test_coverage').optional(),
+    method: Joi.string().valid('z-score', 'percentile', 'iqr', 'all').optional(),
+    periodDays: Joi.number().integer().min(1).max(365).optional(),
+    slaTarget: Joi.number().optional(),
+    alertThresholds: Joi.object({
+      anomaly: Joi.string().valid('low', 'medium', 'high', 'critical').optional(),
+      trend: Joi.string().valid('significant', 'moderate', 'minimal').optional(),
+      sla: Joi.boolean().optional(),
+      cost: Joi.number().optional()
+    }).optional()
+  }).default({})
+});
+
+const jobParamsSchema = Joi.object({
+  jobId: Joi.string().uuid().required()
+});
+
 const pipelineParamsSchema = Joi.object({
   pipelineId: Joi.string().uuid().required()
 });
@@ -654,6 +680,166 @@ router.get('/websocket/info',
         'cost threshold warnings',
         'trend degradation notifications'
       ]
+    }));
+  })
+);
+
+/**
+ * POST /jobs - Create a new background statistical analysis job
+ * Creates scheduled jobs for continuous statistical analysis
+ */
+router.post('/jobs',
+  authenticateJWT,
+  requirePermission(Permission.ANALYTICS_WRITE),
+  validateRequest({ body: jobCreationSchema }),
+  asyncHandler(async (req: Request, res: Response) => {
+    const { name, type, schedule, enabled, pipelineId, parameters } = req.body;
+    
+    logger.info('Background job creation requested', {
+      name,
+      type,
+      schedule,
+      pipelineId,
+      userId: (req as any).user?.userId
+    });
+
+    const jobService = getBackgroundJobService();
+    const jobId = await jobService.createJob({
+      name,
+      type,
+      schedule,
+      enabled,
+      pipelineId,
+      parameters
+    });
+    
+    logger.info('Background job created', {
+      jobId,
+      name,
+      type,
+      userId: (req as any).user?.userId
+    });
+
+    res.json(ResponseBuilder.success({
+      jobId,
+      message: 'Background job created successfully',
+      job: {
+        id: jobId,
+        name,
+        type,
+        schedule,
+        enabled,
+        pipelineId
+      }
+    }));
+  })
+);
+
+/**
+ * GET /jobs - Get all background jobs
+ * Returns list of all scheduled statistical analysis jobs
+ */
+router.get('/jobs',
+  authenticateJWT,
+  requirePermission(Permission.ANALYTICS_READ),
+  asyncHandler(async (req: Request, res: Response) => {
+    logger.info('Jobs list requested', {
+      userId: (req as any).user?.userId
+    });
+
+    const jobService = getBackgroundJobService();
+    const jobs = jobService.getAllJobs();
+    
+    res.json(ResponseBuilder.success({
+      jobs,
+      total: jobs.length,
+      enabled: jobs.filter(job => job.enabled).length,
+      disabled: jobs.filter(job => !job.enabled).length
+    }));
+  })
+);
+
+/**
+ * GET /jobs/:jobId - Get specific job status and details
+ * Returns detailed information about a specific background job
+ */
+router.get('/jobs/:jobId',
+  authenticateJWT,
+  requirePermission(Permission.ANALYTICS_READ),
+  validateRequest({ params: jobParamsSchema }),
+  asyncHandler(async (req: Request, res: Response) => {
+    const { jobId } = req.params;
+    
+    logger.info('Job status requested', {
+      jobId,
+      userId: (req as any).user?.userId
+    });
+
+    const jobService = getBackgroundJobService();
+    const jobStatus = await jobService.getJobStatus(jobId!);
+    
+    res.json(ResponseBuilder.success({
+      job: jobStatus,
+      execution: {
+        isRunning: jobStatus.isActive,
+        current: jobStatus.currentExecution || null,
+        recent: jobStatus.recentExecutions.slice(0, 5)
+      }
+    }));
+  })
+);
+
+/**
+ * POST /jobs/:jobId/cancel - Cancel running job execution
+ * Cancels currently running execution of a background job
+ */
+router.post('/jobs/:jobId/cancel',
+  authenticateJWT,
+  requirePermission(Permission.ANALYTICS_WRITE),
+  validateRequest({ params: jobParamsSchema }),
+  asyncHandler(async (req: Request, res: Response) => {
+    const { jobId } = req.params;
+    
+    logger.info('Job cancellation requested', {
+      jobId,
+      userId: (req as any).user?.userId
+    });
+
+    const jobService = getBackgroundJobService();
+    const result = await jobService.cancelJob(jobId!);
+    
+    logger.info('Job cancellation result', {
+      jobId,
+      cancelled: result.cancelled,
+      userId: (req as any).user?.userId
+    });
+
+    res.json(ResponseBuilder.success({
+      jobId,
+      cancelled: result.cancelled,
+      message: result.message
+    }));
+  })
+);
+
+/**
+ * GET /jobs/metrics - Get background job service metrics
+ * Returns performance metrics and statistics for the job service
+ */
+router.get('/jobs/metrics',
+  authenticateJWT,
+  requireRole(UserRole.ADMIN),
+  asyncHandler(async (req: Request, res: Response) => {
+    logger.info('Job metrics requested', {
+      userId: (req as any).user?.userId
+    });
+
+    const jobService = getBackgroundJobService();
+    const metrics = jobService.getMetrics();
+    
+    res.json(ResponseBuilder.success({
+      metrics,
+      timestamp: new Date().toISOString()
     }));
   })
 );

@@ -15,6 +15,7 @@ const request_validation_1 = require("../middleware/request-validation");
 const api_response_1 = require("../shared/api-response");
 const logger_1 = require("../shared/logger");
 const statistical_analytics_service_1 = require("../services/statistical-analytics.service");
+const background_job_service_1 = require("../services/background-job.service");
 const joi_1 = __importDefault(require("joi"));
 const router = (0, express_1.Router)();
 exports.statisticalAnalyticsRoutes = router;
@@ -272,6 +273,29 @@ const pipelineSlaSchema = joi_1.default.object({
 const pipelineCostSchema = joi_1.default.object({
     periodDays: joi_1.default.number().integer().min(1).max(365).default(30)
 });
+// Job Management Schemas
+const jobCreationSchema = joi_1.default.object({
+    name: joi_1.default.string().min(1).max(100).required(),
+    type: joi_1.default.string().valid('anomaly_detection', 'trend_analysis', 'sla_monitoring', 'cost_analysis', 'full_analysis').required(),
+    schedule: joi_1.default.string().required(), // cron expression
+    enabled: joi_1.default.boolean().default(true),
+    pipelineId: joi_1.default.string().uuid().optional(),
+    parameters: joi_1.default.object({
+        metric: joi_1.default.string().valid('duration', 'cpu', 'memory', 'success_rate', 'test_coverage').optional(),
+        method: joi_1.default.string().valid('z-score', 'percentile', 'iqr', 'all').optional(),
+        periodDays: joi_1.default.number().integer().min(1).max(365).optional(),
+        slaTarget: joi_1.default.number().optional(),
+        alertThresholds: joi_1.default.object({
+            anomaly: joi_1.default.string().valid('low', 'medium', 'high', 'critical').optional(),
+            trend: joi_1.default.string().valid('significant', 'moderate', 'minimal').optional(),
+            sla: joi_1.default.boolean().optional(),
+            cost: joi_1.default.number().optional()
+        }).optional()
+    }).default({})
+});
+const jobParamsSchema = joi_1.default.object({
+    jobId: joi_1.default.string().uuid().required()
+});
 const pipelineParamsSchema = joi_1.default.object({
     pipelineId: joi_1.default.string().uuid().required()
 });
@@ -506,6 +530,123 @@ router.get('/websocket/info', auth_1.authenticateJWT, (0, auth_1.requirePermissi
             'cost threshold warnings',
             'trend degradation notifications'
         ]
+    }));
+}));
+/**
+ * POST /jobs - Create a new background statistical analysis job
+ * Creates scheduled jobs for continuous statistical analysis
+ */
+router.post('/jobs', auth_1.authenticateJWT, (0, auth_1.requirePermission)(auth_1.Permission.ANALYTICS_WRITE), (0, request_validation_1.validateRequest)({ body: jobCreationSchema }), (0, error_handler_1.asyncHandler)(async (req, res) => {
+    const { name, type, schedule, enabled, pipelineId, parameters } = req.body;
+    logger.info('Background job creation requested', {
+        name,
+        type,
+        schedule,
+        pipelineId,
+        userId: req.user?.userId
+    });
+    const jobService = (0, background_job_service_1.getBackgroundJobService)();
+    const jobId = await jobService.createJob({
+        name,
+        type,
+        schedule,
+        enabled,
+        pipelineId,
+        parameters
+    });
+    logger.info('Background job created', {
+        jobId,
+        name,
+        type,
+        userId: req.user?.userId
+    });
+    res.json(api_response_1.ResponseBuilder.success({
+        jobId,
+        message: 'Background job created successfully',
+        job: {
+            id: jobId,
+            name,
+            type,
+            schedule,
+            enabled,
+            pipelineId
+        }
+    }));
+}));
+/**
+ * GET /jobs - Get all background jobs
+ * Returns list of all scheduled statistical analysis jobs
+ */
+router.get('/jobs', auth_1.authenticateJWT, (0, auth_1.requirePermission)(auth_1.Permission.ANALYTICS_READ), (0, error_handler_1.asyncHandler)(async (req, res) => {
+    logger.info('Jobs list requested', {
+        userId: req.user?.userId
+    });
+    const jobService = (0, background_job_service_1.getBackgroundJobService)();
+    const jobs = jobService.getAllJobs();
+    res.json(api_response_1.ResponseBuilder.success({
+        jobs,
+        total: jobs.length,
+        enabled: jobs.filter(job => job.enabled).length,
+        disabled: jobs.filter(job => !job.enabled).length
+    }));
+}));
+/**
+ * GET /jobs/:jobId - Get specific job status and details
+ * Returns detailed information about a specific background job
+ */
+router.get('/jobs/:jobId', auth_1.authenticateJWT, (0, auth_1.requirePermission)(auth_1.Permission.ANALYTICS_READ), (0, request_validation_1.validateRequest)({ params: jobParamsSchema }), (0, error_handler_1.asyncHandler)(async (req, res) => {
+    const { jobId } = req.params;
+    logger.info('Job status requested', {
+        jobId,
+        userId: req.user?.userId
+    });
+    const jobService = (0, background_job_service_1.getBackgroundJobService)();
+    const jobStatus = await jobService.getJobStatus(jobId);
+    res.json(api_response_1.ResponseBuilder.success({
+        job: jobStatus,
+        execution: {
+            isRunning: jobStatus.isActive,
+            current: jobStatus.currentExecution || null,
+            recent: jobStatus.recentExecutions.slice(0, 5)
+        }
+    }));
+}));
+/**
+ * POST /jobs/:jobId/cancel - Cancel running job execution
+ * Cancels currently running execution of a background job
+ */
+router.post('/jobs/:jobId/cancel', auth_1.authenticateJWT, (0, auth_1.requirePermission)(auth_1.Permission.ANALYTICS_WRITE), (0, request_validation_1.validateRequest)({ params: jobParamsSchema }), (0, error_handler_1.asyncHandler)(async (req, res) => {
+    const { jobId } = req.params;
+    logger.info('Job cancellation requested', {
+        jobId,
+        userId: req.user?.userId
+    });
+    const jobService = (0, background_job_service_1.getBackgroundJobService)();
+    const result = await jobService.cancelJob(jobId);
+    logger.info('Job cancellation result', {
+        jobId,
+        cancelled: result.cancelled,
+        userId: req.user?.userId
+    });
+    res.json(api_response_1.ResponseBuilder.success({
+        jobId,
+        cancelled: result.cancelled,
+        message: result.message
+    }));
+}));
+/**
+ * GET /jobs/metrics - Get background job service metrics
+ * Returns performance metrics and statistics for the job service
+ */
+router.get('/jobs/metrics', auth_1.authenticateJWT, (0, auth_1.requireRole)(auth_1.UserRole.ADMIN), (0, error_handler_1.asyncHandler)(async (req, res) => {
+    logger.info('Job metrics requested', {
+        userId: req.user?.userId
+    });
+    const jobService = (0, background_job_service_1.getBackgroundJobService)();
+    const metrics = jobService.getMetrics();
+    res.json(api_response_1.ResponseBuilder.success({
+        metrics,
+        timestamp: new Date().toISOString()
     }));
 }));
 //# sourceMappingURL=statistical-analytics.routes.js.map

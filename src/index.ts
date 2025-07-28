@@ -17,6 +17,7 @@ import { redisManager } from './core/redis';
 import { databaseInitializer } from './core/database-init';
 import { enhancedDatabaseService } from './services/database.enhanced';
 import { WebSocketService } from './services/websocket.service';
+import { createBackgroundJobService, getBackgroundJobService } from './services/background-job.service';
 
 // Import middleware
 import { responseMiddleware } from './middleware/response';
@@ -90,6 +91,10 @@ class Application {
         enableMetrics: true
       });
       
+      // Connect WebSocket service to background job service for real-time alerts
+      const backgroundJobService = getBackgroundJobService();
+      backgroundJobService.setWebSocketService(this.webSocketService);
+      
       this.server = this.httpServer.listen(config.port, config.host, () => {
         this.logger.info(`Server started successfully`, {
           host: config.host,
@@ -115,6 +120,14 @@ class Application {
   public async stop(): Promise<void> {
     try {
       this.logger.info('Shutting down application...');
+
+      // Shutdown background job service
+      try {
+        const backgroundJobService = getBackgroundJobService();
+        await backgroundJobService.shutdown();
+      } catch (error) {
+        this.logger.warn('Background job service not initialized or already shut down');
+      }
 
       // Shutdown WebSocket service
       if (this.webSocketService) {
@@ -179,6 +192,16 @@ class Application {
 
     // Initialize Redis cache
     await redisManager.initialize();
+
+    // Initialize background job service
+    createBackgroundJobService({
+      maxConcurrentJobs: 5,
+      defaultRetryAttempts: 3,
+      jobTimeout: 300000, // 5 minutes
+      enableRealTimeAlerts: true,
+      historicalDataRetention: 30,
+      enableMetrics: true
+    });
 
     this.logger.info('Core services initialized successfully');
   }
