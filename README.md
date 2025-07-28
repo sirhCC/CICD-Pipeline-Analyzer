@@ -1,519 +1,349 @@
-# 🚀 CI/CD Pipeline Analyzer
+# CI/CD Pipeline Analyzer
 
-[![TypeScript](https://img.shields.io/badge/TypeScript-5.0+-blue.svg)](https://www.typescriptlang.org/)
-[![Node.js](https://img.shields.io/badge/Node.js-18.0+-green.svg)](https://nodejs.org/)
-[![License](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![Build Status](https://img.shields.io/badge/Build-Passing-brightgreen.svg)](#)
-[![Coverage](https://img.shields.io/badge/Coverage-99%25+-success.svg)](#)
-[![Tests](https://img.shields.io/badge/Tests-272%2F272%20Passing-brightgreen.svg)](#)
+A comprehensive TypeScript-based application for analyzing and monitoring CI/CD pipeline performance across multiple platforms including GitHub Actions and GitLab CI.
 
-> **Enterprise-grade CI/CD pipeline analysis and optimization platform** 🎯
+## 🚀 Features
 
-An intelligent, modular system for analyzing, monitoring, and optimizing CI/CD pipelines across multiple platforms. Built with TypeScript and designed for scalability, performance, and enterprise deployment.
+- **Multi-Platform Support**: GitHub Actions, GitLab CI, and extensible provider architecture
+- **Real-time Analytics**: Pipeline performance monitoring and statistical analysis
+- **Security-First**: JWT authentication, rate limiting, and comprehensive security measures
+- **Database Integration**: PostgreSQL with Redis caching for optimal performance
+- **REST API**: Full REST API with OpenAPI documentation
+- **Statistical Analytics**: Advanced metrics calculation and trend analysis
+- **Health Monitoring**: Built-in health checks and monitoring endpoints
 
-## 🌟 **Current Status - Production Ready!**
+## 📋 Table of Contents
 
-### ✅ **All Phases Complete** - 272/272 Tests Passing
+- [Installation](#installation)
+- [Quick Start](#quick-start)
+- [Configuration](#configuration)
+- [API Documentation](#api-documentation)
+- [Database](#database)
+- [Testing](#testing)
+- [Development](#development)
+- [Contributing](#contributing)
+- [License](#license)
 
-- **🏗️ Enterprise Foundation** - Complete middleware stack, security, database layer
-- **📊 Analytics Engine** - Real-time metrics, pattern detection, optimization recommendations  
-- **🔬 Statistical Analytics Engine** - Core mathematical analysis engine (anomaly detection, trend analysis, benchmarking, SLA monitoring, cost analysis)
-- **🔐 Production Security** - SSL, authentication, auditing, threat detection
-- **🚀 Ready for Deployment** - Docker, Kubernetes, comprehensive monitoring
+## 🛠️ Installation
 
----
+### Prerequisites
 
-## 🚀 **Quick Start**
+- Node.js 18+
+- PostgreSQL 12+
+- Redis 6+
+- npm or yarn
 
-### **Prerequisites**
-- Node.js 18.0+, PostgreSQL 12+, Redis 6.0+
+### Setup
 
-### **Installation & Setup**
-```bash
-# Clone and install
-git clone https://github.com/sirhCC/CICDpa.git
-cd CICDpa && npm install
+1. **Clone the repository**
 
-# Setup environment
-cp .env.example .env  # Edit with your configuration
+   ```bash
+   git clone <repository-url>
+   cd CICDpa
+   ```
 
-# Quick setup with Docker
-docker-compose up -d  # Includes PostgreSQL + Redis
+2. **Install dependencies**
 
-# Run migrations and start
-npm run migrate && npm run dev
-```
+   ```bash
+   npm install
+   ```
 
-### **🎯 What You Get Immediately**
-- **Analytics Dashboard** at `http://localhost:3000/api/v1/analytics/dashboard`
-- **Statistical Analytics** with mathematical analysis endpoints
-- **Real-time Pipeline Analysis** with failure pattern detection
-- **Production-ready Database** with SSL and security monitoring
+3. **Environment Configuration**
 
----
+   ```bash
+   cp .env.example .env
+   # Edit .env with your configuration
+   ```
 
-## ✨ **Core Features**
+4. **Database Setup**
 
-### 📊 **Analytics Engine** ✅ *Production Ready*
-```http
-GET /api/v1/analytics/dashboard              # Complete analytics overview
-GET /api/v1/analytics/pipelines/:id/metrics  # Pipeline performance metrics  
-GET /api/v1/analytics/patterns               # AI failure pattern detection
-GET /api/v1/analytics/alerts                 # Smart alerting system
-```
+   ```bash
+   npm run db:migrate
+   npm run db:seed
+   ```
 
-**What It Does:**
-- **Real-time Metrics** - Success rates, execution times, throughput analysis
-- **Failure Detection** - AI-powered pattern recognition for recurring issues
-- **Smart Alerts** - Performance degradation, failure spikes, resource waste
-- **Optimization Suggestions** - Automated recommendations for improvement
+5. **Build and Start**
 
-### 🔬 **Statistical Analytics Engine** ✅ *Complete*
-```http
-POST /api/v1/analytics/statistical/anomalies   # Detect anomalies in time series data
-POST /api/v1/analytics/statistical/trends      # Mathematical trend analysis with regression
-POST /api/v1/analytics/statistical/benchmark   # Compare against historical performance  
-POST /api/v1/analytics/statistical/sla         # Monitor SLA compliance and violations
-POST /api/v1/analytics/statistical/costs       # Cost analysis with optimization recommendations
-GET  /api/v1/analytics/statistical/health      # Statistical engine health check
-```
+   ```bash
+   npm run build
+   npm start
+   ```
 
-**Advanced Statistical Features:**
-- **Anomaly Detection** - Z-score and percentile-based outlier detection
-- **Trend Analysis** - Linear regression with confidence intervals and correlation metrics
-- **Benchmark Comparison** - Percentile ranking against historical performance data
-- **SLA Monitoring** - Real-time compliance tracking with violation severity assessment
-- **Cost Analysis** - Resource optimization with efficiency scoring and savings recommendations
-- **Mathematical Models** - Statistical calculations including variance, correlation, and regression analysis
+## 🚀 Quick Start
 
-### 🔍 **Multi-Platform Support** 
-- **GitHub Actions** ✅ Complete integration
-- **GitLab CI/CD** ✅ Full pipeline analysis  
-- **Jenkins** 🔄 Coming in Phase 4
-- **Azure DevOps** 🔄 Planned
-- **CircleCI** 🔄 Roadmap
+### Basic Usage
 
-### 🛡️ **Enterprise Security** ✅ *Production Ready*
-```http
-POST /api/v1/auth/login     # JWT authentication
-GET  /api/v1/auth/profile   # User management
-POST /api/v1/auth/api-key   # API key generation
-```
-
-**Security Features:**
-- **JWT Authentication** with refresh tokens and role-based access
-- **Rate Limiting** with multiple strategies (fixed window, sliding window, token bucket)
-- **SSL/TLS Security** with certificate validation and connection auditing
-- **Input Validation** with XSS protection and data sanitization
-- **Audit Logging** for compliance (GDPR, SOC2)
-
-### 🗄️ **Production Database** ✅ *Enterprise Grade*
-- **PostgreSQL** with TypeORM and SSL encryption
-- **Connection Pooling** with health monitoring and retry logic
-- **Security Auditing** with suspicious query detection
-- **Migration System** with rollback support
-- **Performance Monitoring** with connection tracking
-
----
-
-## 🏗️ **Architecture**
-
-```mermaid
-graph TB
-    A[Analytics Dashboard] --> B[API Gateway v1]
-    B --> C[Auth & Security Layer]
-    B --> D[Analytics Engine]
-    B --> E[Statistical Engine]
-    B --> F[Provider Integrations]
-    
-    D --> G[Metrics Calculator]
-    D --> H[Pattern Detector] 
-    D --> I[Alert Manager]
-    
-    E --> J[Anomaly Detection]
-    E --> K[Trend Analysis]
-    E --> L[Benchmarking]
-    E --> M[SLA Monitoring]
-    
-    F --> N[GitHub Actions ✅]
-    F --> O[GitLab CI ✅]
-    F --> P[Jenkins 🔄]
-    
-    C --> Q[(PostgreSQL)]
-    D --> Q
-    E --> Q
-    C --> R[(Redis Cache)]
-    D --> R
-    
-    S[Webhook Handlers] --> B
-    T[Security Monitor] --> Q
-```
-
-**Key Components:**
-- **API Gateway** - Versioned APIs with standardized responses
-- **Analytics Engine** - Real-time processing with intelligent recommendations
-- **Statistical Engine** - Mathematical analysis without AI/ML complexity
-- **Security Layer** - Multi-layered protection with comprehensive auditing
-- **Provider System** - Extensible integrations with type-safe factory pattern
-
----
-
-## 📖 **API Reference**
-
-### **Core Endpoints**
-```http
-# System Health
-GET /health                 # Application health check
-GET /api/version           # API version discovery
-
-# Authentication  
-POST /api/v1/auth/login    # User login (returns JWT)
-POST /api/v1/auth/refresh  # Refresh token
-GET  /api/v1/auth/profile  # User profile
-
-# Pipeline Management
-GET    /api/v1/pipelines         # List all pipelines  
-POST   /api/v1/pipelines         # Create pipeline
-GET    /api/v1/pipelines/:id     # Get pipeline details
-PUT    /api/v1/pipelines/:id     # Update pipeline
-
-# Analytics
-GET /api/v1/analytics/dashboard                    # Analytics overview
-GET /api/v1/analytics/pipelines/:id/metrics       # Pipeline metrics
-GET /api/v1/analytics/patterns                    # Failure patterns  
-GET /api/v1/analytics/pipelines/:id/recommendations # Optimization tips
-GET /api/v1/analytics/alerts                      # Smart alerts
-PUT /api/v1/analytics/alerts/:id                  # Update alert status
-
-# Statistical Analytics
-POST /api/v1/analytics/statistical/anomalies      # Anomaly detection in time series
-POST /api/v1/analytics/statistical/trends         # Mathematical trend analysis  
-POST /api/v1/analytics/statistical/benchmark      # Performance benchmarking
-POST /api/v1/analytics/statistical/sla            # SLA compliance monitoring
-POST /api/v1/analytics/statistical/costs          # Cost analysis & optimization
-GET  /api/v1/analytics/statistical/health         # Statistical engine health
-```
-
-### **Response Format**
-All APIs return consistent responses with version info:
-```json
-{
-  "success": true,
-  "data": { /* ... response data ... */ },
-  "message": "Request processed successfully", 
-  "meta": {
-    "timestamp": "2025-01-15T10:30:00.000Z",
-    "version": { "api": "v1", "app": "1.0.0" },
-    "requestId": "req_abc123",
-    "performance": { "executionTime": 45 }
-  }
-}
-```
-
----
-
-## 🔬 **Statistical Analytics Usage Examples**
-
-### **Anomaly Detection**
 ```typescript
-// POST request with sample time series data
-const response = await fetch('/api/v1/analytics/statistical/anomalies', {
-  method: 'POST',
-  headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer your-token' },
-  body: JSON.stringify({
-    data: [
-      { timestamp: "2024-01-01T10:00:00Z", value: 450 },
-      { timestamp: "2024-01-01T11:00:00Z", value: 1800 }, // Anomaly
-      { timestamp: "2024-01-01T12:00:00Z", value: 470 }
-    ],
-    method: "z-score"
-  })
+import { PipelineAnalyzer } from './src';
+
+const analyzer = new PipelineAnalyzer({
+  provider: 'github-actions',
+  apiToken: 'your-token'
 });
 
-// Response: Detailed anomaly analysis
+// Analyze a pipeline
+const metrics = await analyzer.analyze('owner/repo');
+console.log(metrics);
+```
+
+### API Example
+
+```bash
+# Health check
+curl http://localhost:3000/health
+
+# Get pipeline analytics
+curl -H "Authorization: Bearer <token>" \
+     http://localhost:3000/api/analytics/pipelines
+```
+
+## ⚙️ Configuration
+
+### Environment Variables
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `PORT` | Server port | `3000` |
+| `DATABASE_URL` | PostgreSQL connection string | Required |
+| `REDIS_URL` | Redis connection string | Required |
+| `JWT_SECRET` | JWT signing secret | Required |
+| `GITHUB_TOKEN` | GitHub API token | Optional |
+| `GITLAB_TOKEN` | GitLab API token | Optional |
+
+### Database Configuration
+
+The application uses PostgreSQL as the primary database with Redis for caching. See [DATABASE.md](docs/DATABASE.md) for detailed configuration.
+
+## 📚 API Documentation
+
+### Authentication
+
+All API endpoints require JWT authentication:
+
+```bash
+POST /api/auth/login
 {
-  "success": true,
-  "data": {
-    "anomalies": [
-      {
-        "timestamp": "2024-01-01T11:00:00Z",
-        "value": 1800,
-        "severity": "major",
-        "zScore": 3.2,
-        "percentile": 99.1
-      }
-    ],
-    "summary": {
-      "totalDataPoints": 3,
-      "anomaliesDetected": 1,
-      "anomalyRate": 33.33,
-      "method": "z-score"
-    }
-  }
+  "username": "your-username",
+  "password": "your-password"
 }
 ```
 
-### **Trend Analysis**
-```typescript
-// Analyze performance trends
-const trends = await fetch('/api/v1/analytics/statistical/trends', {
-  method: 'POST',
-  headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer your-token' },
-  body: JSON.stringify({
-    data: [
-      { timestamp: "2024-01-01T00:00:00Z", value: 500 },
-      { timestamp: "2024-01-02T00:00:00Z", value: 480 },
-      { timestamp: "2024-01-03T00:00:00Z", value: 460 }
-    ],
-    method: "regression"
-  })
-});
+### Pipeline Endpoints
 
-// Response: Statistical trend analysis
-{
-  "success": true,
-  "data": {
-    "trend": "improving",
-    "slope": -0.02,
-    "rSquared": 0.85,
-    "confidence": 0.95,
-    "prediction": {
-      "nextWeek": { "duration": 450, "confidenceInterval": [420, 480] }
-    }
-  }
-}
-```
+- `GET /api/pipelines` - List all pipelines
+- `GET /api/pipelines/:id` - Get pipeline details
+- `POST /api/pipelines` - Create new pipeline
+- `PUT /api/pipelines/:id` - Update pipeline
+- `DELETE /api/pipelines/:id` - Delete pipeline
 
----
+### Analytics Endpoints
 
-## ⚙️ **Configuration**
+- `GET /api/analytics/overview` - Analytics overview
+- `GET /api/analytics/pipelines` - Pipeline analytics
+- `GET /api/analytics/performance` - Performance metrics
+- `GET /api/analytics/trends` - Trend analysis
 
-### **Environment Setup**
+### Statistical Analytics
+
+- `GET /api/statistical-analytics/summary` - Statistical summary
+- `GET /api/statistical-analytics/trends` - Statistical trends
+- `GET /api/statistical-analytics/correlations` - Correlation analysis
+
+## 🗄️ Database
+
+### Schema Overview
+
+- **Pipelines**: Core pipeline configuration and metadata
+- **Pipeline Runs**: Individual execution records
+- **Pipeline Metrics**: Performance and statistical data
+- **Users**: Authentication and authorization
+
+### Migrations
+
 ```bash
-# Application
-NODE_ENV=production
-SERVER_PORT=3000
+# Run migrations
+npm run db:migrate
 
-# Database (Required)
-DATABASE_HOST=localhost
-DATABASE_PORT=5432  
-DATABASE_NAME=cicd_analyzer
-DATABASE_USERNAME=postgres
-DATABASE_PASSWORD=your-secure-password
-DATABASE_POOL_SIZE=20
+# Create new migration
+npm run db:migration:create migration-name
 
-# Database Security (Production)
-DB_SSL_REJECT_UNAUTHORIZED=true
-DB_SSL_CA=path/to/ca-certificate.crt
-
-# Redis
-REDIS_HOST=localhost
-REDIS_PORT=6379
-
-# Authentication (Required)
-JWT_SECRET=your-super-secret-jwt-key-min-32-chars
-JWT_EXPIRES_IN=24h
-
-# Analytics (Optional - has defaults)
-ANALYTICS_ENABLE_REALTIME=true
-ANALYTICS_METRIC_RETENTION_DAYS=90
-ANALYTICS_FAILURE_RATE_THRESHOLD=0.15
-
-# Provider Tokens (For integrations)
-GITHUB_TOKEN=your-github-token
-GITLAB_TOKEN=your-gitlab-token
+# Rollback
+npm run db:rollback
 ```
 
-### **Provider Setup**
-<details>
-<summary><strong>GitHub Actions Setup</strong></summary>
+## 🧪 Testing
 
-1. Create a GitHub App or Personal Access Token
-2. Configure webhook: `https://your-domain.com/api/v1/webhooks/github`
-3. Set `GITHUB_TOKEN` environment variable
+### Run Tests
 
-</details>
-
-<details>
-<summary><strong>GitLab CI Setup</strong></summary>
-
-1. Create GitLab Personal Access Token with `api` scope
-2. Configure webhook: `https://your-domain.com/api/v1/webhooks/gitlab`  
-3. Set `GITLAB_TOKEN` environment variable
-
-</details>
-
----
-
-## 🧪 **Development**
-
-### **Project Structure**
-```
-src/
-├── config/           # Configuration (versioning, routing)
-├── core/             # Core services (database, security, monitoring)
-├── entities/         # Database models (pipeline, user, analytics)
-├── middleware/       # Express middleware (auth, validation, logging)
-├── providers/        # CI/CD integrations (GitHub, GitLab)
-├── repositories/     # Data access with factory pattern
-├── routes/           # API routes (auth, pipelines, analytics, admin)
-├── services/         # Business logic (database, analytics, statistical)
-├── test/             # Comprehensive test suite (272 tests)
-└── types/            # TypeScript definitions
-```
-
-### **Development Commands**
 ```bash
-npm run dev           # Start with hot reload
-npm run build         # Build for production
-npm run start         # Start production server
-npm test              # Run all tests (272/272 passing)
-npm run test:coverage # Coverage report (99%+)
-npm run lint          # Code quality check
-npm run type-check    # TypeScript compilation check
-```
-
-### **Testing Examples**
-```bash
-# Run all tests
+# All tests
 npm test
 
-# Run specific components
-npm test -- analytics.test.ts                    # Analytics engine tests
-npm test -- statistical-analytics.test.ts        # Statistical analytics tests
-npm test -- provider-factory.test.ts             # Provider system tests
-npm test -- auth.test.ts                         # Authentication tests
+# Unit tests only
+npm run test:unit
 
-# Watch mode during development
-npm run test:watch
+# Integration tests
+npm run test:integration
+
+# Coverage report
+npm run test:coverage
 ```
 
----
+### Test Structure
 
-## 🚀 **Deployment**
+- `src/test/` - Test files
+- `jest.config.js` - Jest configuration
+- Coverage reports in `coverage/`
 
-### **Docker (Recommended)**
-```yaml
-# docker-compose.yml
-version: '3.8'
-services:
-  app:
-    build: .
-    ports: ["3000:3000"]
-    environment:
-      - DATABASE_URL=postgresql://user:pass@db:5432/cicd_analyzer
-      - REDIS_URL=redis://cache:6379
-    depends_on: [db, cache]
-      
-  db:
-    image: postgres:15
-    environment:
-      POSTGRES_DB: cicd_analyzer
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: ${DB_PASSWORD}
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-      
-  cache:
-    image: redis:7-alpine
-    command: redis-server --requirepass ${REDIS_PASSWORD}
+## 🔧 Development
 
-volumes:
-  postgres_data:
+### Project Structure
+
+```
+src/
+├── cli/              # CLI tools
+├── config/           # Configuration
+├── controllers/      # HTTP controllers
+├── core/            # Core functionality
+├── entities/        # Database entities
+├── middleware/      # Express middleware
+├── providers/       # CI/CD platform providers
+├── repositories/    # Data access layer
+├── routes/          # API routes
+├── services/        # Business logic
+├── shared/          # Shared utilities
+├── test/           # Test files
+├── types/          # TypeScript types
+└── utils/          # Utility functions
 ```
 
-### **Production Checklist**
-- ✅ Set strong `JWT_SECRET` (32+ characters)
-- ✅ Enable SSL with `DB_SSL_REJECT_UNAUTHORIZED=true`
-- ✅ Configure proper database credentials
-- ✅ Set up Redis for caching and rate limiting
-- ✅ Configure webhook endpoints for your CI/CD platforms
-- ✅ Set up monitoring and logging
-- ✅ Review security settings in production
+### Development Commands
+
+```bash
+# Development server with hot reload
+npm run dev
+
+# Type checking
+npm run type-check
+
+# Linting
+npm run lint
+
+# Build
+npm run build
+```
+
+### Adding New Providers
+
+1. Create provider in `src/providers/`
+2. Implement `BaseProvider` interface
+3. Register in provider factory
+4. Add tests
+
+Example:
+```typescript
+export class CustomProvider extends BaseProvider {
+  async fetchPipelineData(config: PipelineConfig): Promise<PipelineData> {
+    // Implementation
+  }
+}
+```
+
+## 📊 Analytics Features
+
+### Statistical Metrics
+
+- **Performance Metrics**: Execution times, success rates, failure patterns
+- **Trend Analysis**: Historical performance trends and forecasting
+- **Correlation Analysis**: Dependencies and bottleneck identification
+- **Custom Metrics**: Extensible metrics framework
+
+### Visualization
+
+The application provides REST endpoints that can be integrated with visualization tools like Grafana or custom dashboards.
+
+## 🛡️ Security
+
+- JWT-based authentication
+- Rate limiting (100 requests/minute by default)
+- Input validation and sanitization
+- SQL injection protection
+- CORS configuration
+- Security headers
+
+## 🚀 Deployment
+
+### Production Setup
+
+1. **Environment**
+   ```bash
+   NODE_ENV=production
+   ```
+
+2. **Database**
+   ```bash
+   npm run db:migrate
+   ```
+
+3. **Build and Start**
+   ```bash
+   npm run build
+   npm start
+   ```
+
+### Docker (Optional)
+
+```dockerfile
+FROM node:18-alpine
+WORKDIR /app
+COPY package*.json ./
+RUN npm ci --only=production
+COPY . .
+RUN npm run build
+EXPOSE 3000
+CMD ["npm", "start"]
+```
+
+## 📈 Performance
+
+- **Caching**: Redis caching for frequently accessed data
+- **Database**: Optimized queries with proper indexing
+- **Rate Limiting**: Configurable rate limits to prevent abuse
+- **Monitoring**: Built-in health checks and metrics endpoints
+
+## 🤝 Contributing
+
+We welcome contributions! Please see [CONTRIBUTING.md](docs/CONTRIBUTING.md) for guidelines.
+
+### Development Workflow
+
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Add tests
+5. Run the test suite
+6. Submit a pull request
+
+## 📝 License
+
+This project is licensed under the MIT License - see the LICENSE file for details.
+
+## 🙋 Support
+
+- **Documentation**: Check the `docs/` directory
+- **Issues**: Use GitHub Issues for bug reports
+- **Questions**: Use GitHub Discussions for questions
+
+## 🎯 Roadmap
+
+- [ ] Additional CI/CD platform support
+- [ ] Real-time notifications
+- [ ] Advanced visualization dashboard
+- [ ] Machine learning pipeline optimization
+- [ ] Kubernetes integration
 
 ---
 
-## 🗺️ **Roadmap**
+**Project Status**: ✅ Phase 3 Complete - Statistical Analytics Implemented
 
-### ✅ **Completed Phases**
-
-#### **Phase 1: Foundation & Core Infrastructure**
-- **Foundation** - TypeScript, testing, middleware stack
-- **Security** - JWT auth, rate limiting, input validation, SSL
-- **Database** - PostgreSQL with security, monitoring, migrations  
-- **Provider System** - GitHub Actions, GitLab CI integrations
-- **API System** - Versioning, standardized responses, comprehensive endpoints
-
-#### **Phase 2: Analytics Engine**
-- **Analytics Service** - Comprehensive metrics calculation, pattern detection
-- **Failure Pattern Detection** - AI-powered identification of recurring failures
-- **Optimization Recommendations** - Performance and reliability analysis
-- **Intelligent Alerting** - Smart alerts for performance issues
-- **Real-time Analysis** - Configurable background analysis
-
-#### **Phase 3: Statistical Analytics Engine** 
-- **Core Statistical Engine** - Mathematical analysis service with 5 algorithms
-- **API Routes** - Complete REST endpoints with validation and error handling
-- **Test Coverage** - 17/17 tests passing for statistical functionality
-- **Mathematical Models** - Anomaly detection, trend analysis, benchmarking, SLA monitoring, cost analysis
-
-### 🎯 **Future Phases**
-
-#### **Phase 4: Enterprise Visualization Suite** (Next)
-- **Interactive Dashboards** - Real-time charts, heatmaps, performance matrices
-- **Advanced Reporting** - PDF generation, scheduled reports, executive dashboards  
-- **WebSocket Real-time Updates** - Live dashboard updates and notifications
-- **Data Export & Integration** - CSV/Excel exports, API integrations, webhook notifications
-
-#### **Phase 5+**
-- **Phase 5** - Additional provider integrations (Jenkins, Azure DevOps, CircleCI)  
-- **Phase 6** - Multi-tenant SaaS platform with organization management
-- **Phase 7** - Mobile app and advanced notifications
-- **Phase 8** - AI/ML predictive analytics and intelligent automation
-
----
-
-## 🤝 **Contributing**
-
-We welcome contributions! See our [Contributing Guide](docs/CONTRIBUTING.md) for:
-- Development setup and workflow
-- Coding standards and best practices  
-- How to add new providers and analytics features
-- Testing requirements and guidelines
-
-**Quick Contribution Steps:**
-1. Fork and create feature branch: `git checkout -b feature/amazing-feature`
-2. Follow our TypeScript and testing standards
-3. Ensure all tests pass: `npm test`
-4. Submit PR with detailed description
-
----
-
-## 📊 **Current Metrics**
-
-- **✅ Tests**: 272/272 passing across all modules
-- **✅ Coverage**: 99%+ with comprehensive integration tests
-- **✅ TypeScript**: Strict mode with complete type safety
-- **✅ Security**: Production-grade with comprehensive auditing
-- **✅ Performance**: Optimized with caching and connection pooling
-- **✅ Documentation**: Complete API docs and deployment guides
-
----
-
-## 📝 **License & Support**
-
-- **License**: MIT License - see [LICENSE](LICENSE)
-- **Issues**: [GitHub Issues](https://github.com/sirhCC/CICDpa/issues)
-- **Discussions**: [GitHub Discussions](https://github.com/sirhCC/CICDpa/discussions)
-
----
-
-<div align="center">
-
-**🚀 Ready for Production • 📊 Analytics-Powered • 🔐 Enterprise-Secure**
-
-[⭐ Star this repo](https://github.com/sirhCC/CICDpa) | [🐛 Report Bug](https://github.com/sirhCC/CICDpa/issues) | [💡 Request Feature](https://github.com/sirhCC/CICDpa/issues)
-
-*Built with ❤️ for the DevOps Community*
-
-</div>
+For detailed documentation, see the `docs/` directory.
