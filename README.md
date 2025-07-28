@@ -5,7 +5,7 @@
 [![License](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Build Status](https://img.shields.io/badge/Build-Passing-brightgreen.svg)](#)
 [![Coverage](https://img.shields.io/badge/Coverage-98%25+-success.svg)](#)
-[![Tests](https://img.shields.io/badge/Tests-153%2F153%20Passing-brightgreen.svg)](#)
+[![Tests](https://img.shields.io/badge/Tests-196%2F196%20Passing-brightgreen.svg)](#)
 
 > **Enterprise-grade CI/CD pipeline analysis and optimization platform** 🎯
 
@@ -107,6 +107,40 @@ An intelligent, modular system for analyzing, monitoring, and optimizing CI/CD p
   - Integration with existing Winston logger infrastructure
   - Background processing for non-blocking performance
 
+#### ✅ **API Versioning System (Completed)**
+
+- **Dynamic API Versioning**:
+  - Centralized version management with `ApiVersionManager` singleton
+  - Support for multiple simultaneous API versions (v1, v2, etc.)
+  - Automatic version detection from request headers (`X-API-Version`) and URL paths
+  - Version headers injected into all responses for client compatibility
+
+- **Enterprise Features**:
+  - Backward compatibility support for legacy clients
+  - Version deprecation and sunset lifecycle management
+  - Feature-based versioning with granular control
+  - Future-proofed architecture for seamless version transitions
+
+- **Developer Experience**:
+  - Dedicated version discovery endpoints (`/api/version`, `/api/v1/version`)
+  - Comprehensive version information in all API responses
+  - Version-aware router factory for scalable API organization
+  - Standard response format with consistent versioning metadata
+
+#### ✅ **Standardized API Responses (Completed)**
+
+- **Consistent Response Format**:
+  - Standardized JSON response structure across all endpoints
+  - Version information embedded in every response
+  - Success/error status with descriptive messages
+  - Comprehensive metadata (timestamp, request ID, performance metrics)
+
+- **Enhanced Error Handling**:
+  - Structured error responses with detailed context
+  - Centralized error logging with correlation IDs
+  - HTTP status code consistency and proper error categorization
+  - Developer-friendly error messages with actionable guidance
+
 ---
 
 ## 🏗️ Architecture
@@ -196,13 +230,22 @@ docker run -p 3000:3000 cicd-analyzer
 ### Core Endpoints
 
 #### Health & Status
+
 ```http
 GET /health           # System health check
 GET /version          # Application version info
 GET /modules          # Module status and configuration
 ```
 
+#### API Versioning & Discovery
+
+```http
+GET /api/version      # API version information and supported versions
+GET /api/v1/version   # Specific version details for v1 API
+```
+
 #### Authentication & Authorization
+
 ```http
 POST /api/v1/auth/login           # User login (JWT token)
 POST /api/v1/auth/refresh         # Refresh JWT token
@@ -214,6 +257,7 @@ DELETE /api/v1/auth/api-key/:id   # Revoke API key
 ```
 
 #### Pipeline Management
+
 ```http
 GET    /api/v1/pipelines              # List all pipelines
 POST   /api/v1/pipelines              # Create new pipeline
@@ -223,6 +267,7 @@ DELETE /api/v1/pipelines/:id          # Delete pipeline
 ```
 
 #### Analytics & Reports
+
 ```http
 GET /api/v1/analytics/performance/:id  # Performance metrics
 GET /api/v1/analytics/bottlenecks/:id  # Bottleneck analysis
@@ -231,10 +276,52 @@ GET /api/v1/analytics/optimization/:id # Optimization suggestions
 ```
 
 #### Webhook Integration
+
 ```http
 POST /api/v1/webhooks/github          # GitHub webhook handler
 POST /api/v1/webhooks/gitlab          # GitLab webhook handler
 POST /api/v1/webhooks/jenkins         # Jenkins webhook handler
+```
+
+### API Versioning
+
+The API supports versioning through multiple mechanisms:
+
+#### Version Detection
+- **Header-based**: Include `X-API-Version: v1` header in requests
+- **URL-based**: Use versioned endpoints like `/api/v1/pipelines`
+- **Automatic fallback**: Defaults to latest stable version if not specified
+
+#### Response Format
+All API responses include version information:
+
+```json
+{
+  "success": true,
+  "data": { /* ... response data ... */ },
+  "message": "Request processed successfully",
+  "meta": {
+    "timestamp": "2024-01-15T10:30:00.000Z",
+    "version": {
+      "api": "v1",
+      "app": "1.0.0"
+    },
+    "requestId": "req_abc123"
+  }
+}
+```
+
+#### Version Discovery
+Query `/api/version` to get information about all supported API versions:
+
+```json
+{
+  "current": "v1",
+  "supported": ["v1"],
+  "deprecated": [],
+  "sunset": [],
+  "latest": "v1"
+}
 ```
 
 ---
@@ -279,6 +366,12 @@ GITLAB_TOKEN=your-gitlab-token
 JENKINS_URL=https://your-jenkins.com
 JENKINS_USERNAME=admin
 JENKINS_TOKEN=your-jenkins-token
+
+# API Configuration
+API_VERSION_CURRENT=v1
+API_VERSION_SUPPORTED=v1
+API_VERSION_DEPRECATED=
+API_VERSION_SUNSET=
 ```
 
 ### Provider Setup
@@ -318,13 +411,13 @@ JENKINS_TOKEN=your-jenkins-token
 
 ```
 src/
-├── config/           # Configuration management
+├── config/           # Configuration management (versioning, routing)
 ├── core/             # Core services (database, cache, modules)
 ├── entities/         # Database models
-├── middleware/       # Express middleware
+├── middleware/       # Express middleware (auth, validation, logging, responses)
 ├── modules/          # Feature modules
 ├── providers/        # CI/CD platform integrations
-├── shared/           # Shared utilities
+├── shared/           # Shared utilities (API responses, health, logger)
 ├── test/             # Test files
 ├── types/            # TypeScript definitions
 └── utils/            # Helper functions
@@ -547,17 +640,22 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 ### ✅ **Phase 1: Foundation & Core Middleware (Current)**
 
 **Completed Components:**
+
 - [x] **Project Foundation** - TypeScript setup, testing framework, build system
 - [x] **Error Handler Middleware** - Comprehensive error handling with proper logging
 - [x] **JWT Authentication Middleware** - Enterprise-grade auth with RBAC, API keys, security features
 - [x] **Rate Limiting Middleware** - Advanced rate limiting with multiple strategies and Redis support
 - [x] **Request Validation Middleware** - Input validation and sanitization with Joi schemas (P0 Priority #4)
 - [x] **Request Logger Middleware** - Structured logging and monitoring (P0 Priority #5)
+- [x] **API Versioning System** - Dynamic versioning with backward compatibility and lifecycle management
+- [x] **Standardized API Responses** - Consistent response format with enhanced error handling
 
 **In Progress:**
+
 - [ ] **Database Layer** - PostgreSQL integration with TypeORM (Next Priority)
 
 **Next Up:**
+
 - [ ] **Redis Cache Layer** - Caching and session management
 - [ ] **Module System** - Plugin architecture foundation
 - [ ] **API Routes** - Core API endpoint implementation
@@ -571,9 +669,10 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - [ ] **Phase 6**: Mobile app for pipeline monitoring
 
 ### 📊 **Current Metrics**
+
 - **Test Coverage**: 98%+ across all modules
 - **TypeScript**: Strict mode compliance
-- **Tests**: 153/153 passing (Foundation: 8/8, Error Handler: 20/20, JWT Auth: 34/34, Rate Limiter: 6/6, Request Validation: 32/32, Request Logger: 54/54)
+- **Tests**: 196/196 passing (Foundation: 8/8, Error Handler: 20/20, JWT Auth: 34/34, Rate Limiter: 6/6, Request Validation: 32/32, Request Logger: 54/54, API Versioning: 23/23, Response Standardization: 19/19)
 - **Code Quality**: ESLint + Prettier enforced
 
 ---
