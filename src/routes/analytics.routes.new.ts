@@ -7,6 +7,8 @@ import { requestLoggers } from '../middleware/request-logger';
 import { ResponseBuilder } from '../shared/api-response';
 import { Logger } from '../shared/logger';
 import Joi from 'joi';
+import { alertingRoutes } from './alerting.routes';
+import advancedDataProcessingRoutes from './advanced-data-processing.routes';
 
 const router = Router();
 const logger = new Logger('AnalyticsRoutes');
@@ -280,5 +282,11 @@ router.get('/health',
     );
   })
 );
+
+// Mount alerting routes
+router.use('/alerts', alertingRoutes);
+
+// Mount advanced data processing routes
+router.use('/advanced', advancedDataProcessingRoutes);
 
 export default router;

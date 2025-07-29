@@ -6,7 +6,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.userRepository = exports.pipelineRunRepository = exports.pipelineRepository = exports.RepositoryFactory = exports.UserRepository = exports.PipelineRunRepository = exports.PipelineRepository = exports.BaseRepository = void 0;
+exports.userRepository = exports.pipelineRunRepository = exports.pipelineRepository = exports.RepositoryFactory = exports.StatisticalCacheRepository = exports.StatisticalResultRepository = exports.UserRepository = exports.PipelineRunRepository = exports.PipelineRepository = exports.BaseRepository = void 0;
 var base_repository_1 = require("./base.repository");
 Object.defineProperty(exports, "BaseRepository", { enumerable: true, get: function () { return base_repository_1.BaseRepository; } });
 var pipeline_repository_1 = require("./pipeline.repository");
@@ -15,6 +15,11 @@ var pipeline_run_repository_1 = require("./pipeline-run.repository");
 Object.defineProperty(exports, "PipelineRunRepository", { enumerable: true, get: function () { return __importDefault(pipeline_run_repository_1).default; } });
 var user_repository_1 = require("./user.repository");
 Object.defineProperty(exports, "UserRepository", { enumerable: true, get: function () { return __importDefault(user_repository_1).default; } });
+// Statistical Data Persistence Repositories - Phase 3
+var statistical_result_repository_1 = require("./statistical-result.repository");
+Object.defineProperty(exports, "StatisticalResultRepository", { enumerable: true, get: function () { return statistical_result_repository_1.StatisticalResultRepository; } });
+var statistical_cache_repository_1 = require("./statistical-cache.repository");
+Object.defineProperty(exports, "StatisticalCacheRepository", { enumerable: true, get: function () { return statistical_cache_repository_1.StatisticalCacheRepository; } });
 const pipeline_repository_2 = __importDefault(require("./pipeline.repository"));
 const pipeline_run_repository_2 = __importDefault(require("./pipeline-run.repository"));
 const user_repository_2 = __importDefault(require("./user.repository"));

@@ -19,6 +19,17 @@ import { PipelineRun } from '@/entities/pipeline-run.entity';
 import { Pipeline } from '@/entities/pipeline.entity';
 import { repositoryFactory } from '@/repositories/factory.enhanced';
 import { PipelineStatus } from '@/types';
+import { databaseManager } from '@/core/database';
+import { 
+  StatisticalResultRepository, 
+  StatisticalCacheRepository 
+} from '@/repositories';
+import { 
+  AnalysisType, 
+  ResultStatus, 
+  CacheType 
+} from '@/entities';
+import { alertingService, AlertType, AlertSeverity } from '@/services/alerting.service';
 
 export interface StatisticalDataPoint {
   timestamp: Date;
@@ -158,6 +169,8 @@ export class StatisticalAnalyticsService {
   private static instance: StatisticalAnalyticsService;
   private logger: Logger;
   private config: StatisticalAnalyticsConfig;
+  private resultRepository?: StatisticalResultRepository;
+  private cacheRepository?: StatisticalCacheRepository;
 
   private constructor(config?: Partial<StatisticalAnalyticsConfig>) {
     this.logger = new Logger('StatisticalAnalytics');
@@ -1058,6 +1071,445 @@ export class StatisticalAnalyticsService {
     };
 
     return this.analyzeCosts(recentRun.duration / 60, resourceUsage, dataPoints);
+  }
+
+  /**
+   * Lazy repository initialization methods
+   */
+  private getResultRepository(): StatisticalResultRepository {
+    if (!this.resultRepository) {
+      try {
+        this.resultRepository = new StatisticalResultRepository(databaseManager.getDataSource());
+      } catch (error) {
+        this.logger.warn('Database not available for statistical result persistence', { 
+          error: error instanceof Error ? error.message : String(error) 
+        });
+        throw new AppError('Statistical result persistence not available', 503);
+      }
+    }
+    return this.resultRepository;
+  }
+
+  private getCacheRepository(): StatisticalCacheRepository {
+    if (!this.cacheRepository) {
+      try {
+        this.cacheRepository = new StatisticalCacheRepository(databaseManager.getDataSource());
+      } catch (error) {
+        this.logger.warn('Database not available for statistical cache', { 
+          error: error instanceof Error ? error.message : String(error) 
+        });
+        throw new AppError('Statistical cache not available', 503);
+      }
+    }
+    return this.cacheRepository;
+  }
+
+  /**
+   * Data Persistence Methods - Phase 3
+   */
+
+  /**
+   * Save statistical analysis result to database
+   */
+  async saveAnalysisResult(
+    analysisType: AnalysisType,
+    result: any,
+    pipelineId?: string,
+    metadata?: {
+      metric?: string;
+      method?: string;
+      score?: number;
+      severity?: 'low' | 'medium' | 'high' | 'critical';
+      dataPointCount?: number;
+      periodDays?: number;
+      executionTime?: number;
+      jobExecutionId?: string;
+    }
+  ): Promise<void> {
+    try {
+      const status = this.determineResultStatus(result, metadata?.severity);
+      
+      const resultData: any = {
+        analysisType,
+        status,
+        result,
+        metadata: { ...metadata },
+        timestamp: new Date()
+      };
+
+      // Only add pipelineId if it exists
+      if (pipelineId) {
+        resultData.pipelineId = pipelineId;
+      }
+
+      // Add optional fields only if they exist
+      if (metadata?.metric) resultData.metric = metadata.metric;
+      if (metadata?.method) resultData.method = metadata.method;
+      if (metadata?.score !== undefined) resultData.score = metadata.score;
+      if (metadata?.severity) resultData.severity = metadata.severity;
+      if (metadata?.dataPointCount !== undefined) resultData.dataPointCount = metadata.dataPointCount;
+      if (metadata?.periodDays !== undefined) resultData.periodDays = metadata.periodDays;
+      if (metadata?.executionTime !== undefined) resultData.executionTime = metadata.executionTime;
+      if (metadata?.jobExecutionId) resultData.jobExecutionId = metadata.jobExecutionId;
+      
+      await this.getResultRepository().create(resultData);
+
+      this.logger.info('Statistical analysis result saved', {
+        analysisType,
+        pipelineId,
+        status,
+        metric: metadata?.metric
+      });
+    } catch (error) {
+      this.logger.error('Failed to save analysis result', error, {
+        analysisType,
+        pipelineId
+      });
+      // Don't throw - analysis should continue even if persistence fails
+    }
+  }
+
+  /**
+   * Get cached analysis result
+   */
+  async getCachedResult(
+    cacheKey: string,
+    cacheType: CacheType
+  ): Promise<any | null> {
+    try {
+      if (!this.cacheRepository) {
+        this.logger.warn('Cache repository not initialized');
+        return null;
+      }
+      
+      const cached = await this.cacheRepository.get(cacheKey);
+      if (cached) {
+        this.logger.debug('Cache hit', { cacheKey, cacheType });
+        return cached.data;
+      }
+      return null;
+    } catch (error) {
+      this.logger.error('Cache retrieval failed', error, { cacheKey });
+      return null;
+    }
+  }
+
+  /**
+   * Set cache for analysis result
+   */
+  async setCachedResult(
+    cacheKey: string,
+    cacheType: CacheType,
+    data: any,
+    expirationMs: number = 3600000, // 1 hour default
+    pipelineId?: string,
+    metric?: string
+  ): Promise<void> {
+    try {
+      if (!this.cacheRepository) {
+        this.logger.warn('Cache repository not initialized');
+        return;
+      }
+      
+      await this.cacheRepository.set(
+        cacheKey,
+        cacheType,
+        data,
+        expirationMs,
+        pipelineId,
+        metric,
+        {
+          generatedAt: new Date().toISOString(),
+          dataSize: JSON.stringify(data).length
+        }
+      );
+
+      this.logger.debug('Result cached', { 
+        cacheKey, 
+        cacheType, 
+        expirationMs,
+        pipelineId 
+      });
+    } catch (error) {
+      this.logger.error('Cache storage failed', error, { cacheKey });
+      // Don't throw - analysis should continue even if caching fails
+    }
+  }
+
+  /**
+   * Determine result status based on analysis results
+   */
+  private determineResultStatus(
+    result: any,
+    severity?: 'low' | 'medium' | 'high' | 'critical'
+  ): ResultStatus {
+    if (severity === 'critical') return ResultStatus.CRITICAL;
+    if (severity === 'high') return ResultStatus.ERROR;
+    if (severity === 'medium') return ResultStatus.WARNING;
+    
+    // Check for anomalies in result
+    if (Array.isArray(result)) {
+      const hasAnomalies = result.some((r: any) => r.isAnomaly === true);
+      if (hasAnomalies) return ResultStatus.WARNING;
+    } else if (result.isAnomaly === true) {
+      return ResultStatus.WARNING;
+    }
+
+    return ResultStatus.SUCCESS;
+  }
+
+  /**
+   * Enhanced anomaly detection with automatic alerting
+   */
+  public async detectAnomaliesWithAlerting(
+    pipelineId?: string,
+    metric: 'duration' | 'cpu' | 'memory' | 'success_rate' = 'duration',
+    method: 'z-score' | 'percentile' | 'iqr' | 'all' = 'z-score',
+    alertThreshold: number = 3.0
+  ): Promise<AnomalyDetectionResult[]> {
+    try {
+      // Extract data points for analysis
+      const dataPoints = pipelineId 
+        ? await this.extractPipelineDataPoints(pipelineId, metric)
+        : [];
+
+      if (dataPoints.length === 0) {
+        this.logger.warn('No data points available for anomaly detection', { pipelineId, metric });
+        return [];
+      }
+
+      // Detect anomalies using the core algorithm
+      const anomalies = this.detectAnomalies(dataPoints, method);
+
+      // Filter critical anomalies that exceed the alert threshold
+      const criticalAnomalies = anomalies.filter(anomaly => 
+        anomaly.anomalyScore >= alertThreshold && 
+        ['high', 'critical'].includes(anomaly.severity)
+      );
+
+      // Trigger alerts for critical anomalies
+      for (const anomaly of criticalAnomalies) {
+        await this.triggerAnomalyAlert(anomaly, pipelineId, metric);
+      }
+
+      this.logger.info('Anomaly detection with alerting completed', {
+        pipelineId,
+        metric,
+        totalAnomalies: anomalies.length,
+        criticalAnomalies: criticalAnomalies.length,
+        alertsTriggered: criticalAnomalies.length
+      });
+
+      return anomalies;
+
+    } catch (error) {
+      this.logger.error('Enhanced anomaly detection failed', error, { pipelineId, metric });
+      throw new AppError('Enhanced anomaly detection failed', 500);
+    }
+  }
+
+  /**
+   * Trigger an alert for detected anomaly
+   */
+  private async triggerAnomalyAlert(
+    anomaly: AnomalyDetectionResult,
+    pipelineId?: string,
+    metric: string = 'duration'
+  ): Promise<void> {
+    try {
+      const alertDetails: any = {
+        triggerValue: anomaly.anomalyScore,
+        threshold: anomaly.threshold,
+        metric,
+        source: 'statistical-analytics',
+        raw: {
+          anomaly,
+          method: anomaly.method,
+          confidence: anomaly.confidence,
+          expectedRange: anomaly.expectedRange
+        }
+      };
+      
+      if (pipelineId) {
+        alertDetails.pipelineId = pipelineId;
+      }
+      
+      await alertingService.triggerAlert(
+        AlertType.ANOMALY_DETECTION,
+        alertDetails,
+        {
+          environment: 'production',
+          tags: ['anomaly-detection', metric, anomaly.severity],
+          metadata: {
+            anomalyMethod: anomaly.method,
+            severity: anomaly.severity,
+            confidence: anomaly.confidence,
+            actualValue: anomaly.actualValue,
+            expectedRange: anomaly.expectedRange
+          },
+          relatedAlerts: []
+        }
+      );
+
+      this.logger.info('Anomaly alert triggered', {
+        pipelineId,
+        metric,
+        anomalyScore: anomaly.anomalyScore,
+        severity: anomaly.severity
+      });
+
+    } catch (error) {
+      this.logger.error('Failed to trigger anomaly alert', error, {
+        pipelineId,
+        metric,
+        anomalyScore: anomaly.anomalyScore
+      });
+      // Don't throw - we don't want alert failures to break the analysis
+    }
+  }
+
+  /**
+   * Enhanced SLA monitoring with automatic alerting
+   */
+  public async monitorSLAWithAlerting(
+    pipelineId?: string,
+    slaConfig: {
+      duration?: number;
+      errorRate?: number;
+      successRate?: number;
+    } = { duration: 300000, errorRate: 5, successRate: 95 }
+  ): Promise<SLAMonitoringResult> {
+    try {
+      // Get pipeline performance data
+      const dataPoints = pipelineId 
+        ? await this.extractPipelineDataPoints(pipelineId, 'duration')
+        : [];
+
+      if (dataPoints.length === 0) {
+        return {
+          violated: false,
+          slaTarget: slaConfig.successRate || 95,
+          actualValue: 0,
+          violationPercent: 0,
+          violationType: 'performance',
+          severity: 'minor',
+          timeInViolation: 0,
+          frequencyOfViolation: 0,
+          remediation: {
+            immediateActions: ['Monitor pipeline health'],
+            longTermActions: ['Establish baseline metrics'],
+            estimatedImpact: 'Low'
+          }
+        };
+      }
+
+      // Calculate SLA metrics
+      const recentDataPoints = dataPoints.slice(-50); // Last 50 runs
+      const averageDuration = recentDataPoints.reduce((sum, dp) => sum + dp.value, 0) / recentDataPoints.length;
+      const slaTarget = slaConfig.duration || 300000; // 5 minutes default
+      
+      const violation = averageDuration > slaTarget;
+      const violationPercent = violation ? ((averageDuration - slaTarget) / slaTarget) * 100 : 0;
+
+      const slaResult: SLAMonitoringResult = {
+        violated: violation,
+        slaTarget,
+        actualValue: averageDuration,
+        violationPercent,
+        violationType: 'performance',
+        severity: violationPercent > 50 ? 'critical' : 
+                  violationPercent > 25 ? 'major' : 'minor',
+        timeInViolation: violation ? 30 : 0, // Simplified calculation
+        frequencyOfViolation: 0, // Would need historical data
+        remediation: {
+          immediateActions: violation ? [
+            'Check pipeline configuration',
+            'Review recent changes',
+            'Monitor resource usage'
+          ] : [],
+          longTermActions: violation ? [
+            'Optimize pipeline steps',
+            'Consider parallel execution',
+            'Review SLA targets'
+          ] : [],
+          estimatedImpact: violation ? 'High' : 'Low'
+        }
+      };
+
+      // Trigger alert if SLA is violated
+      if (violation && slaResult.severity !== 'minor') {
+        await this.triggerSLAAlert(slaResult, pipelineId);
+      }
+
+      this.logger.info('SLA monitoring with alerting completed', {
+        pipelineId,
+        violated: violation,
+        violationPercent,
+        severity: slaResult.severity
+      });
+
+      return slaResult;
+
+    } catch (error) {
+      this.logger.error('SLA monitoring with alerting failed', error, { pipelineId });
+      throw new AppError('SLA monitoring with alerting failed', 500);
+    }
+  }
+
+  /**
+   * Trigger an alert for SLA violation
+   */
+  private async triggerSLAAlert(
+    slaResult: SLAMonitoringResult,
+    pipelineId?: string
+  ): Promise<void> {
+    try {
+      const alertDetails: any = {
+        triggerValue: slaResult.violationPercent,
+        threshold: 0, // Any violation is significant
+        metric: 'sla_compliance',
+        source: 'statistical-analytics',
+        raw: {
+          slaResult,
+          actualValue: slaResult.actualValue,
+          target: slaResult.slaTarget,
+          violationType: slaResult.violationType
+        }
+      };
+      
+      if (pipelineId) {
+        alertDetails.pipelineId = pipelineId;
+      }
+      
+      await alertingService.triggerAlert(
+        AlertType.SLA_VIOLATION,
+        alertDetails,
+        {
+          environment: 'production',
+          tags: ['sla-violation', slaResult.violationType, slaResult.severity],
+          metadata: {
+            violationType: slaResult.violationType,
+            severity: slaResult.severity,
+            timeInViolation: slaResult.timeInViolation,
+            frequency: slaResult.frequencyOfViolation,
+            remediation: slaResult.remediation
+          },
+          relatedAlerts: []
+        }
+      );
+
+      this.logger.info('SLA violation alert triggered', {
+        pipelineId,
+        violationPercent: slaResult.violationPercent,
+        severity: slaResult.severity
+      });
+
+    } catch (error) {
+      this.logger.error('Failed to trigger SLA alert', error, {
+        pipelineId,
+        violationPercent: slaResult.violationPercent
+      });
+    }
   }
 }
 

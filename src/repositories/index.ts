@@ -7,9 +7,15 @@ export { default as PipelineRepository } from './pipeline.repository';
 export { default as PipelineRunRepository } from './pipeline-run.repository';
 export { default as UserRepository } from './user.repository';
 
+// Statistical Data Persistence Repositories - Phase 3
+export { StatisticalResultRepository } from './statistical-result.repository';
+export { StatisticalCacheRepository } from './statistical-cache.repository';
+
 import PipelineRepository from './pipeline.repository';
 import PipelineRunRepository from './pipeline-run.repository';
 import UserRepository from './user.repository';
+import { StatisticalResultRepository } from './statistical-result.repository';
+import { StatisticalCacheRepository } from './statistical-cache.repository';
 
 // Repository factory for dependency injection
 export class RepositoryFactory {

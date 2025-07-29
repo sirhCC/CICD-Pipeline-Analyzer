@@ -6,6 +6,28 @@ export { BaseEntity } from './base.entity';
 export { Pipeline } from './pipeline.entity';
 export { PipelineRun, PipelineRunStage } from './pipeline-run.entity';
 export { User, UserSession, ApiKey } from './user.entity';
+
+// Statistical Data Persistence Entities - Phase 3
+export { 
+  StatisticalResult, 
+  AnalysisType, 
+  ResultStatus 
+} from './statistical-result.entity';
+export { 
+  AnomalyHistory, 
+  AnomalyMethod, 
+  AnomalySeverity 
+} from './anomaly-history.entity';
+export { 
+  TrendHistory, 
+  TrendDirection, 
+  TrendStrength 
+} from './trend-history.entity';
+export { 
+  StatisticalCache, 
+  CacheType 
+} from './statistical-cache.entity';
+
 export { 
   PipelineMetrics, 
   FailurePattern, 
@@ -24,7 +46,11 @@ export const entities = [
   'PipelineMetrics',
   'FailurePattern',
   'OptimizationRecommendation',
-  'AnalyticsAlert'
+  'AnalyticsAlert',
+  'StatisticalResult',
+  'AnomalyHistory',
+  'TrendHistory',
+  'StatisticalCache'
 ];
 
 // Entity metadata for introspection
@@ -58,5 +84,25 @@ export const entityMetadata = {
     tableName: 'api_keys',
     primaryKey: 'id',
     relations: ['user']
+  },
+  StatisticalResult: {
+    tableName: 'statistical_results',
+    primaryKey: 'id',
+    relations: []
+  },
+  AnomalyHistory: {
+    tableName: 'anomaly_history',
+    primaryKey: 'id',
+    relations: []
+  },
+  TrendHistory: {
+    tableName: 'trend_history',
+    primaryKey: 'id',
+    relations: []
+  },
+  StatisticalCache: {
+    tableName: 'statistical_cache',
+    primaryKey: 'id',
+    relations: []
   }
 };

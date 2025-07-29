@@ -16,6 +16,7 @@ const api_response_1 = require("../shared/api-response");
 const logger_1 = require("../shared/logger");
 const statistical_analytics_service_1 = require("../services/statistical-analytics.service");
 const background_job_service_1 = require("../services/background-job.service");
+const database_1 = require("../core/database");
 const joi_1 = __importDefault(require("joi"));
 const router = (0, express_1.Router)();
 exports.statisticalAnalyticsRoutes = router;
@@ -649,4 +650,409 @@ router.get('/jobs/metrics', auth_1.authenticateJWT, (0, auth_1.requireRole)(auth
         timestamp: new Date().toISOString()
     }));
 }));
+/**
+ * =============================================================================
+ * REAL-TIME DASHBOARD API ENDPOINTS
+ * =============================================================================
+ * Comprehensive endpoints for dashboard visualization and real-time insights
+ */
+/**
+ * GET /dashboard/overview - Get comprehensive dashboard overview
+ * Returns aggregated statistical data for dashboard widgets
+ */
+router.get('/dashboard/overview', auth_1.authenticateJWT, (0, auth_1.requirePermission)(auth_1.Permission.ANALYTICS_READ), (0, error_handler_1.asyncHandler)(async (req, res) => {
+    const { timeRange = '24h', pipelineId } = req.query;
+    logger.info('Dashboard overview requested', {
+        timeRange,
+        pipelineId,
+        userId: req.user?.userId
+    });
+    try {
+        // Use existing method to extract pipeline data for recent time range
+        // If no pipelineId is provided, get a sample pipeline for demonstration
+        let dataPoints = [];
+        if (pipelineId) {
+            dataPoints = await statistical_analytics_service_1.statisticalAnalyticsService.extractPipelineDataPoints(pipelineId, 'duration');
+        }
+        else {
+            // Generate sample data for overview when no specific pipeline is requested
+            dataPoints = generateSampleDataPoints();
+        }
+        if (dataPoints.length === 0) {
+            return res.json(api_response_1.ResponseBuilder.success({
+                overview: {
+                    totalRuns: 0,
+                    message: 'No pipeline runs found for the specified time range'
+                }
+            }));
+        }
+        // Filter data points for time range (last 24 hours by default)
+        const timeRangeMs = timeRange === '24h' ? 24 * 60 * 60 * 1000 :
+            timeRange === '1h' ? 60 * 60 * 1000 :
+                timeRange === '7d' ? 7 * 24 * 60 * 60 * 1000 :
+                    24 * 60 * 60 * 1000;
+        const cutoffTime = new Date(Date.now() - timeRangeMs);
+        const recentDataPoints = dataPoints.filter(dp => dp.timestamp >= cutoffTime);
+        // Calculate dashboard statistics
+        const overview = {
+            totalRuns: recentDataPoints.length,
+            averageDuration: recentDataPoints.length > 0 ?
+                recentDataPoints.reduce((sum, dp) => sum + dp.value, 0) / recentDataPoints.length : 0,
+            // Anomaly detection overview
+            anomalies: statistical_analytics_service_1.statisticalAnalyticsService.detectAnomalies(recentDataPoints, 'z-score'),
+            // Trend analysis overview  
+            trends: statistical_analytics_service_1.statisticalAnalyticsService.analyzeTrend(recentDataPoints),
+            // Performance benchmarks
+            benchmarks: recentDataPoints.length > 0 ?
+                statistical_analytics_service_1.statisticalAnalyticsService.generateBenchmark(recentDataPoints[recentDataPoints.length - 1]?.value || 0, recentDataPoints, 'performance') : null,
+            // Real-time status
+            realtimeStatus: {
+                totalJobs: (0, background_job_service_1.getBackgroundJobService)().getAllJobs().length,
+                recentExecutions: (0, background_job_service_1.getBackgroundJobService)().getExecutionHistory().length,
+                lastUpdateTime: new Date().toISOString()
+            }
+        };
+        return res.json(api_response_1.ResponseBuilder.success({ overview }));
+    }
+    catch (error) {
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+        logger.error('Dashboard overview failed', { error: errorMessage });
+        throw new error_handler_1.AppError('Failed to generate dashboard overview', 500);
+    }
+}));
+/**
+ * GET /dashboard/real-time-metrics - Get real-time streaming metrics
+ * Returns current metrics for real-time dashboard updates
+ */
+router.get('/dashboard/real-time-metrics', auth_1.authenticateJWT, (0, auth_1.requirePermission)(auth_1.Permission.ANALYTICS_READ), (0, error_handler_1.asyncHandler)(async (req, res) => {
+    const { pipelineId } = req.query;
+    logger.info('Real-time metrics requested', {
+        pipelineId,
+        userId: req.user?.userId
+    });
+    try {
+        // Get latest pipeline data points (last 10 minutes worth)
+        let allDataPoints = [];
+        if (pipelineId) {
+            allDataPoints = await statistical_analytics_service_1.statisticalAnalyticsService.extractPipelineDataPoints(pipelineId, 'duration');
+        }
+        else {
+            allDataPoints = generateSampleDataPoints();
+        }
+        // Filter for last 10 minutes
+        const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000);
+        const recentDataPoints = allDataPoints.filter(dp => dp.timestamp >= tenMinutesAgo);
+        const currentTime = new Date();
+        const metrics = {
+            timestamp: currentTime.toISOString(),
+            // Current pipeline activity
+            activity: {
+                runsInLast10Min: recentDataPoints.length,
+                avgDuration: recentDataPoints.length > 0 ?
+                    recentDataPoints.reduce((sum, dp) => sum + dp.value, 0) / recentDataPoints.length : 0
+            },
+            // System health metrics
+            system: {
+                backgroundJobs: {
+                    total: (0, background_job_service_1.getBackgroundJobService)().getAllJobs().length,
+                    executions: (0, background_job_service_1.getBackgroundJobService)().getExecutionHistory().length
+                }
+            },
+            // Recent alerts and anomalies (simplified)
+            alerts: await getRecentAlerts('5m'),
+            // Performance indicators
+            performance: {
+                databaseHealth: await checkDatabaseHealth(),
+                memoryUsage: process.memoryUsage(),
+                uptime: process.uptime()
+            }
+        };
+        res.json(api_response_1.ResponseBuilder.success({ metrics }));
+    }
+    catch (error) {
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+        logger.error('Real-time metrics failed', { error: errorMessage });
+        throw new error_handler_1.AppError('Failed to get real-time metrics', 500);
+    }
+}));
+/**
+ * GET /dashboard/charts/:chartType - Get data for specific chart types
+ * Returns formatted data for different dashboard chart components
+ */
+router.get('/dashboard/charts/:chartType', auth_1.authenticateJWT, (0, auth_1.requirePermission)(auth_1.Permission.ANALYTICS_READ), (0, error_handler_1.asyncHandler)(async (req, res) => {
+    const { chartType } = req.params;
+    const { timeRange = '24h', pipelineId } = req.query;
+    logger.info('Dashboard chart data requested', {
+        chartType,
+        timeRange,
+        pipelineId,
+        userId: req.user?.userId
+    });
+    try {
+        let chartData = {};
+        switch (chartType) {
+            case 'anomaly-timeline':
+                chartData = await generateAnomalyTimelineChart(pipelineId || null, timeRange);
+                break;
+            case 'trend-analysis':
+                chartData = await generateTrendAnalysisChart(pipelineId || null, timeRange);
+                break;
+            case 'performance-summary':
+                chartData = await generatePerformanceSummaryChart(pipelineId || null, timeRange);
+                break;
+            default:
+                throw new error_handler_1.AppError(`Unknown chart type: ${chartType}`, 400);
+        }
+        res.json(api_response_1.ResponseBuilder.success({
+            chartType,
+            data: chartData,
+            metadata: {
+                timeRange,
+                pipelineId,
+                generatedAt: new Date().toISOString()
+            }
+        }));
+    }
+    catch (error) {
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+        logger.error('Dashboard chart generation failed', {
+            chartType,
+            error: errorMessage
+        });
+        throw new error_handler_1.AppError(`Failed to generate ${chartType} chart data`, 500);
+    }
+}));
+/**
+ * GET /dashboard/alerts/recent - Get recent alerts and notifications
+ * Returns recent alerts for dashboard alert panel
+ */
+router.get('/dashboard/alerts/recent', auth_1.authenticateJWT, (0, auth_1.requirePermission)(auth_1.Permission.ANALYTICS_READ), (0, error_handler_1.asyncHandler)(async (req, res) => {
+    const { limit = 20, severity, timeRange = '24h' } = req.query;
+    logger.info('Recent alerts requested', {
+        limit,
+        severity,
+        timeRange,
+        userId: req.user?.userId
+    });
+    try {
+        const alerts = await getRecentAlertsWithDetails(timeRange, severity, parseInt(limit));
+        res.json(api_response_1.ResponseBuilder.success({
+            alerts,
+            summary: {
+                total: alerts.length,
+                critical: alerts.filter((a) => a.severity === 'critical').length,
+                high: alerts.filter((a) => a.severity === 'high').length,
+                medium: alerts.filter((a) => a.severity === 'medium').length,
+                low: alerts.filter((a) => a.severity === 'low').length,
+                unresolved: alerts.filter((a) => !a.resolved).length
+            }
+        }));
+    }
+    catch (error) {
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+        logger.error('Recent alerts retrieval failed', { error: errorMessage });
+        throw new error_handler_1.AppError('Failed to get recent alerts', 500);
+    }
+}));
+/**
+ * GET /dashboard/system/health - Get system health overview
+ * Returns current system status for monitoring dashboard
+ */
+router.get('/dashboard/system/health', auth_1.authenticateJWT, (0, auth_1.requirePermission)(auth_1.Permission.ANALYTICS_READ), (0, error_handler_1.asyncHandler)(async (req, res) => {
+    logger.info('System health requested', {
+        userId: req.user?.userId
+    });
+    try {
+        const systemHealth = {
+            database: await checkDatabaseHealth(),
+            backgroundJobs: {
+                total: (0, background_job_service_1.getBackgroundJobService)().getAllJobs().length,
+                executionHistory: (0, background_job_service_1.getBackgroundJobService)().getExecutionHistory().slice(-10)
+            },
+            memory: process.memoryUsage(),
+            uptime: process.uptime(),
+            timestamp: new Date().toISOString()
+        };
+        res.json(api_response_1.ResponseBuilder.success({
+            health: systemHealth,
+            status: systemHealth.database === 'healthy' ? 'healthy' : 'degraded'
+        }));
+    }
+    catch (error) {
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+        logger.error('System health check failed', { error: errorMessage });
+        throw new error_handler_1.AppError('Failed to get system health', 500);
+    }
+}));
+// ===================== HELPER FUNCTIONS FOR DASHBOARD ENDPOINTS =====================
+/**
+ * Get recent alerts with filtering
+ */
+async function getRecentAlerts(timeRange) {
+    // Implementation would get alerts from database/cache
+    // For now, return mock data structure
+    return [
+        {
+            id: 'alert-1',
+            type: 'sla_violation',
+            severity: 'high',
+            message: 'SLA threshold exceeded',
+            timestamp: new Date(Date.now() - 1800000).toISOString()
+        }
+    ];
+}
+/**
+ * Get recent alerts with detailed information
+ */
+async function getRecentAlertsWithDetails(timeRange, severity, limit) {
+    // Implementation would query alert history with filters
+    // For now, return mock detailed data
+    return [
+        {
+            id: 'alert-1',
+            type: 'anomaly_detection',
+            severity: 'critical',
+            title: 'Pipeline Duration Anomaly',
+            message: 'Pipeline execution time 300% above normal baseline',
+            timestamp: new Date(Date.now() - 1800000).toISOString(),
+            pipelineId: 'pipeline-abc-123',
+            resolved: false,
+            metadata: {
+                expectedDuration: 120000,
+                actualDuration: 360000,
+                threshold: 200000,
+                anomalyScore: 3.2
+            }
+        }
+    ];
+}
+/**
+ * Check database health status
+ */
+async function checkDatabaseHealth() {
+    try {
+        await database_1.databaseManager.query('SELECT 1');
+        return 'healthy';
+    }
+    catch (error) {
+        return 'unhealthy';
+    }
+}
+/**
+ * Generate chart data for anomaly timeline
+ */
+async function generateAnomalyTimelineChart(pipelineId, timeRange) {
+    // Use actual service data
+    let dataPoints = [];
+    if (pipelineId) {
+        dataPoints = await statistical_analytics_service_1.statisticalAnalyticsService.extractPipelineDataPoints(pipelineId, 'duration');
+    }
+    else {
+        dataPoints = generateSampleDataPoints();
+    }
+    // Filter for time range
+    const timeRangeMs = timeRange === '24h' ? 24 * 60 * 60 * 1000 :
+        timeRange === '1h' ? 60 * 60 * 1000 :
+            timeRange === '7d' ? 7 * 24 * 60 * 60 * 1000 :
+                24 * 60 * 60 * 1000;
+    const cutoffTime = new Date(Date.now() - timeRangeMs);
+    const filteredPoints = dataPoints.filter(dp => dp.timestamp >= cutoffTime);
+    const anomalies = statistical_analytics_service_1.statisticalAnalyticsService.detectAnomalies(filteredPoints, 'z-score');
+    // Create set of anomaly values for quick lookup
+    const anomalyValues = new Set(anomalies.map(a => a.actualValue));
+    return {
+        type: 'line',
+        series: [
+            {
+                name: 'Normal Values',
+                data: filteredPoints.filter(dp => !anomalyValues.has(dp.value))
+                    .map(dp => ({ x: dp.timestamp, y: dp.value }))
+            },
+            {
+                name: 'Anomalies',
+                data: anomalies.map(a => ({ x: new Date(), y: a.actualValue })) // Use current time as placeholder
+            }
+        ]
+    };
+}
+/**
+ * Generate chart data for trend analysis
+ */
+async function generateTrendAnalysisChart(pipelineId, timeRange) {
+    let dataPoints = [];
+    if (pipelineId) {
+        dataPoints = await statistical_analytics_service_1.statisticalAnalyticsService.extractPipelineDataPoints(pipelineId, 'duration');
+    }
+    else {
+        dataPoints = generateSampleDataPoints();
+    }
+    const trend = statistical_analytics_service_1.statisticalAnalyticsService.analyzeTrend(dataPoints);
+    return {
+        type: 'area',
+        series: [
+            {
+                name: 'Actual Values',
+                data: dataPoints.map(dp => ({ x: dp.timestamp, y: dp.value }))
+            },
+            {
+                name: 'Trend Line',
+                data: dataPoints.map((dp, index) => ({
+                    x: dp.timestamp,
+                    y: trend.slope * index + (dataPoints[0]?.value || 0) // Use first value as baseline
+                }))
+            }
+        ],
+        trendDirection: trend.trend,
+        correlation: trend.correlation
+    };
+}
+/**
+ * Generate chart data for performance summary
+ */
+async function generatePerformanceSummaryChart(pipelineId, timeRange) {
+    let dataPoints = [];
+    if (pipelineId) {
+        dataPoints = await statistical_analytics_service_1.statisticalAnalyticsService.extractPipelineDataPoints(pipelineId, 'duration');
+    }
+    else {
+        dataPoints = generateSampleDataPoints();
+    }
+    const anomalies = statistical_analytics_service_1.statisticalAnalyticsService.detectAnomalies(dataPoints, 'z-score');
+    const trend = statistical_analytics_service_1.statisticalAnalyticsService.analyzeTrend(dataPoints);
+    return {
+        type: 'summary',
+        metrics: {
+            totalRuns: dataPoints.length,
+            averageValue: dataPoints.length > 0 ?
+                dataPoints.reduce((sum, dp) => sum + dp.value, 0) / dataPoints.length : 0,
+            anomalyCount: anomalies.length,
+            trendDirection: trend.trend,
+            correlation: trend.correlation
+        },
+        timeRange
+    };
+}
+/**
+ * Generate sample data points for demonstration when no pipeline is specified
+ */
+function generateSampleDataPoints() {
+    const now = new Date();
+    const dataPoints = [];
+    // Generate 30 data points over the last 30 hours
+    for (let i = 29; i >= 0; i--) {
+        const timestamp = new Date(now.getTime() - (i * 60 * 60 * 1000)); // hourly intervals
+        const baseValue = 120000; // 2 minutes base duration
+        const variation = (Math.random() - 0.5) * 60000; // ±30 seconds variation
+        const value = Math.max(30000, baseValue + variation); // minimum 30 seconds
+        dataPoints.push({
+            timestamp,
+            value,
+            metadata: {
+                status: Math.random() > 0.1 ? 'success' : 'failed',
+                synthetic: true
+            }
+        });
+    }
+    return dataPoints;
+}
 //# sourceMappingURL=statistical-analytics.routes.js.map

@@ -12,6 +12,8 @@ const request_logger_1 = require("../middleware/request-logger");
 const api_response_1 = require("../shared/api-response");
 const logger_1 = require("../shared/logger");
 const joi_1 = __importDefault(require("joi"));
+const alerting_routes_1 = require("./alerting.routes");
+const advanced_data_processing_routes_1 = __importDefault(require("./advanced-data-processing.routes"));
 const router = (0, express_1.Router)();
 const logger = new logger_1.Logger('AnalyticsRoutes');
 // Initialize analytics service with configuration
@@ -207,5 +209,9 @@ router.get('/health', (0, auth_1.requirePermission)(auth_1.Permission.SYSTEM_MET
         performance: { executionTime: Date.now() - req.startTime }
     }));
 }));
+// Mount alerting routes
+router.use('/alerts', alerting_routes_1.alertingRoutes);
+// Mount advanced data processing routes
+router.use('/advanced', advanced_data_processing_routes_1.default);
 exports.default = router;
 //# sourceMappingURL=analytics.routes.new.js.map

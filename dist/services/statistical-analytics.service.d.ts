@@ -11,6 +11,7 @@
  * @author sirhCC
  * @version 1.0.0
  */
+import { AnalysisType, CacheType } from '../entities';
 export interface StatisticalDataPoint {
     timestamp: Date;
     value: number;
@@ -142,6 +143,8 @@ export declare class StatisticalAnalyticsService {
     private static instance;
     private logger;
     private config;
+    private resultRepository?;
+    private cacheRepository?;
     private constructor();
     static getInstance(config?: Partial<StatisticalAnalyticsConfig>): StatisticalAnalyticsService;
     /**
@@ -221,6 +224,60 @@ export declare class StatisticalAnalyticsService {
      * Analyze pipeline cost trends with integration
      */
     analyzePipelineCostTrends(pipelineId: string, periodDays?: number): Promise<CostAnalysisResult>;
+    /**
+     * Lazy repository initialization methods
+     */
+    private getResultRepository;
+    private getCacheRepository;
+    /**
+     * Data Persistence Methods - Phase 3
+     */
+    /**
+     * Save statistical analysis result to database
+     */
+    saveAnalysisResult(analysisType: AnalysisType, result: any, pipelineId?: string, metadata?: {
+        metric?: string;
+        method?: string;
+        score?: number;
+        severity?: 'low' | 'medium' | 'high' | 'critical';
+        dataPointCount?: number;
+        periodDays?: number;
+        executionTime?: number;
+        jobExecutionId?: string;
+    }): Promise<void>;
+    /**
+     * Get cached analysis result
+     */
+    getCachedResult(cacheKey: string, cacheType: CacheType): Promise<any | null>;
+    /**
+     * Set cache for analysis result
+     */
+    setCachedResult(cacheKey: string, cacheType: CacheType, data: any, expirationMs?: number, // 1 hour default
+    pipelineId?: string, metric?: string): Promise<void>;
+    /**
+     * Determine result status based on analysis results
+     */
+    private determineResultStatus;
+    /**
+     * Enhanced anomaly detection with automatic alerting
+     */
+    detectAnomaliesWithAlerting(pipelineId?: string, metric?: 'duration' | 'cpu' | 'memory' | 'success_rate', method?: 'z-score' | 'percentile' | 'iqr' | 'all', alertThreshold?: number): Promise<AnomalyDetectionResult[]>;
+    /**
+     * Trigger an alert for detected anomaly
+     */
+    private triggerAnomalyAlert;
+    /**
+     * Enhanced SLA monitoring with automatic alerting
+     */
+    monitorSLAWithAlerting(pipelineId?: string, slaConfig?: {
+        duration?: number;
+        errorRate?: number;
+        successRate?: number;
+    }): Promise<SLAMonitoringResult>;
+    /**
+     * Trigger an alert for SLA violation
+     */
+    private triggerSLAAlert;
 }
 export declare const getStatisticalAnalyticsService: () => StatisticalAnalyticsService;
 export declare const statisticalAnalyticsService: StatisticalAnalyticsService;

@@ -27,3 +27,39 @@ export type {
   CostAnalysisResult,
   StatisticalAnalyticsConfig
 } from './statistical-analytics.service';
+
+export { 
+  AlertingService, 
+  alertingService,
+  AlertType,
+  AlertSeverity,
+  AlertStatus,
+  ChannelType,
+  ResolutionType
+} from './alerting.service';
+export type {
+  AlertConfiguration,
+  Alert,
+  AlertDetails,
+  AlertContext,
+  NotificationChannel,
+  EscalationPolicy
+} from './alerting.service';
+
+export { 
+  AdvancedDataProcessingService, 
+  advancedDataProcessingService,
+  AggregationLevel,
+  AggregationStrategy,
+  ProcessingJobType,
+  JobStatus,
+  ExportFormat
+} from './advanced-data-processing.service';
+export type {
+  TimeSeriesPoint,
+  TimeSeriesData,
+  AggregationConfig,
+  ProcessingJob,
+  CacheEntry,
+  ExportOptions
+} from './advanced-data-processing.service';
