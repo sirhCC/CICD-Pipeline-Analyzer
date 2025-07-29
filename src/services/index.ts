@@ -28,6 +28,49 @@ export type {
   StatisticalAnalyticsConfig
 } from './statistical-analytics.service';
 
+// Enhanced optimized services
+export { 
+  EnhancedStatisticalAnalyticsService,
+  enhancedStatisticalAnalyticsService 
+} from './enhanced-statistical-analytics.service';
+export type { 
+  EnhancedAnalyticsConfig,
+  AnalyticsPerformanceMetrics
+} from './enhanced-statistical-analytics.service';
+
+export { MemoizationService, memoizationService } from './memoization.service';
+export type { MemoizationConfig, MemoizationMetrics } from './memoization.service';
+
+export { BatchProcessingService, batchProcessingService } from './batch-processing.service';
+export type { 
+  BatchConfig, 
+  BatchResult, 
+  BatchProgress,
+  StreamingConfig 
+} from './batch-processing.service';
+
+export { OptimizedMathUtils, optimizedMathUtils } from './optimized-math-utils.service';
+export type { 
+  StatisticalSummary,
+  RegressionResult,
+  MovingAverageConfig 
+} from './optimized-math-utils.service';
+
+export { PerformanceMonitorService } from './performance-monitor.service';
+export type { 
+  PerformanceMetrics,
+  PerformanceAlert,
+  PerformanceThresholds
+} from './performance-monitor.service';
+
+export { AdvancedCacheService } from './advanced-cache.service';
+export type { 
+  CacheEntry as AdvancedCacheEntry,
+  CacheStats,
+  CacheConfig,
+  AccessPattern 
+} from './advanced-cache.service';
+
 export { 
   AlertingService, 
   alertingService,
@@ -63,3 +106,24 @@ export type {
   CacheEntry,
   ExportOptions
 } from './advanced-data-processing.service';
+
+// Optimization services
+export { 
+  OptimizationConfigService,
+  optimizationConfigService 
+} from './optimization-config.service';
+export type { 
+  OptimizationProfile,
+  PerformanceMetrics as OptimizationPerformanceMetrics,
+  AutoTuningConfig 
+} from './optimization-config.service';
+
+export { 
+  OptimizationIntegrationService,
+  optimizationIntegrationService 
+} from './optimization-integration.service';
+export type { 
+  OptimizationStatus,
+  ServiceStatus,
+  OptimizationReport 
+} from './optimization-integration.service';

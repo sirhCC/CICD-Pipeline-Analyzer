@@ -9,6 +9,7 @@ import { Logger } from '../shared/logger';
 import authRoutes from '../routes/auth.routes';
 import pipelineRoutes from '../routes/pipeline.routes';
 import analyticsRoutes from '../routes/analytics.routes';
+import enhancedAnalyticsRoutes from '../routes/enhanced-analytics.routes';
 
 const logger = new Logger('VersionedRouter');
 
@@ -20,6 +21,7 @@ export interface VersionedRouterConfig {
     auth?: boolean;
     pipelines?: boolean;
     analytics?: boolean;
+    enhancedAnalytics?: boolean;
     admin?: boolean;
   };
 }
@@ -95,6 +97,12 @@ export function createVersionedRouter(config: VersionedRouterConfig): Router {
     logger.debug(`Registered analytics routes for ${config.version}`);
   }
 
+  // Enhanced Analytics routes (Phase 3 - Optimized)
+  if (config.routes.enhancedAnalytics) {
+    router.use('/analytics/enhanced', enhancedAnalyticsRoutes);
+    logger.debug(`Registered enhanced analytics routes for ${config.version}`);
+  }
+
   if (config.routes.admin) {
     router.use('/admin', (req, res) => {
       res.status(501).json({
@@ -131,6 +139,8 @@ export function createAllVersionedRouters(): Array<{ version: string; prefix: st
           pipelines: versionConfig.features.includes('pipeline-management'),
           analytics: versionConfig.features.includes('basic-analytics') || 
                     versionConfig.features.includes('advanced-analytics'),
+          enhancedAnalytics: versionConfig.features.includes('advanced-analytics') ||
+                            versionConfig.features.includes('phase3-optimizations'),
           admin: versionConfig.features.includes('user-management'),
         },
       };

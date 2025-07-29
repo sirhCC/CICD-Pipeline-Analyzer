@@ -25,6 +25,8 @@ class ApiVersionManager {
                         'authentication',
                         'pipeline-management',
                         'basic-analytics',
+                        'advanced-analytics',
+                        'phase3-optimizations',
                         'user-management',
                     ],
                     breaking: false,

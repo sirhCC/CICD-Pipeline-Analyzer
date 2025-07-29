@@ -11,6 +11,7 @@ export interface VersionedRouterConfig {
         auth?: boolean;
         pipelines?: boolean;
         analytics?: boolean;
+        enhancedAnalytics?: boolean;
         admin?: boolean;
     };
 }

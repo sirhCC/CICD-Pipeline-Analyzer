@@ -15,18 +15,24 @@ const statistical_analytics_routes_1 = require("./statistical-analytics.routes")
 const joi_1 = __importDefault(require("joi"));
 const router = (0, express_1.Router)();
 const logger = new logger_1.Logger('AnalyticsRoutes');
-// Initialize analytics service with configuration
-const analyticsService = new analytics_service_1.AnalyticsService({
-    enableRealTimeAnalysis: false, // Disable in tests to prevent open handles
-    metricRetentionDays: 90,
-    alertThresholds: {
-        failureRate: 0.15,
-        avgDuration: 1800,
-        errorSpike: 5
-    },
-    batchSize: 100,
-    analysisInterval: 15
-});
+// Lazy initialization of analytics service to avoid database initialization issues
+let analyticsService = null;
+const getAnalyticsService = () => {
+    if (!analyticsService) {
+        analyticsService = new analytics_service_1.AnalyticsService({
+            enableRealTimeAnalysis: false, // Disable in tests to prevent open handles
+            metricRetentionDays: 90,
+            alertThresholds: {
+                failureRate: 0.15,
+                avgDuration: 1800,
+                errorSpike: 5
+            },
+            batchSize: 100,
+            analysisInterval: 15
+        });
+    }
+    return analyticsService;
+};
 // Apply middleware
 router.use(request_logger_1.requestLoggers.production);
 router.use(auth_1.authenticateJWT);
@@ -71,7 +77,7 @@ router.get('/dashboard', (0, auth_1.requirePermission)(auth_1.Permission.PIPELIN
         pipelineId,
         userId: req.user?.userId
     });
-    const dashboard = await analyticsService.generateDashboard({
+    const dashboard = await getAnalyticsService().generateDashboard({
         timeRange: period || 'daily',
         ...(pipelineId && { pipelineId })
     });
@@ -92,7 +98,7 @@ router.get('/pipelines/:pipelineId/metrics', (0, auth_1.requirePermission)(auth_
         period,
         userId: req.user?.userId
     });
-    const metrics = await analyticsService.calculateMetrics(pipelineId, period || 'daily');
+    const metrics = await getAnalyticsService().calculateMetrics(pipelineId, period || 'daily');
     res.json(api_response_1.ResponseBuilder.success({
         pipelineId,
         period: period || 'daily',
@@ -112,7 +118,7 @@ router.get('/pipelines/:pipelineId/patterns', (0, auth_1.requirePermission)(auth
         pipelineId,
         userId: req.user?.userId
     });
-    const patterns = await analyticsService.detectFailurePatterns(pipelineId);
+    const patterns = await getAnalyticsService().detectFailurePatterns(pipelineId);
     res.json(api_response_1.ResponseBuilder.success(patterns, {
         performance: { executionTime: Date.now() - startTime }
     }));
@@ -126,7 +132,7 @@ router.get('/patterns', (0, auth_1.requirePermission)(auth_1.Permission.SYSTEM_M
     logger.info('Global failure patterns requested', {
         userId: req.user?.userId
     });
-    const patterns = await analyticsService.detectFailurePatterns();
+    const patterns = await getAnalyticsService().detectFailurePatterns();
     res.json(api_response_1.ResponseBuilder.success(patterns, {
         performance: { executionTime: Date.now() - startTime }
     }));
@@ -142,7 +148,7 @@ router.get('/pipelines/:pipelineId/recommendations', (0, auth_1.requirePermissio
         pipelineId,
         userId: req.user?.userId
     });
-    const recommendations = await analyticsService.generateOptimizationRecommendations(pipelineId);
+    const recommendations = await getAnalyticsService().generateOptimizationRecommendations(pipelineId);
     res.json(api_response_1.ResponseBuilder.success(recommendations, {
         performance: { executionTime: Date.now() - startTime }
     }));
@@ -156,7 +162,7 @@ router.get('/alerts', (0, auth_1.requirePermission)(auth_1.Permission.PIPELINES_
     logger.info('Analytics alerts requested', {
         userId: req.user?.userId
     });
-    const alerts = await analyticsService.generateAlerts();
+    const alerts = await getAnalyticsService().generateAlerts();
     res.json(api_response_1.ResponseBuilder.success(alerts, {
         performance: { executionTime: Date.now() - startTime }
     }));
@@ -179,7 +185,7 @@ router.put('/alerts/:alertId', (0, auth_1.requirePermission)(auth_1.Permission.P
     if (acknowledgedBy) {
         updateData.acknowledgedBy = acknowledgedBy;
     }
-    const updatedAlert = await analyticsService.updateAlert(alertId, updateData);
+    const updatedAlert = await getAnalyticsService().updateAlert(alertId, updateData);
     res.json(api_response_1.ResponseBuilder.success(updatedAlert, {
         performance: { executionTime: Date.now() - startTime }
     }));
@@ -196,7 +202,7 @@ router.post('/pipelines/:pipelineId/trigger', (0, auth_1.requirePermission)(auth
         userId: req.user?.userId
     });
     // Start analysis in background
-    analyticsService.analyzeAsync(pipelineId).catch(error => {
+    getAnalyticsService().analyzeAsync(pipelineId).catch(error => {
         logger.error('Background analytics analysis failed', {
             pipelineId,
             error: error.message

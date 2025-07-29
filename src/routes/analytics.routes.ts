@@ -13,18 +13,25 @@ import Joi from 'joi';
 const router = Router();
 const logger = new Logger('AnalyticsRoutes');
 
-// Initialize analytics service with configuration
-const analyticsService = new AnalyticsService({
-  enableRealTimeAnalysis: false, // Disable in tests to prevent open handles
-  metricRetentionDays: 90,
-  alertThresholds: {
-    failureRate: 0.15,
-    avgDuration: 1800,
-    errorSpike: 5
-  },
-  batchSize: 100,
-  analysisInterval: 15
-});
+// Lazy initialization of analytics service to avoid database initialization issues
+let analyticsService: AnalyticsService | null = null;
+
+const getAnalyticsService = (): AnalyticsService => {
+  if (!analyticsService) {
+    analyticsService = new AnalyticsService({
+      enableRealTimeAnalysis: false, // Disable in tests to prevent open handles
+      metricRetentionDays: 90,
+      alertThresholds: {
+        failureRate: 0.15,
+        avgDuration: 1800,
+        errorSpike: 5
+      },
+      batchSize: 100,
+      analysisInterval: 15
+    });
+  }
+  return analyticsService;
+};
 
 // Apply middleware
 router.use(requestLoggers.production);
@@ -81,7 +88,7 @@ router.get('/dashboard',
       userId: (req as any).user?.userId 
     });
 
-    const dashboard = await analyticsService.generateDashboard({
+    const dashboard = await getAnalyticsService().generateDashboard({
       timeRange: period || 'daily',
       ...(pipelineId && { pipelineId })
     });
@@ -111,7 +118,7 @@ router.get('/pipelines/:pipelineId/metrics',
       userId: (req as any).user?.userId 
     });
 
-    const metrics = await analyticsService.calculateMetrics(
+    const metrics = await getAnalyticsService().calculateMetrics(
       pipelineId, 
       (period as 'hourly' | 'daily' | 'weekly' | 'monthly') || 'daily'
     );
@@ -142,7 +149,7 @@ router.get('/pipelines/:pipelineId/patterns',
       userId: (req as any).user?.userId 
     });
 
-    const patterns = await analyticsService.detectFailurePatterns(pipelineId);
+    const patterns = await getAnalyticsService().detectFailurePatterns(pipelineId);
 
     res.json(ResponseBuilder.success(patterns, {
       performance: { executionTime: Date.now() - startTime }
@@ -163,7 +170,7 @@ router.get('/patterns',
       userId: (req as any).user?.userId 
     });
 
-    const patterns = await analyticsService.detectFailurePatterns();
+    const patterns = await getAnalyticsService().detectFailurePatterns();
 
     res.json(ResponseBuilder.success(patterns, {
       performance: { executionTime: Date.now() - startTime }
@@ -187,7 +194,7 @@ router.get('/pipelines/:pipelineId/recommendations',
       userId: (req as any).user?.userId 
     });
 
-    const recommendations = await analyticsService.generateOptimizationRecommendations(pipelineId);
+    const recommendations = await getAnalyticsService().generateOptimizationRecommendations(pipelineId);
 
     res.json(ResponseBuilder.success(recommendations, {
       performance: { executionTime: Date.now() - startTime }
@@ -208,7 +215,7 @@ router.get('/alerts',
       userId: (req as any).user?.userId 
     });
 
-    const alerts = await analyticsService.generateAlerts();
+    const alerts = await getAnalyticsService().generateAlerts();
 
     res.json(ResponseBuilder.success(alerts, {
       performance: { executionTime: Date.now() - startTime }
@@ -245,7 +252,7 @@ router.put('/alerts/:alertId',
       updateData.acknowledgedBy = acknowledgedBy;
     }
 
-    const updatedAlert = await analyticsService.updateAlert(alertId, updateData);
+    const updatedAlert = await getAnalyticsService().updateAlert(alertId, updateData);
 
     res.json(ResponseBuilder.success(updatedAlert, {
       performance: { executionTime: Date.now() - startTime }
@@ -270,7 +277,7 @@ router.post('/pipelines/:pipelineId/trigger',
     });
 
     // Start analysis in background
-    analyticsService.analyzeAsync(pipelineId).catch(error => {
+    getAnalyticsService().analyzeAsync(pipelineId).catch(error => {
       logger.error('Background analytics analysis failed', { 
         pipelineId, 
         error: error.message 

@@ -16,6 +16,7 @@ const logger_1 = require("../shared/logger");
 const auth_routes_1 = __importDefault(require("../routes/auth.routes"));
 const pipeline_routes_1 = __importDefault(require("../routes/pipeline.routes"));
 const analytics_routes_1 = __importDefault(require("../routes/analytics.routes"));
+const enhanced_analytics_routes_1 = __importDefault(require("../routes/enhanced-analytics.routes"));
 const logger = new logger_1.Logger('VersionedRouter');
 /**
  * Create a versioned router with specified configuration
@@ -81,6 +82,11 @@ function createVersionedRouter(config) {
         router.use('/analytics', analytics_routes_1.default);
         logger.debug(`Registered analytics routes for ${config.version}`);
     }
+    // Enhanced Analytics routes (Phase 3 - Optimized)
+    if (config.routes.enhancedAnalytics) {
+        router.use('/analytics/enhanced', enhanced_analytics_routes_1.default);
+        logger.debug(`Registered enhanced analytics routes for ${config.version}`);
+    }
     if (config.routes.admin) {
         router.use('/admin', (req, res) => {
             res.status(501).json({
@@ -114,6 +120,8 @@ function createAllVersionedRouters() {
                     pipelines: versionConfig.features.includes('pipeline-management'),
                     analytics: versionConfig.features.includes('basic-analytics') ||
                         versionConfig.features.includes('advanced-analytics'),
+                    enhancedAnalytics: versionConfig.features.includes('advanced-analytics') ||
+                        versionConfig.features.includes('phase3-optimizations'),
                     admin: versionConfig.features.includes('user-management'),
                 },
             };
