@@ -23,10 +23,10 @@ import { createBackgroundJobService, getBackgroundJobService } from './services/
 // Import middleware
 import { responseMiddleware } from './middleware/response';
 import { createAllVersionedRouters, createVersionInfoRouter } from './config/router';
-// import { errorHandler } from '@/middleware/error-handler';
-// import { requestLogger } from '@/middleware/request-logger';
-// import { rateLimiter } from '@/middleware/rate-limiter';
-// import { auth } from '@/middleware/auth';
+import { errorHandler } from '@/middleware/error-handler';
+import { createRequestLogger } from '@/middleware/request-logger';
+import { rateLimiter } from '@/middleware/rate-limiter';
+import { authenticateJWT } from '@/middleware/auth';
 
 class Application {
   private app: express.Application;
@@ -262,13 +262,19 @@ class Application {
     // Response standardization middleware
     this.app.use(responseMiddleware);
 
-    // Request logging middleware (will be implemented)
-    // this.app.use(requestLogger);
+    // Request logging middleware
+    const requestLogger = createRequestLogger({
+      enableMetrics: true,
+      enableSecurityLogging: true,
+      enableAuditTrail: true,
+      logLevel: 'info'
+    });
+    this.app.use(requestLogger);
 
-    // Rate limiting middleware (will be implemented)
-    // if (config.security.rateLimiting) {
-    //   this.app.use(rateLimiter);
-    // }
+    // Rate limiting middleware
+    if (config.security.rateLimiting) {
+      this.app.use(rateLimiter.createLimiter());
+    }
 
     this.logger.info('Middleware configured successfully');
   }
@@ -357,31 +363,8 @@ class Application {
   private configureErrorHandling(): void {
     this.logger.info('Configuring error handling...');
 
-    // Global error handler
-    this.app.use((
-      error: any,
-      req: express.Request,
-      res: express.Response,
-      next: express.NextFunction
-    ) => {
-      this.logger.error('Unhandled request error', error, {
-        method: req.method,
-        url: req.url,
-        userAgent: req.get('User-Agent'),
-        ip: req.ip,
-      });
-
-      const statusCode = error.statusCode || 500;
-      const message = configManager.isDevelopment() 
-        ? error.message 
-        : 'Internal Server Error';
-
-      res.status(statusCode).json({
-        error: message,
-        timestamp: new Date().toISOString(),
-        requestId: req.headers['x-request-id'] || 'unknown',
-      });
-    });
+    // Use the comprehensive error handler middleware
+    this.app.use(errorHandler);
 
     this.logger.info('Error handling configured successfully');
   }

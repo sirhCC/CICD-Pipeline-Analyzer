@@ -279,12 +279,15 @@ export class ConfigManager {
 
   // === Configuration Validation ===
   public validateConfiguration(): void {
-    const requiredProviders = ['github-actions'];
-    
-    for (const provider of requiredProviders) {
-      const config = this.getProviderConfig(provider);
-      if (!config || !config.apiToken) {
-        throw new Error(`Missing configuration for required provider: ${provider}`);
+    // Only require providers in production
+    if (this.isProduction()) {
+      const requiredProviders = ['github-actions'];
+      
+      for (const provider of requiredProviders) {
+        const config = this.getProviderConfig(provider);
+        if (!config || !config.apiToken) {
+          throw new Error(`Missing configuration for required provider: ${provider}`);
+        }
       }
     }
 
