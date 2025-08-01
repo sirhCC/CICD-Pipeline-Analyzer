@@ -228,6 +228,9 @@ jest.mock('../config', () => {
             return defaultValue;
         }
       }),
+      isProduction: jest.fn().mockReturnValue(false),
+      isDevelopment: jest.fn().mockReturnValue(true),
+      isTest: jest.fn().mockReturnValue(true),
       getMonitoring: jest.fn().mockReturnValue({
         level: 'info',
         enableConsole: true,

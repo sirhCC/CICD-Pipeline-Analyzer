@@ -18,6 +18,7 @@ import request from 'supertest';
 import express, { Application } from 'express';
 import jwt from 'jsonwebtoken';
 import { 
+  AuthService,
   getAuthService,
   authenticateJWT,
   requireRole,
