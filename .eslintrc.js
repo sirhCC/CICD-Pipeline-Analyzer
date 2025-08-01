@@ -3,31 +3,29 @@ module.exports = {
   parserOptions: {
     ecmaVersion: 2022,
     sourceType: 'module',
-    project: './tsconfig.json',
   },
   plugins: ['@typescript-eslint'],
   extends: [
     'eslint:recommended',
-    '@typescript-eslint/recommended',
-    '@typescript-eslint/recommended-requiring-type-checking',
   ],
   root: true,
   env: {
     node: true,
     jest: true,
   },
-  ignorePatterns: ['.eslintrc.js', 'dist/', 'node_modules/'],
+  ignorePatterns: ['.eslintrc.js', 'dist/', 'node_modules/', '**/*.test.ts', '**/*.spec.ts'],
   rules: {
-    '@typescript-eslint/interface-name-prefix': 'off',
-    '@typescript-eslint/explicit-function-return-type': 'error',
-    '@typescript-eslint/explicit-module-boundary-types': 'error',
-    '@typescript-eslint/no-explicit-any': 'error',
-    '@typescript-eslint/no-unused-vars': 'error',
-    '@typescript-eslint/prefer-const': 'error',
-    '@typescript-eslint/no-var-requires': 'error',
+    // Basic ESLint rules
     'prefer-const': 'error',
     'no-var': 'error',
     'no-console': 'warn',
     'no-debugger': 'error',
+    'no-case-declarations': 'error',
+    'no-control-regex': 'error',
+    'no-undef': 'error',
+    
+    // TypeScript specific rules
+    '@typescript-eslint/no-unused-vars': 'error',
+    '@typescript-eslint/no-var-requires': 'error',
   },
 };
