@@ -11,6 +11,7 @@ import { createServer } from 'http';
 
 import { configManager } from './config';
 import { Logger } from './shared/logger';
+import { environmentValidator } from './core/environment-validator';
 import { moduleManager } from './core/module-manager';
 import { databaseManager } from './core/database';
 import { redisManager } from './core/redis';
@@ -169,6 +170,15 @@ class Application {
     this.logger.info('Validating configuration...');
     
     try {
+      // Validate environment variables first
+      const envValidation = environmentValidator.validateEnvironment();
+      environmentValidator.printValidationResults(envValidation);
+      
+      if (!envValidation.isValid) {
+        throw new Error('Environment validation failed - check logs for details');
+      }
+      
+      // Validate application configuration
       configManager.validateConfiguration();
       this.logger.info('Configuration validation passed');
     } catch (error) {
