@@ -15,6 +15,7 @@ const compression_1 = __importDefault(require("compression"));
 const http_1 = require("http");
 const config_1 = require("./config");
 const logger_1 = require("./shared/logger");
+const environment_validator_1 = require("./core/environment-validator");
 const module_manager_1 = require("./core/module-manager");
 const database_1 = require("./core/database");
 const redis_1 = require("./core/redis");
@@ -149,6 +150,13 @@ class Application {
     validateConfiguration() {
         this.logger.info('Validating configuration...');
         try {
+            // Validate environment variables first
+            const envValidation = environment_validator_1.environmentValidator.validateEnvironment();
+            environment_validator_1.environmentValidator.printValidationResults(envValidation);
+            if (!envValidation.isValid) {
+                throw new Error('Environment validation failed - check logs for details');
+            }
+            // Validate application configuration
             config_1.configManager.validateConfiguration();
             this.logger.info('Configuration validation passed');
         }
