@@ -1,0 +1,134 @@
+# =========================================
+# CI/CD Pipeline Analyzer - Release Workflow
+# Automated releases with semantic versioning and changelog
+# =========================================
+
+name: Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version bump type'
+        required: true
+        default: 'patch'
+        type: choice
+        options:
+          - patch
+          - minor
+          - major
+      prerelease:
+        description: 'Is this a prerelease?'
+        required: false
+        type: boolean
+        default: false
+
+env:
+  NODE_VERSION: '18'
+
+jobs:
+  release:
+    name: 🚀 Create Release
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      packages: write
+      pull-requests: write
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Configure Git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Generate changelog
+        id: changelog
+        run: |
+          # Install conventional-changelog-cli
+          npm install -g conventional-changelog-cli
+          
+          # Generate changelog
+          conventional-changelog -p angular -i CHANGELOG.md -s -r 0
+
+      - name: Bump version
+        id: version
+        run: |
+          if [[ "${{ github.event.inputs.prerelease }}" == "true" ]]; then
+            NEW_VERSION=$(npm version pre${{ github.event.inputs.version }} --preid=rc --no-git-tag-version)
+          else
+            NEW_VERSION=$(npm version ${{ github.event.inputs.version }} --no-git-tag-version)
+          fi
+          
+          echo "version=${NEW_VERSION}" >> $GITHUB_OUTPUT
+          echo "New version: ${NEW_VERSION}"
+
+      - name: Update package files
+        run: |
+          # Update version in package.json and package-lock.json
+          npm install --package-lock-only
+
+      - name: Commit changes
+        run: |
+          git add .
+          git commit -m "chore(release): ${{ steps.version.outputs.version }}"
+          git tag ${{ steps.version.outputs.version }}
+
+      - name: Push changes
+        run: |
+          git push origin main
+          git push origin ${{ steps.version.outputs.version }}
+
+      - name: Extract release notes
+        id: extract-notes
+        run: |
+          # Extract the latest entry from CHANGELOG.md
+          sed -n '/^## \[/,/^## \[/p' CHANGELOG.md | sed '$d' > RELEASE_NOTES.md
+          
+          # If empty, provide default notes
+          if [[ ! -s RELEASE_NOTES.md ]]; then
+            echo "## Changes" > RELEASE_NOTES.md
+            echo "- Bug fixes and improvements" >> RELEASE_NOTES.md
+          fi
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ steps.version.outputs.version }}
+          name: Release ${{ steps.version.outputs.version }}
+          body_path: RELEASE_NOTES.md
+          prerelease: ${{ github.event.inputs.prerelease }}
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push Docker image
+        run: |
+          docker build -t ghcr.io/${{ github.repository }}:${{ steps.version.outputs.version }} .
+          docker tag ghcr.io/${{ github.repository }}:${{ steps.version.outputs.version }} ghcr.io/${{ github.repository }}:latest
+          
+          echo ${{ secrets.GITHUB_TOKEN }} | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+          docker push ghcr.io/${{ github.repository }}:${{ steps.version.outputs.version }}
+          
+          if [[ "${{ github.event.inputs.prerelease }}" != "true" ]]; then
+            docker push ghcr.io/${{ github.repository }}:latest
+          fi
+
+      - name: Notify release
+        run: |
+          echo "🎉 Release ${{ steps.version.outputs.version }} created successfully!"
+          echo "📦 Docker image: ghcr.io/${{ github.repository }}:${{ steps.version.outputs.version }}"
