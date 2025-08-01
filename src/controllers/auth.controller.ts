@@ -4,7 +4,7 @@
  */
 
 import { Request, Response, NextFunction } from 'express';
-import { authService, hashPassword, verifyPassword, generateSessionId, UserRole } from '../middleware/auth';
+import { getAuthService, hashPassword, verifyPassword, generateSessionId, UserRole } from '../middleware/auth';
 import { userRepository } from '../repositories';
 import { AuthenticatedRequest } from '../middleware/auth';
 import { Logger } from '../shared/logger';
@@ -42,7 +42,7 @@ export const authController = {
       const sessionId = generateSessionId();
       
       // Generate tokens
-      const accessToken = authService.generateAccessToken({
+      const accessToken = getAuthService().generateAccessToken({
         userId: user.id,
         email: user.email,
         role: user.role,
@@ -50,7 +50,7 @@ export const authController = {
         sessionId
       });
 
-      const refreshToken = authService.generateRefreshToken(
+      const refreshToken = getAuthService().generateRefreshToken(
         user.id, 
         sessionId, 
         'web'
@@ -150,7 +150,7 @@ export const authController = {
       }
 
       // Verify refresh token
-      const decoded = authService.verifyToken(refreshToken, authService.config.jwtRefreshSecret);
+      const decoded = getAuthService().verifyToken(refreshToken, getAuthService().config.jwtRefreshSecret);
       
       // Generate new access token
       const user = await userRepository.findById(decoded.userId);
@@ -158,7 +158,7 @@ export const authController = {
         throw new AuthenticationError('User not found or inactive');
       }
 
-      const accessToken = authService.generateAccessToken({
+      const accessToken = getAuthService().generateAccessToken({
         userId: user.id,
         email: user.email,
         role: user.role,
@@ -230,7 +230,7 @@ export const authController = {
       const authHeader = req.headers.authorization;
       if (authHeader?.startsWith('Bearer ')) {
         const token = authHeader.substring(7);
-        authService.blacklistToken(token);
+        getAuthService().blacklistToken(token);
       }
 
       // Clear refresh token cookie
@@ -280,7 +280,7 @@ export const authController = {
       const { name, permissions, expiresIn } = req.body;
 
       // Generate API key
-      const apiKey = authService.generateApiKey({
+      const apiKey = getAuthService().generateApiKey({
         keyId: generateSessionId(),
         userId: req.user!.userId,
         permissions: permissions || ['pipelines:read'],

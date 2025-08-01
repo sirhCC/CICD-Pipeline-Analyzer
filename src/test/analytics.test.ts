@@ -177,7 +177,7 @@ jest.mock('../repositories/factory.enhanced', () => {
 
 import { AnalyticsService } from '../services/analytics.service';
 import analyticsRoutes from '../routes/analytics.routes';
-import { AuthService, UserRole } from '../middleware/auth';
+import { AuthService, UserRole, getAuthService } from '../middleware/auth';
 import { PipelineMetrics, FailurePattern, OptimizationRecommendation, AnalyticsAlert } from '../entities/pipeline-metrics.entity';
 
 // Mock config manager
@@ -525,7 +525,7 @@ describe('Analytics Routes Tests', () => {
     app.use(express.json());
     
     // Initialize auth service
-    authService = new AuthService();
+    authService = getAuthService();
 
     // Generate valid test token
     validToken = authService.generateAccessToken({

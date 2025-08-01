@@ -132,6 +132,7 @@ export class AdvancedDataProcessingService {
   private readonly maxCacheSize = 1000; // Maximum number of cache entries
   private readonly maxMemoryUsage = 500 * 1024 * 1024; // 500MB
   private currentMemoryUsage = 0;
+  private cleanupTimer?: NodeJS.Timeout;
 
   constructor() {
     this.logger = new Logger();
@@ -142,7 +143,7 @@ export class AdvancedDataProcessingService {
    * Setup periodic cache cleanup
    */
   private setupCacheCleanup(): void {
-    setInterval(() => {
+    this.cleanupTimer = setInterval(() => {
       this.cleanupCache();
     }, 5 * 60 * 1000); // Every 5 minutes
   }
@@ -750,6 +751,18 @@ export class AdvancedDataProcessingService {
     this.cache.clear();
     this.currentMemoryUsage = 0;
     this.logger.info('Cache cleared');
+  }
+
+  /**
+   * Cleanup resources and stop timers
+   */
+  public destroy(): void {
+    if (this.cleanupTimer) {
+      clearInterval(this.cleanupTimer);
+      delete this.cleanupTimer;
+    }
+    this.clearCache();
+    this.logger.info('AdvancedDataProcessingService destroyed');
   }
 }
 
