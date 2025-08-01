@@ -1,0 +1,186 @@
+# =========================================
+# CI/CD Pipeline Analyzer - Docker Compose
+# Complete development environment with PostgreSQL, Redis, and app
+# =========================================
+
+version: '3.8'
+
+services:
+  # === PostgreSQL Database ===
+  postgres:
+    image: postgres:15-alpine
+    container_name: cicd-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: cicd_analyzer
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: dev-password-change-in-production
+      POSTGRES_INITDB_ARGS: "--encoding=UTF-8 --lc-collate=C --lc-ctype=C"
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./docker/postgres/init:/docker-entrypoint-initdb.d
+    networks:
+      - cicd-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d cicd_analyzer"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # === PostgreSQL Test Database ===
+  postgres-test:
+    image: postgres:15-alpine
+    container_name: cicd-postgres-test
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: cicd_analyzer_test
+      POSTGRES_USER: test_user
+      POSTGRES_PASSWORD: test_password
+      POSTGRES_INITDB_ARGS: "--encoding=UTF-8 --lc-collate=C --lc-ctype=C"
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_test_data:/var/lib/postgresql/data
+    networks:
+      - cicd-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U test_user -d cicd_analyzer_test"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # === Redis Cache ===
+  redis:
+    image: redis:7-alpine
+    container_name: cicd-redis
+    restart: unless-stopped
+    command: redis-server --appendonly yes --requirepass dev-redis-password
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+      - ./docker/redis/redis.conf:/usr/local/etc/redis/redis.conf
+    networks:
+      - cicd-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "--raw", "incr", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # === CI/CD Pipeline Analyzer Application ===
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: development
+    container_name: cicd-app
+    restart: unless-stopped
+    environment:
+      NODE_ENV: development
+      LOG_LEVEL: debug
+      
+      # Server Configuration
+      PORT: 3000
+      HOST: 0.0.0.0
+      
+      # Security
+      JWT_SECRET: dev-jwt-secret-change-in-production-minimum-32-characters-long
+      JWT_REFRESH_SECRET: dev-refresh-secret-change-in-production-minimum-32-characters-long
+      API_KEY_SECRET: dev-api-key-secret-change-in-production-minimum-32-characters-long
+      
+      # Database
+      DATABASE_HOST: postgres
+      DATABASE_PORT: 5432
+      DATABASE_NAME: cicd_analyzer
+      DATABASE_USERNAME: postgres
+      DATABASE_PASSWORD: dev-password-change-in-production
+      DATABASE_SSL: false
+      
+      # Redis
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: dev-redis-password
+      REDIS_DB: 0
+      
+      # CORS
+      CORS_ORIGIN: http://localhost:3000
+      
+      # Features
+      ENABLE_PERFORMANCE_MONITORING: true
+      ENABLE_STATISTICAL_ANALYTICS: true
+      ENABLE_BACKGROUND_JOBS: true
+      ENABLE_SWAGGER: true
+      ENABLE_DEBUG_ROUTES: true
+    ports:
+      - "3000:3000"
+      - "9229:9229" # Debug port
+    volumes:
+      - .:/app
+      - /app/node_modules
+      - app_logs:/app/logs
+    networks:
+      - cicd-network
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # === Adminer (Database Management UI) ===
+  adminer:
+    image: adminer:latest
+    container_name: cicd-adminer
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    environment:
+      ADMINER_DEFAULT_SERVER: postgres
+      ADMINER_DESIGN: bootstrap
+    networks:
+      - cicd-network
+    depends_on:
+      - postgres
+
+  # === Redis Commander (Redis Management UI) ===
+  redis-commander:
+    image: rediscommander/redis-commander:latest
+    container_name: cicd-redis-commander
+    restart: unless-stopped
+    environment:
+      REDIS_HOSTS: redis:redis:6379:0:dev-redis-password
+      HTTP_USER: admin
+      HTTP_PASSWORD: admin
+    ports:
+      - "8081:8081"
+    networks:
+      - cicd-network
+    depends_on:
+      - redis
+
+# === Named Volumes ===
+volumes:
+  postgres_data:
+    driver: local
+  postgres_test_data:
+    driver: local
+  redis_data:
+    driver: local
+  app_logs:
+    driver: local
+
+# === Networks ===
+networks:
+  cicd-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16
