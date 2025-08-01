@@ -406,8 +406,15 @@ export class AuthService {
   }
 }
 
-// Initialize auth service
-export const authService = new AuthService();
+// Initialize auth service - lazy loaded to avoid circular dependencies
+let authServiceInstance: AuthService | null = null;
+
+export const getAuthService = (): AuthService => {
+  if (!authServiceInstance) {
+    authServiceInstance = new AuthService();
+  }
+  return authServiceInstance;
+};
 
 /**
  * JWT Authentication Middleware
@@ -420,13 +427,13 @@ export const authenticateJWT = (req: AuthenticatedRequest, res: Response, next: 
     const apiKey = req.headers['x-api-key'] as string;
     
     // Check for API key authentication first
-    if (apiKey && authService.config.enableApiKeys) {
+    if (apiKey && getAuthService().config.enableApiKeys) {
       try {
-        const decoded = authService.verifyToken(apiKey, String(authService.config.apiKeySecret)) as ApiKeyPayload;
+        const decoded = getAuthService().verifyToken(apiKey, String(getAuthService().config.apiKeySecret)) as ApiKeyPayload;
         
         // Check IP whitelist for API keys
         const clientIP = req.ip || req.connection.remoteAddress || 'unknown';
-        if (!authService.isIpAllowed(clientIP, decoded.allowedIPs)) {
+        if (!getAuthService().isIpAllowed(clientIP, decoded.allowedIPs)) {
           logger.warn('API key access denied for IP', { ip: clientIP, keyId: decoded.keyId });
           throw new AuthorizationError('Access denied for this IP address');
         }
@@ -466,15 +473,15 @@ export const authenticateJWT = (req: AuthenticatedRequest, res: Response, next: 
     const token = authHeader.substring(7);
     
     // Check if token is blacklisted
-    if (authService.isTokenBlacklisted(token)) {
+    if (getAuthService().isTokenBlacklisted(token)) {
       throw new AuthenticationError('Token has been revoked');
     }
     
     // Verify token
-    const decoded = authService.verifyToken(token, String(authService.config.jwtSecret)) as JWTPayload;
+    const decoded = getAuthService().verifyToken(token, String(getAuthService().config.jwtSecret)) as JWTPayload;
     
     // Check MFA requirement
-    if (authService.config.requireMfa && !decoded.mfaVerified) {
+    if (getAuthService().config.requireMfa && !decoded.mfaVerified) {
       throw new AuthenticationError('MFA verification required');
     }
     
@@ -599,7 +606,7 @@ export const optionalAuth = (req: AuthenticatedRequest, res: Response, next: Nex
  * Utility function to hash passwords
  */
 export const hashPassword = async (password: string): Promise<string> => {
-  return bcrypt.hash(password, authService.config.bcryptRounds);
+  return bcrypt.hash(password, getAuthService().config.bcryptRounds);
 };
 
 /**
