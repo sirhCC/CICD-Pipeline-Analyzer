@@ -108,6 +108,7 @@ export declare class AdvancedDataProcessingService {
     private readonly maxCacheSize;
     private readonly maxMemoryUsage;
     private currentMemoryUsage;
+    private cleanupTimer?;
     constructor();
     /**
      * Setup periodic cache cleanup
@@ -173,6 +174,10 @@ export declare class AdvancedDataProcessingService {
      * Clear cache
      */
     clearCache(): void;
+    /**
+     * Cleanup resources and stop timers
+     */
+    destroy(): void;
 }
 export declare const advancedDataProcessingService: AdvancedDataProcessingService;
 //# sourceMappingURL=advanced-data-processing.service.d.ts.map

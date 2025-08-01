@@ -107,6 +107,7 @@ class AdvancedDataProcessingService {
     maxCacheSize = 1000; // Maximum number of cache entries
     maxMemoryUsage = 500 * 1024 * 1024; // 500MB
     currentMemoryUsage = 0;
+    cleanupTimer;
     constructor() {
         this.logger = new logger_1.Logger();
         this.setupCacheCleanup();
@@ -115,7 +116,7 @@ class AdvancedDataProcessingService {
      * Setup periodic cache cleanup
      */
     setupCacheCleanup() {
-        setInterval(() => {
+        this.cleanupTimer = setInterval(() => {
             this.cleanupCache();
         }, 5 * 60 * 1000); // Every 5 minutes
     }
@@ -620,6 +621,17 @@ class AdvancedDataProcessingService {
         this.cache.clear();
         this.currentMemoryUsage = 0;
         this.logger.info('Cache cleared');
+    }
+    /**
+     * Cleanup resources and stop timers
+     */
+    destroy() {
+        if (this.cleanupTimer) {
+            clearInterval(this.cleanupTimer);
+            delete this.cleanupTimer;
+        }
+        this.clearCache();
+        this.logger.info('AdvancedDataProcessingService destroyed');
     }
 }
 exports.AdvancedDataProcessingService = AdvancedDataProcessingService;

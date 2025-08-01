@@ -144,7 +144,7 @@ export declare class AuthService {
      */
     private parseExpiration;
 }
-export declare const authService: AuthService;
+export declare const getAuthService: () => AuthService;
 /**
  * JWT Authentication Middleware
  */
