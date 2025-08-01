@@ -107,12 +107,84 @@ class AuthService {
     }
     loadConfig() {
         const config = config_1.configManager.get();
+        const isProduction = config_1.configManager.isProduction();
+        const isDevelopment = config_1.configManager.isDevelopment();
+        // For production, require environment variables - no fallbacks to weak defaults
+        let jwtSecret;
+        let jwtRefreshSecret;
+        let apiKeySecret;
+        if (isProduction) {
+            // Production requires strong secrets from environment
+            const envJwtSecret = process.env.JWT_SECRET;
+            if (!envJwtSecret) {
+                throw new Error('JWT_SECRET environment variable is required in production');
+            }
+            if (envJwtSecret.length < 32) {
+                throw new Error('JWT_SECRET must be at least 32 characters long in production');
+            }
+            jwtSecret = envJwtSecret;
+            const envJwtRefreshSecret = process.env.JWT_REFRESH_SECRET;
+            if (!envJwtRefreshSecret) {
+                throw new Error('JWT_REFRESH_SECRET environment variable is required in production');
+            }
+            if (envJwtRefreshSecret.length < 32) {
+                throw new Error('JWT_REFRESH_SECRET must be at least 32 characters long in production');
+            }
+            jwtRefreshSecret = envJwtRefreshSecret;
+            const envApiKeySecret = process.env.API_KEY_SECRET;
+            if (!envApiKeySecret) {
+                throw new Error('API_KEY_SECRET environment variable is required in production');
+            }
+            if (envApiKeySecret.length < 32) {
+                throw new Error('API_KEY_SECRET must be at least 32 characters long in production');
+            }
+            apiKeySecret = envApiKeySecret;
+        }
+        else {
+            // Development/test can use fallbacks but warn about weak secrets
+            jwtSecret = process.env.JWT_SECRET || config.auth.jwtSecret;
+            if (!jwtSecret) {
+                if (isDevelopment) {
+                    jwtSecret = 'dev-jwt-secret-change-in-production-32chars-min';
+                    this.logger.warn('Using default JWT secret for development. Set JWT_SECRET environment variable.');
+                }
+                else {
+                    throw new Error('JWT_SECRET is required');
+                }
+            }
+            const envJwtRefreshSecret = process.env.JWT_REFRESH_SECRET;
+            if (!envJwtRefreshSecret) {
+                if (isDevelopment) {
+                    jwtRefreshSecret = 'dev-refresh-secret-change-in-production-32chars-min';
+                    this.logger.warn('Using default JWT refresh secret for development. Set JWT_REFRESH_SECRET environment variable.');
+                }
+                else {
+                    throw new Error('JWT_REFRESH_SECRET is required');
+                }
+            }
+            else {
+                jwtRefreshSecret = envJwtRefreshSecret;
+            }
+            const envApiKeySecret = process.env.API_KEY_SECRET;
+            if (!envApiKeySecret) {
+                if (isDevelopment) {
+                    apiKeySecret = 'dev-api-key-secret-change-in-production-32chars-min';
+                    this.logger.warn('Using default API key secret for development. Set API_KEY_SECRET environment variable.');
+                }
+                else {
+                    throw new Error('API_KEY_SECRET is required');
+                }
+            }
+            else {
+                apiKeySecret = envApiKeySecret;
+            }
+        }
         return {
-            jwtSecret: process.env.JWT_SECRET || config.auth.jwtSecret || 'your-super-secret-jwt-key-change-in-production',
-            jwtRefreshSecret: process.env.JWT_REFRESH_SECRET || 'your-super-secret-refresh-key',
+            jwtSecret,
+            jwtRefreshSecret,
             jwtExpiresIn: process.env.JWT_EXPIRES_IN || config.auth.jwtExpiresIn || '15m',
             jwtRefreshExpiresIn: process.env.JWT_REFRESH_EXPIRES_IN || '7d',
-            apiKeySecret: process.env.API_KEY_SECRET || 'your-super-secret-api-key',
+            apiKeySecret,
             bcryptRounds: parseInt(process.env.BCRYPT_ROUNDS || config.auth.bcryptRounds?.toString() || '12'),
             requireMfa: (process.env.REQUIRE_MFA || 'false') === 'true',
             enableApiKeys: (process.env.ENABLE_API_KEYS || 'true') === 'true',
