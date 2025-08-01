@@ -20,7 +20,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.ROLE_PERMISSIONS = exports.getRolePermissions = exports.generateSessionId = exports.verifyPassword = exports.hashPassword = exports.optionalAuth = exports.requirePermission = exports.requireRole = exports.authenticateJWT = exports.authService = exports.AuthService = exports.Permission = exports.UserRole = void 0;
+exports.ROLE_PERMISSIONS = exports.getRolePermissions = exports.generateSessionId = exports.verifyPassword = exports.hashPassword = exports.optionalAuth = exports.requirePermission = exports.requireRole = exports.authenticateJWT = exports.getAuthService = exports.AuthService = exports.Permission = exports.UserRole = void 0;
 const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
 const bcryptjs_1 = __importDefault(require("bcryptjs"));
 const uuid_1 = require("uuid");
@@ -325,8 +325,15 @@ class AuthService {
     }
 }
 exports.AuthService = AuthService;
-// Initialize auth service
-exports.authService = new AuthService();
+// Initialize auth service - lazy loaded to avoid circular dependencies
+let authServiceInstance = null;
+const getAuthService = () => {
+    if (!authServiceInstance) {
+        authServiceInstance = new AuthService();
+    }
+    return authServiceInstance;
+};
+exports.getAuthService = getAuthService;
 /**
  * JWT Authentication Middleware
  */
@@ -336,12 +343,12 @@ const authenticateJWT = (req, res, next) => {
         const authHeader = req.headers.authorization;
         const apiKey = req.headers['x-api-key'];
         // Check for API key authentication first
-        if (apiKey && exports.authService.config.enableApiKeys) {
+        if (apiKey && (0, exports.getAuthService)().config.enableApiKeys) {
             try {
-                const decoded = exports.authService.verifyToken(apiKey, String(exports.authService.config.apiKeySecret));
+                const decoded = (0, exports.getAuthService)().verifyToken(apiKey, String((0, exports.getAuthService)().config.apiKeySecret));
                 // Check IP whitelist for API keys
                 const clientIP = req.ip || req.connection.remoteAddress || 'unknown';
-                if (!exports.authService.isIpAllowed(clientIP, decoded.allowedIPs)) {
+                if (!(0, exports.getAuthService)().isIpAllowed(clientIP, decoded.allowedIPs)) {
                     logger.warn('API key access denied for IP', { ip: clientIP, keyId: decoded.keyId });
                     throw new error_handler_1.AuthorizationError('Access denied for this IP address');
                 }
@@ -375,13 +382,13 @@ const authenticateJWT = (req, res, next) => {
         }
         const token = authHeader.substring(7);
         // Check if token is blacklisted
-        if (exports.authService.isTokenBlacklisted(token)) {
+        if ((0, exports.getAuthService)().isTokenBlacklisted(token)) {
             throw new error_handler_1.AuthenticationError('Token has been revoked');
         }
         // Verify token
-        const decoded = exports.authService.verifyToken(token, String(exports.authService.config.jwtSecret));
+        const decoded = (0, exports.getAuthService)().verifyToken(token, String((0, exports.getAuthService)().config.jwtSecret));
         // Check MFA requirement
-        if (exports.authService.config.requireMfa && !decoded.mfaVerified) {
+        if ((0, exports.getAuthService)().config.requireMfa && !decoded.mfaVerified) {
             throw new error_handler_1.AuthenticationError('MFA verification required');
         }
         // Update session activity
@@ -492,7 +499,7 @@ exports.optionalAuth = optionalAuth;
  * Utility function to hash passwords
  */
 const hashPassword = async (password) => {
-    return bcryptjs_1.default.hash(password, exports.authService.config.bcryptRounds);
+    return bcryptjs_1.default.hash(password, (0, exports.getAuthService)().config.bcryptRounds);
 };
 exports.hashPassword = hashPassword;
 /**
