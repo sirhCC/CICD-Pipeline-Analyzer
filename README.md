@@ -2,11 +2,12 @@
 
 # 🚀 CI/CD Pipeline Analyzer
 
-[![CI/CD Pipeline](https://github.com/your-username/CICD-Pipeline-Analyzer/actions/workflows/ci.yml/badge.svg)](https://github.com/your-username/CICD-Pipeline-Analyzer/actions/workflows/ci.yml)
-[![Security Audit](https://github.com/your-username/CICD-Pipeline-Analyzer/actions/workflows/security.yml/badge.svg)](https://github.com/your-username/CICD-Pipeline-Analyzer/actions/workflows/security.yml)
-[![codecov](https://codecov.io/gh/your-username/CICD-Pipeline-Analyzer/branch/main/graph/badge.svg)](https://codecov.io/gh/your-username/CICD-Pipeline-Analyzer)
-[![Version](https://img.shields.io/github/package-json/v/your-username/CICD-Pipeline-Analyzer?color=blue)](https://github.com/your-username/CICD-Pipeline-Analyzer/releases)
-[![License](https://img.shields.io/github/license/your-username/CICD-Pipeline-Analyzer?color=green)](LICENSE)
+[![CI/CD Pipeline](https://github.com/sirhCC/CICD-Pipeline-Analyzer/actions/workflows/ci.yml/badge.svg)](https://github.com/sirhCC/CICD-Pipeline-Analyzer/actions/workflows/ci.yml)
+[![Build Status](https://img.shields.io/github/actions/workflow/status/sirhCC/CICD-Pipeline-Analyzer/ci.yml?branch=main&logo=github&label=Build)](https://github.com/sirhCC/CICD-Pipeline-Analyzer/actions)
+[![Tests](https://img.shields.io/badge/Tests-116%20Passing-success?logo=jest)](https://github.com/sirhCC/CICD-Pipeline-Analyzer/actions)
+[![Version](https://img.shields.io/github/package-json/v/sirhCC/CICD-Pipeline-Analyzer?color=blue&logo=semver)](https://github.com/sirhCC/CICD-Pipeline-Analyzer/releases)
+[![License](https://img.shields.io/github/license/sirhCC/CICD-Pipeline-Analyzer?color=green)](LICENSE)
+[![Docker](https://img.shields.io/badge/Docker-Ready-2496ED?logo=docker)](https://github.com/sirhCC/CICD-Pipeline-Analyzer/pkgs/container/cicd-pipeline-analyzer)
 
 ### *Next-Generation Pipeline Intelligence & Performance Analytics*
 
