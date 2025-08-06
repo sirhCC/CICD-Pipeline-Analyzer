@@ -14,34 +14,59 @@ import {
   PipelineStatus, 
   UserRole 
 } from '../types';
+import { MockDatabaseService, setupTestDatabase, cleanupTestDatabase } from './test-db-setup';
+import { DataSource } from 'typeorm';
 
 describe('Database Layer Basic Tests', () => {
+  let testDataSource: DataSource | null = null;
+  let mockDbService: MockDatabaseService | null = null;
   let isDatabaseAvailable = false;
 
   beforeAll(async () => {
     try {
-      // Try to initialize test database
-      await databaseService.initialize();
-      isDatabaseAvailable = true;
-      
-      // Clear existing data
-      if (configManager.isTest()) {
-        await databaseService.clearAllData();
+      // Try to use real database first, fallback to mock
+      if (process.env.DB_TYPE === 'sqlite' || !process.env.DB_HOST) {
+        // Use in-memory SQLite for testing
+        mockDbService = new MockDatabaseService();
+        await mockDbService.initialize();
+        testDataSource = mockDbService.getDataSource();
+        isDatabaseAvailable = true;
+      } else {
+        // Try to initialize real database
+        await databaseService.initialize();
+        isDatabaseAvailable = true;
+        
+        // Clear existing data
+        if (configManager.isTest()) {
+          await databaseService.clearAllData();
+        }
       }
     } catch (error) {
-      console.warn('Database not available for testing - skipping database tests:', error instanceof Error ? error.message : String(error));
-      isDatabaseAvailable = false;
+      // Fallback to mock database
+      try {
+        mockDbService = new MockDatabaseService();
+        await mockDbService.initialize();
+        testDataSource = mockDbService.getDataSource();
+        isDatabaseAvailable = true;
+      } catch (mockError) {
+        console.warn('Database not available for testing - skipping database tests:', error instanceof Error ? error.message : String(error));
+        isDatabaseAvailable = false;
+      }
     }
   });
 
   afterAll(async () => {
     if (isDatabaseAvailable) {
       try {
-        // Clean up and close connections
-        if (configManager.isTest()) {
-          await databaseService.clearAllData();
+        if (mockDbService) {
+          await mockDbService.close();
+        } else {
+          // Clean up real database
+          if (configManager.isTest()) {
+            await databaseService.clearAllData();
+          }
+          await databaseService.close();
         }
-        await databaseService.close();
       } catch (error) {
         console.warn('Error cleaning up database:', error instanceof Error ? error.message : String(error));
       }
