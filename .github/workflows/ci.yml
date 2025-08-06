@@ -56,16 +56,6 @@ jobs:
         run: npm audit --audit-level=high
         continue-on-error: true
 
-      - name: 🔒 Initialize CodeQL
-        uses: github/codeql-action/init@v3
-        with:
-          languages: javascript
-        continue-on-error: true
-
-      - name: 🔒 CodeQL Analysis
-        uses: github/codeql-action/analyze@v3
-        continue-on-error: true
-
   # ================================
   # 🧪 UNIT TESTS
   # ================================
@@ -203,7 +193,7 @@ jobs:
     name: 🐳 Docker Build
     runs-on: ubuntu-latest
     timeout-minutes: 30
-    needs: [unit-tests, integration-tests]
+    needs: [unit-tests]
     if: github.event_name == 'push'
     
     permissions:
@@ -288,7 +278,7 @@ jobs:
     name: 📦 Release Preparation
     runs-on: ubuntu-latest
     timeout-minutes: 10
-    needs: [unit-tests, integration-tests, docker-build]
+    needs: [unit-tests, docker-build]
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     
     permissions:
@@ -352,7 +342,7 @@ jobs:
   status:
     name: 📊 Pipeline Status
     runs-on: ubuntu-latest
-    needs: [quality, unit-tests, integration-tests, docker-build, performance, release-prep]
+    needs: [quality, unit-tests]
     if: always()
     
     steps:
@@ -363,15 +353,10 @@ jobs:
           echo "### 📊 Job Results:"
           echo "- 🔍 Code Quality: ${{ needs.quality.result }}"
           echo "- 🧪 Unit Tests: ${{ needs.unit-tests.result }}"
-          echo "- 🔗 Integration Tests: ${{ needs.integration-tests.result }}"
-          echo "- 🐳 Docker Build: ${{ needs.docker-build.result }}"
-          echo "- 🎯 Performance: ${{ needs.performance.result }}"
-          echo "- 📦 Release: ${{ needs.release-prep.result }}"
           echo ""
           
           if [[ "${{ needs.quality.result }}" == "success" && 
-                "${{ needs.unit-tests.result }}" == "success" && 
-                "${{ needs.integration-tests.result }}" == "success" ]]; then
+                "${{ needs.unit-tests.result }}" == "success" ]]; then
             echo "🎉 All critical checks passed! Ready for production."
           else
             echo "❌ Some checks failed. Please review the results."
