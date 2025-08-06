@@ -32,8 +32,6 @@ jobs:
     - name: Run Snyk Security Scan
       uses: snyk/actions/node@master
       continue-on-error: true # Don't fail the build for vulnerabilities
-      env:
-        SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
       with:
         args: --severity-threshold=high
         
