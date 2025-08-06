@@ -19,14 +19,29 @@ const configSchema = Joi.object({
   HOST: Joi.string().default('0.0.0.0'),
 
   // Database Configuration
-  DB_TYPE: Joi.string().valid('postgres', 'mysql').default('postgres'),
+  DB_TYPE: Joi.string().valid('postgres', 'mysql', 'sqlite').default('postgres'),
   DB_HOST: Joi.string().default('localhost'),
   DB_PORT: Joi.number().port().default(5432),
-  DB_NAME: Joi.string().required(),
-  DB_USERNAME: Joi.string().required(),
-  DB_PASSWORD: Joi.string().required(),
+  DB_NAME: Joi.string().when('DB_TYPE', {
+    is: 'sqlite',
+    then: Joi.string().default(':memory:'),
+    otherwise: Joi.string().required()
+  }),
+  DB_USERNAME: Joi.string().when('DB_TYPE', {
+    is: 'sqlite',
+    then: Joi.string().optional(),
+    otherwise: Joi.string().required()
+  }),
+  DB_PASSWORD: Joi.string().when('DB_TYPE', {
+    is: 'sqlite',
+    then: Joi.string().optional(),
+    otherwise: Joi.string().required()
+  }),
   DB_SSL: Joi.boolean().default(false),
   DB_POOL_SIZE: Joi.number().min(1).max(100).default(10),
+  DB_SYNCHRONIZE: Joi.boolean().default(false),
+  DB_DROP_SCHEMA: Joi.boolean().default(false),
+  DB_LOGGING: Joi.boolean().default(false),
 
   // Redis Configuration
   REDIS_HOST: Joi.string().default('localhost'),
