@@ -14,20 +14,25 @@ process.env.JWT_SECRET = 'test-jwt-secret-that-is-at-least-32-characters-long-fo
 process.env.JWT_EXPIRES_IN = '1h';
 process.env.CORS_ORIGIN = 'http://localhost:3000';
 
-// Database test config
+// Database test config - Use PostgreSQL for testing when available, SQLite as fallback
+process.env.DB_TYPE = 'postgres';
 process.env.DB_HOST = 'localhost';
 process.env.DB_PORT = '5432';
 process.env.DB_NAME = 'cicd_analyzer_test';
 process.env.DB_USERNAME = 'test';
 process.env.DB_PASSWORD = 'test';
 process.env.DB_SSL = 'false';
+process.env.DB_SYNCHRONIZE = 'true';
+process.env.DB_DROP_SCHEMA = 'true';
+process.env.DB_LOGGING = 'false';
 
-// Redis test config
+// Redis test config - Mock Redis for tests
 process.env.REDIS_HOST = 'localhost';
 process.env.REDIS_PORT = '6379';
-process.env.REDIS_PASSWORD = 'test-redis-password'; // Provide a test password
-process.env.REDIS_DB = '1'; // Use different DB for tests
+process.env.REDIS_PASSWORD = 'test-redis-password';
+process.env.REDIS_DB = '1';
 process.env.REDIS_KEY_PREFIX = 'test:';
+process.env.REDIS_MOCK = 'true'; // Enable Redis mocking
 
 // Provider test config
 process.env.GITHUB_APP_ID = 'test-github-app-id';
