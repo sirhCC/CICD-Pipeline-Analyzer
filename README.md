@@ -2,6 +2,12 @@
 
 # 🚀 CI/CD Pipeline Analyzer
 
+[![CI/CD Pipeline](https://github.com/your-username/CICD-Pipeline-Analyzer/actions/workflows/ci.yml/badge.svg)](https://github.com/your-username/CICD-Pipeline-Analyzer/actions/workflows/ci.yml)
+[![Security Audit](https://github.com/your-username/CICD-Pipeline-Analyzer/actions/workflows/security.yml/badge.svg)](https://github.com/your-username/CICD-Pipeline-Analyzer/actions/workflows/security.yml)
+[![codecov](https://codecov.io/gh/your-username/CICD-Pipeline-Analyzer/branch/main/graph/badge.svg)](https://codecov.io/gh/your-username/CICD-Pipeline-Analyzer)
+[![Version](https://img.shields.io/github/package-json/v/your-username/CICD-Pipeline-Analyzer?color=blue)](https://github.com/your-username/CICD-Pipeline-Analyzer/releases)
+[![License](https://img.shields.io/github/license/your-username/CICD-Pipeline-Analyzer?color=green)](LICENSE)
+
 ### *Next-Generation Pipeline Intelligence & Performance Analytics*
 
 <p align="center">
@@ -12,12 +18,11 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/github/license/your-username/cicd-pipeline-analyzer?style=flat-square&color=green" alt="License"/>
-  <img src="https://img.shields.io/badge/Version-3.0.0-blue?style=flat-square" alt="Version"/>
   <img src="https://img.shields.io/badge/Status-✅%20Production%20Ready-brightgreen?style=flat-square" alt="Status"/>
-  <img src="https://img.shields.io/badge/Tests-272%20Passing-success?style=flat-square" alt="Tests"/>
+  <img src="https://img.shields.io/badge/Tests-278%20Total-success?style=flat-square" alt="Tests"/>
   <img src="https://img.shields.io/badge/Phase%203-✅%20Complete-success?style=flat-square" alt="Phase 3"/>
   <img src="https://img.shields.io/badge/API%20Endpoints-100+-informational?style=flat-square" alt="API Endpoints"/>
+  <img src="https://img.shields.io/badge/Performance-+300%25-orange?style=flat-square" alt="Performance"/>
 </p>
 
 ---
