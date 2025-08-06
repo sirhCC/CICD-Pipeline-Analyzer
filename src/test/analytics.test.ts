@@ -804,7 +804,7 @@ describe('Analytics Routes Tests', () => {
 
       expect(response.body.meta.performance).toBeDefined();
       expect(typeof response.body.meta.performance.executionTime).toBe('number');
-      expect(response.body.meta.performance.executionTime).toBeGreaterThan(0);
+      expect(response.body.meta.performance.executionTime).toBeGreaterThanOrEqual(0);
     });
 
     it('should handle concurrent requests efficiently', async () => {

@@ -20,14 +20,29 @@ const configSchema = joi_1.default.object({
     PORT: joi_1.default.number().port().default(3000),
     HOST: joi_1.default.string().default('0.0.0.0'),
     // Database Configuration
-    DB_TYPE: joi_1.default.string().valid('postgres', 'mysql').default('postgres'),
+    DB_TYPE: joi_1.default.string().valid('postgres', 'mysql', 'sqlite').default('postgres'),
     DB_HOST: joi_1.default.string().default('localhost'),
     DB_PORT: joi_1.default.number().port().default(5432),
-    DB_NAME: joi_1.default.string().required(),
-    DB_USERNAME: joi_1.default.string().required(),
-    DB_PASSWORD: joi_1.default.string().required(),
+    DB_NAME: joi_1.default.string().when('DB_TYPE', {
+        is: 'sqlite',
+        then: joi_1.default.string().default(':memory:'),
+        otherwise: joi_1.default.string().required()
+    }),
+    DB_USERNAME: joi_1.default.string().when('DB_TYPE', {
+        is: 'sqlite',
+        then: joi_1.default.string().optional(),
+        otherwise: joi_1.default.string().required()
+    }),
+    DB_PASSWORD: joi_1.default.string().when('DB_TYPE', {
+        is: 'sqlite',
+        then: joi_1.default.string().optional(),
+        otherwise: joi_1.default.string().required()
+    }),
     DB_SSL: joi_1.default.boolean().default(false),
     DB_POOL_SIZE: joi_1.default.number().min(1).max(100).default(10),
+    DB_SYNCHRONIZE: joi_1.default.boolean().default(false),
+    DB_DROP_SCHEMA: joi_1.default.boolean().default(false),
+    DB_LOGGING: joi_1.default.boolean().default(false),
     // Redis Configuration
     REDIS_HOST: joi_1.default.string().default('localhost'),
     REDIS_PORT: joi_1.default.number().port().default(6379),
