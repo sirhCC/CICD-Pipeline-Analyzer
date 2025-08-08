@@ -18,6 +18,7 @@
  */
 
 import { Request, Response, NextFunction } from 'express';
+import client from 'prom-client';
 import { v4 as uuidv4 } from 'uuid';
 import { Logger } from '@/shared/logger';
 import { configManager } from '@/config';
@@ -129,12 +130,22 @@ export class RequestLoggerService {
   private metrics: RequestMetrics;
   private isEnabled: boolean;
   private startTime: number;
+  // Prometheus metrics
+  private promRegistry: client.Registry;
+  private promHttpRequestsTotal: client.Counter<string>;
+  private promHttpRequestDuration: client.Histogram<string>;
+  private promHttpRequestsInFlight: client.Gauge<string>;
 
   constructor(options: RequestLoggerOptions = {}) {
     this.logger = new Logger('RequestLogger');
     this.options = { ...defaultOptions, ...options };
     this.isEnabled = this.options.enabled ?? true;
     this.startTime = Date.now();
+    this.promRegistry = new client.Registry();
+    // Default metrics
+    if (configManager.getMonitoring().prometheus) {
+      client.collectDefaultMetrics({ register: this.promRegistry, prefix: 'cicd_' });
+    }
     
     this.metrics = {
       totalRequests: 0,
@@ -146,6 +157,26 @@ export class RequestLoggerService {
       requestsPerSecond: 0,
       lastResetTime: Date.now()
     };
+
+    // Prometheus instruments
+    this.promHttpRequestsTotal = new client.Counter({
+      name: 'http_requests_total',
+      help: 'Total number of HTTP requests',
+      labelNames: ['method', 'route', 'status'],
+      registers: [this.promRegistry]
+    });
+    this.promHttpRequestDuration = new client.Histogram({
+      name: 'http_request_duration_seconds',
+      help: 'HTTP request duration in seconds',
+      labelNames: ['method', 'route', 'status'],
+      registers: [this.promRegistry],
+      buckets: [0.05, 0.1, 0.3, 0.5, 1, 2, 5]
+    });
+    this.promHttpRequestsInFlight = new client.Gauge({
+      name: 'http_requests_in_flight',
+      help: 'Current number of in-flight HTTP requests',
+      registers: [this.promRegistry]
+    });
   }
 
   /**
@@ -313,6 +344,10 @@ export class RequestLoggerService {
    * Log request start
    */
   public logRequestStart(context: RequestLogContext): void {
+    // Prometheus in-flight increment
+    if (configManager.getMonitoring().prometheus) {
+      this.promHttpRequestsInFlight.inc();
+    }
     const logContext: any = {
       requestId: context.requestId
     };
@@ -349,6 +384,14 @@ export class RequestLoggerService {
    * Log request completion
    */
   public logRequestEnd(context: RequestLogContext, res: Response): void {
+    // Prometheus: record metrics
+    if (configManager.getMonitoring().prometheus) {
+      const route = (res.req as any)?.route?.path || context.url.split('?')[0] || 'unknown';
+      const labels = { method: context.method, route, status: String(context.statusCode || 0) } as any;
+      this.promHttpRequestsTotal.inc(labels, 1);
+      if (context.duration) this.promHttpRequestDuration.observe(labels, context.duration / 1000);
+      this.promHttpRequestsInFlight.dec();
+    }
     context.endTime = Date.now();
     context.duration = context.endTime - context.startTime;
     context.statusCode = res.statusCode;
@@ -467,7 +510,7 @@ export class RequestLoggerService {
       /\.\.\//,  // Path traversal
       /script|javascript|vbscript/i,  // XSS
       /union|select|insert|update|delete|drop/i,  // SQL injection
-      /\x00/,  // Null bytes
+      /%00/i,  // Encoded null byte
     ];
 
     const url = context.url || '';
@@ -589,6 +632,13 @@ export class RequestLoggerService {
   public updateOptions(options: Partial<RequestLoggerOptions>): void {
     this.options = { ...this.options, ...options };
   }
+
+  /**
+   * Expose Prometheus registry (read-only usage)
+   */
+  public getPrometheusRegistry(): client.Registry {
+    return this.promRegistry;
+  }
 }
 
 // Global service instance
@@ -598,7 +648,9 @@ export const requestLoggerService = new RequestLoggerService();
  * Request logger middleware factory
  */
 export function createRequestLogger(options: RequestLoggerOptions = {}) {
-  const service = new RequestLoggerService(options);
+  // Use the singleton service to avoid duplicate metric registration and unify metrics
+  requestLoggerService.updateOptions(options);
+  const service = requestLoggerService;
 
   return (req: Request, res: Response, next: NextFunction) => {
     // Check if request should be logged
@@ -687,8 +739,20 @@ export function createHealthCheckEndpoint() {
 export function createMetricsEndpoint() {
   return (req: Request, res: Response) => {
     const metrics = requestLoggerService.getMetrics();
+    // Serve Prometheus format when requested, else JSON
+    const wantsProm = req.headers['accept']?.includes('text/plain') || req.query.format === 'prom';
+    if (wantsProm && configManager.getMonitoring().prometheus) {
+      res.set('Content-Type', requestLoggerService.getPrometheusRegistry().contentType);
+  requestLoggerService.getPrometheusRegistry().metrics().then((text: string) => res.send(text));
+      return;
+    }
     res.json(metrics);
   };
+}
+
+// Expose registry for integration
+export function getPrometheusRegister() {
+  return requestLoggerService.getPrometheusRegistry();
 }
 
 /**
