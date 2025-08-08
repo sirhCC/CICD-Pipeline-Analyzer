@@ -99,7 +99,7 @@ export interface RequestMetrics {
 // Default configuration
 const defaultOptions: RequestLoggerOptions = {
   enabled: true,
-  skipPaths: ['/health', '/metrics', '/favicon.ico'],
+  skipPaths: ['/health', '/ready', '/metrics', '/favicon.ico'],
   skipMethods: ['OPTIONS'],
   logRequestBody: true,
   logResponseBody: false,
