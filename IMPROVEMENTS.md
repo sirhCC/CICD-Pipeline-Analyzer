@@ -2,14 +2,28 @@
 
 Legend: Priority (High/Med/Low), Effort (S/M/L). Use this as a living checklist.
 
+## ✅ Completed (Aug 8, 2025)
+
+- Liveness and readiness endpoints added:
+	- /health (fast liveness: uptime, memory, version)
+	- /ready (readiness with DB/Redis health; returns 503 when dependencies are down/skipped)
+- Basic metrics endpoint added at /metrics (JSON via request-logger). Prometheus format is a follow-up.
+- Graceful shutdown in place: shuts down background jobs, WebSocket, HTTP server, modules, DB, and Redis.
+- Environment improvements:
+	- Accept DATABASE_* and DB_* aliases; and SERVER_* to HOST/PORT pre-validation.
+	- Added SKIP_DB_INIT and SKIP_REDIS_INIT flags; validator honors DB skip to allow local start without infra.
+- Operability polish: request logger skips /health, /ready, /metrics paths to reduce noise.
+- Generated .env.example.generated aligned with current config schema (DB_*, HOST/PORT, JWT_*, Redis).
+
 ## Quick wins (next 1–2 days)
 
-- [ ] (High, S) Add graceful shutdown (SIGTERM/SIGINT): close HTTP server, DB, Redis, Bull queues
-- [ ] (High, S) Split health endpoints: `/health` (liveness) and `/ready` (readiness incl. DB/Redis)
+- [x] (High, S) Add graceful shutdown (SIGTERM/SIGINT): close HTTP server, DB, Redis, Bull queues
+- [x] (High, S) Split health endpoints: `/health` (liveness) and `/ready` (readiness incl. DB/Redis)
 - [ ] (High, S) Raise Jest thresholds slightly (e.g., unit: 85%) and enforce in CI
 - [ ] (High, S) Add npm audit/Dependabot workflow for vulnerability alerts
-- [ ] (Med, S) Add Prometheus metrics endpoint `/metrics` (http, process, db, queue)
-- [ ] (Med, S) Add .env.example with safe defaults; ensure env validation covers all secrets
+- [x] (Med, S) Add metrics endpoint `/metrics` (basic JSON now; Prometheus text format next)
+- [ ] (Med, S) Expose Prometheus metrics at `/metrics` (http, process, db, queue)
+- [x] (Med, S) Add .env.example with safe defaults; ensure env validation covers all secrets
 - [ ] (Med, S) Ensure compression, CORS allowlist, body size limits are configured centrally
 - [ ] (Med, S) Add Docker .dockerignore and run-as-nonroot in Dockerfile
 
@@ -25,7 +39,7 @@ Legend: Priority (High/Med/Low), Effort (S/M/L). Use this as a living checklist.
 
 ## Reliability & operations
 
-- [ ] (High, S) Central shutdown hooks to gracefully stop services (HTTP, DB, Redis, queues)
+- [x] (High, S) Central shutdown hooks to gracefully stop services (HTTP, DB, Redis, queues)
 - [ ] (Med, M) Circuit breaker + retry/backoff for provider API calls
 - [ ] (Med, M) Queue backpressure policy + metrics for Bull; dead-letter handling
 - [ ] (Med, S) Separate rate limiting by route and by identity (IP/user/API key)
@@ -33,7 +47,7 @@ Legend: Priority (High/Med/Low), Effort (S/M/L). Use this as a living checklist.
 
 ## Security
 
-- [ ] (High, S) Enforce min length/entropy for JWT_SECRET/JWT_REFRESH_SECRET/API_KEY_SECRET in env validator
+- [x] (High, S) Enforce min length/entropy for JWT_SECRET/JWT_REFRESH_SECRET/API_KEY_SECRET in env validator
 - [ ] (High, S) Restrictive CORS allowlist from env; reject wildcard in production
 - [ ] (High, S) Set request body size limits; sanitize/validate headers, query, and body uniformly
 - [ ] (Med, S) Add security linters (eslint-plugin-security, eslint-plugin-sonarjs)
@@ -65,7 +79,7 @@ Legend: Priority (High/Med/Low), Effort (S/M/L). Use this as a living checklist.
 ## Observability
 
 - [ ] (Med, M) OpenTelemetry traces for HTTP, TypeORM, Redis, Bull; OTLP exporter; sampling in prod
-- [ ] (Med, S) Prometheus metrics: http_server, process, db connection, queue depth; add `/metrics` route
+- [ ] (Med, S) Prometheus metrics: http_server, process, db connection, queue depth; expose in `/metrics` (Prometheus text)
 - [ ] (Low, S) Correlation IDs propagated through logs, HTTP headers (x-request-id), and jobs
 
 ## API design & DX
@@ -91,15 +105,17 @@ Legend: Priority (High/Med/Low), Effort (S/M/L). Use this as a living checklist.
 
 ## File pointers (where to implement)
 
-- `src/index.ts`: graceful shutdown, readiness probe
-- `src/middleware/*`: auth, rate limiter, request logger, validation limits
-- `src/core/environment-validator.ts`: enforce secret lengths and required envs
+- `src/index.ts`: graceful shutdown, readiness probe, health/metrics routes, SKIP_* flags handling
+- `src/middleware/*`: auth, rate limiter, request logger (skipPaths), validation limits
+- `src/core/environment-validator.ts`: secret strength checks, alias support, SKIP_DB_INIT handling
+- `src/config/index.ts`: env aliases, config validation, server/security config
 - `src/core/database.ts`: pool sizing, logging, naming strategy
 - `src/providers/*`: retries/circuit breakers; remove network flakes via mocks in tests
 - `src/routes/*` and `src/controllers/*`: pagination, cache headers, error shape
 - `jest.config.js` / `jest.unit.config.js`: thresholds, Testcontainers setup
 - `Dockerfile`, `docker-compose.yml`, `.dockerignore`: non-root, healthchecks, build cache
 - `.github/workflows/*`: split pipelines, cache, scans
+- `.env.example` (generated from `.env.example.generated`): publish canonical example
 
 ## References
 
