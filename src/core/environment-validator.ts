@@ -108,6 +108,7 @@ export class EnvironmentValidator {
   private static instance: EnvironmentValidator;
   private validationErrors: string[] = [];
   private validationWarnings: string[] = [];
+  private warnedDbSkip: boolean = false;
 
   public static getInstance(): EnvironmentValidator {
     if (!EnvironmentValidator.instance) {
@@ -122,15 +123,39 @@ export class EnvironmentValidator {
   public validateEnvironment(): { isValid: boolean; errors: string[]; warnings: string[] } {
     this.validationErrors = [];
     this.validationWarnings = [];
+    this.warnedDbSkip = false;
 
     const nodeEnv = process.env.NODE_ENV || 'development';
     const isProduction = nodeEnv === 'production';
+    const skipDb = (process.env.SKIP_DB_INIT || 'false').toLowerCase() === 'true';
+
+    // Apply backward-compatible aliases so validation can see equivalent values
+    const env = process.env as Record<string, string | undefined>;
+    // Database aliases (both directions, prefer explicit DATABASE_*)
+    if (!env.DATABASE_HOST && env.DB_HOST) env.DATABASE_HOST = env.DB_HOST;
+    if (!env.DATABASE_PORT && env.DB_PORT) env.DATABASE_PORT = env.DB_PORT;
+    if (!env.DATABASE_NAME && env.DB_NAME) env.DATABASE_NAME = env.DB_NAME;
+    if (!env.DATABASE_USERNAME && env.DB_USERNAME) env.DATABASE_USERNAME = env.DB_USERNAME;
+    if (!env.DATABASE_PASSWORD && env.DB_PASSWORD) env.DATABASE_PASSWORD = env.DB_PASSWORD;
+    if (!env.DATABASE_SSL && env.DB_SSL) env.DATABASE_SSL = env.DB_SSL;
+    // Server aliases
+    if (!env.HOST && (env.SERVER_HOST || env.SERVERNAME)) env.HOST = env.SERVER_HOST || env.SERVERNAME;
+    if (!env.PORT && env.SERVER_PORT) env.PORT = env.SERVER_PORT;
 
     // Validate each environment variable
     for (const [key, config] of Object.entries(environmentConfig)) {
       const value = process.env[key];
       
       if (!value) {
+        // If DB init is skipped, don't require DATABASE_* keys
+        if (skipDb && key.startsWith('DATABASE_')) {
+          if (!this.warnedDbSkip) {
+            this.validationWarnings.push('Database initialization is skipped (SKIP_DB_INIT=true); DATABASE_* variables are not required.');
+            this.warnedDbSkip = true;
+          }
+          continue;
+        }
+
         if (config.required || (isProduction && this.isSecurityCritical(key))) {
           this.validationErrors.push(
             `Missing required environment variable: ${key} - ${config.description}`
@@ -212,6 +237,7 @@ export class EnvironmentValidator {
    * Validate production-specific requirements
    */
   private validateProductionRequirements(): void {
+    const skipDb = (process.env.SKIP_DB_INIT || 'false').toLowerCase() === 'true';
     // Ensure HTTPS in production
     const corsOrigin = process.env.CORS_ORIGIN;
     if (corsOrigin && !corsOrigin.startsWith('https://')) {
@@ -221,11 +247,13 @@ export class EnvironmentValidator {
     }
 
     // Ensure database SSL in production
-    const databaseSsl = process.env.DATABASE_SSL;
-    if (!databaseSsl || databaseSsl.toLowerCase() !== 'true') {
-      this.validationWarnings.push(
-        'DATABASE_SSL should be enabled in production environment'
-      );
+    if (!skipDb) {
+      const databaseSsl = process.env.DATABASE_SSL;
+      if (!databaseSsl || databaseSsl.toLowerCase() !== 'true') {
+        this.validationWarnings.push(
+          'DATABASE_SSL should be enabled in production environment'
+        );
+      }
     }
 
     // Ensure proper log level in production
