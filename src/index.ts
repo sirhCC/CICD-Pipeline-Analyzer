@@ -25,6 +25,7 @@ import { responseMiddleware } from './middleware/response';
 import { createAllVersionedRouters, createVersionInfoRouter } from './config/router';
 import { errorHandler } from '@/middleware/error-handler';
 import { createRequestLogger, createMetricsEndpoint } from '@/middleware/request-logger';
+import { noStore, shortPublicCache } from '@/middleware/cache-control';
 import { rateLimiter } from '@/middleware/rate-limiter';
 
 class Application {
@@ -237,6 +238,12 @@ class Application {
 
     const config = configManager.getServer();
 
+  // Express tuning & security
+  // Trust reverse proxies (needed for correct IPs and HTTPS headers behind proxies/load balancers)
+  this.app.set('trust proxy', true);
+  // Remove X-Powered-By header
+  this.app.disable('x-powered-by');
+
     // Security middleware
     if (config.security.helmet) {
       this.app.use(helmet({
@@ -261,11 +268,15 @@ class Application {
       origin: config.cors.origin,
       credentials: config.cors.credentials,
       optionsSuccessStatus: config.cors.optionsSuccessStatus,
+      maxAge: 600
     }));
 
     // Compression middleware
     if (config.security.compression) {
-      this.app.use(compression());
+      this.app.use(compression({
+        threshold: '1kb',
+        level: 6
+      }));
     }
 
     // Body parsing middleware
@@ -298,8 +309,8 @@ class Application {
   private async configureRoutes(): Promise<void> {
     this.logger.info('Configuring routes...');
 
-    // Liveness endpoint (fast, no external deps)
-    this.app.get('/health', (req, res) => {
+  // Liveness endpoint (fast, no external deps)
+  this.app.get('/health', noStore(), (req, res) => {
       const uptime = process.uptime();
       const memoryUsage = process.memoryUsage();
       res.status(200).json({
@@ -318,7 +329,7 @@ class Application {
     });
 
     // Readiness endpoint (checks external dependencies)
-    this.app.get('/ready', async (req, res) => {
+  this.app.get('/ready', noStore(), async (req, res) => {
       try {
         const health = await this.getHealthStatus();
         const isReady = health.status === 'healthy';
@@ -336,10 +347,10 @@ class Application {
     });
 
     // Basic metrics endpoint (JSON). Prometheus format can be added later.
-    this.app.get('/metrics', createMetricsEndpoint());
+  this.app.get('/metrics', noStore(), createMetricsEndpoint());
 
     // API version endpoint
-    this.app.get('/version', (req, res) => {
+  this.app.get('/version', shortPublicCache(60), (req, res) => {
       res.json({
         name: 'CI/CD Pipeline Analyzer',
         version: process.env.npm_package_version || '1.0.0',
