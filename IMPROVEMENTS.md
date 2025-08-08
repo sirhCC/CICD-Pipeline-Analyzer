@@ -21,8 +21,8 @@ Legend: Priority (High/Med/Low), Effort (S/M/L). Use this as a living checklist.
 - [x] (High, S) Split health endpoints: `/health` (liveness) and `/ready` (readiness incl. DB/Redis)
 - [ ] (High, S) Raise Jest thresholds slightly (e.g., unit: 85%) and enforce in CI
 - [ ] (High, S) Add npm audit/Dependabot workflow for vulnerability alerts
-- [x] (Med, S) Add metrics endpoint `/metrics` (basic JSON now; Prometheus text format next)
-- [ ] (Med, S) Expose Prometheus metrics at `/metrics` (http, process, db, queue)
+- [x] (Med, S) Add metrics endpoint `/metrics` (JSON and Prometheus text when enabled)
+- [ ] (Med, S) Extend Prometheus metrics: DB connection pool, Redis, Bull queue depth
 - [x] (Med, S) Add .env.example with safe defaults; ensure env validation covers all secrets
 - [ ] (Med, S) Ensure compression, CORS allowlist, body size limits are configured centrally
 - [ ] (Med, S) Add Docker .dockerignore and run-as-nonroot in Dockerfile
@@ -79,7 +79,8 @@ Legend: Priority (High/Med/Low), Effort (S/M/L). Use this as a living checklist.
 ## Observability
 
 - [ ] (Med, M) OpenTelemetry traces for HTTP, TypeORM, Redis, Bull; OTLP exporter; sampling in prod
-- [ ] (Med, S) Prometheus metrics: http_server, process, db connection, queue depth; expose in `/metrics` (Prometheus text)
+- [x] (Med, S) Prometheus metrics: http_server/process (exposed in `/metrics` when enabled)
+- [ ] (Med, S) Prometheus metrics: db connection and queue depth (extend `/metrics`)
 - [ ] (Low, S) Correlation IDs propagated through logs, HTTP headers (x-request-id), and jobs
 
 ## API design & DX
