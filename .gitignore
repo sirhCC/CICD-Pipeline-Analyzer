@@ -34,6 +34,12 @@ pids/
 coverage/
 *.lcov
 .nyc_output
+coverage/lcov-report/
+
+# Linters & caches
+.eslintcache
+.cache/
+.jest/
 
 # IDE files
 .vscode/
@@ -41,6 +47,8 @@ coverage/
 *.swp
 *.swo
 *~
+.history/
+.vscode/*
 
 # OS generated files
 .DS_Store
@@ -50,15 +58,35 @@ coverage/
 .Trashes
 ehthumbs.db
 Thumbs.db
+desktop.ini
 
 # Temporary files
 tmp/
 temp/
+.tmp/
 
 # Database
 *.db
 *.sqlite
 *.sqlite3
+docker/postgres/data/
+docker/postgres/backups/
 
 # Redis dump
 dump.rdb
+
+# Docker compose overrides
+docker-compose.override.yml
+
+# Node / npm artifacts
+*.tgz
+npm-packages-offline-cache/
+
+# Env helpers
+.envrc
+.direnv/
+.tool-versions
+
+# Patch/merge leftovers
+*.orig
+*.rej
