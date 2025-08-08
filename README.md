@@ -35,22 +35,13 @@ npm run type-check
 
 ## Configuration
 
-Create a `.env` file with the following as a starting point:
-
-```dotenv
-PORT=3000
-DATABASE_URL=postgres://postgres:postgres@localhost:5432/cicd_analyzer
-REDIS_URL=redis://localhost:6379
-JWT_SECRET=change-me
-JWT_REFRESH_SECRET=change-me-refresh
-API_KEY_SECRET=change-me-api-key
-NODE_ENV=development
-```
+Copy `.env.example` to `.env` and adjust values (strong secrets, DB/Redis creds). The app accepts DATABASE_* and SERVER_* aliases, but DB_* and HOST/PORT are canonical now.
 
 Notes:
 
-- Tests provide safe defaults for `JWT_REFRESH_SECRET` and `API_KEY_SECRET`.
-- See `docs/DEVELOPMENT.md` and related docs for deeper configuration.
+- Secrets must be at least 32 characters (enforced).
+- You can start locally without DB/Redis by setting `SKIP_DB_INIT=true` and `SKIP_REDIS_INIT=true` (readiness will be 503 until services are available).
+- See `docs/DEVELOPMENT.md` for deeper configuration.
 
 ## Running
 
@@ -120,8 +111,9 @@ Notes:
 With the server running at <http://localhost:3000>:
 
 ```powershell
-# Health
-curl http://localhost:3000/health
+curl http://localhost:3000/health    # liveness (200)
+curl http://localhost:3000/ready     # readiness (200 when DB/Redis OK, else 503)
+curl http://localhost:3000/metrics   # basic JSON metrics
 
 # Login (example payload)
 $headers = @{"Content-Type"="application/json"}
