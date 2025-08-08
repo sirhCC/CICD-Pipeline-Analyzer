@@ -28,6 +28,7 @@ const response_1 = require("./middleware/response");
 const router_1 = require("./config/router");
 const error_handler_1 = require("./middleware/error-handler");
 const request_logger_1 = require("./middleware/request-logger");
+const cache_control_1 = require("./middleware/cache-control");
 const rate_limiter_1 = require("./middleware/rate-limiter");
 class Application {
     app;
@@ -209,6 +210,11 @@ class Application {
     configureMiddleware() {
         this.logger.info('Configuring middleware...');
         const config = config_1.configManager.getServer();
+        // Express tuning & security
+        // Trust reverse proxies (needed for correct IPs and HTTPS headers behind proxies/load balancers)
+        this.app.set('trust proxy', true);
+        // Remove X-Powered-By header
+        this.app.disable('x-powered-by');
         // Security middleware
         if (config.security.helmet) {
             this.app.use((0, helmet_1.default)({
@@ -232,10 +238,14 @@ class Application {
             origin: config.cors.origin,
             credentials: config.cors.credentials,
             optionsSuccessStatus: config.cors.optionsSuccessStatus,
+            maxAge: 600
         }));
         // Compression middleware
         if (config.security.compression) {
-            this.app.use((0, compression_1.default)());
+            this.app.use((0, compression_1.default)({
+                threshold: '1kb',
+                level: 6
+            }));
         }
         // Body parsing middleware
         this.app.use(express_1.default.json({ limit: '10mb' }));
@@ -262,7 +272,7 @@ class Application {
     async configureRoutes() {
         this.logger.info('Configuring routes...');
         // Liveness endpoint (fast, no external deps)
-        this.app.get('/health', (req, res) => {
+        this.app.get('/health', (0, cache_control_1.noStore)(), (req, res) => {
             const uptime = process.uptime();
             const memoryUsage = process.memoryUsage();
             res.status(200).json({
@@ -280,7 +290,7 @@ class Application {
             });
         });
         // Readiness endpoint (checks external dependencies)
-        this.app.get('/ready', async (req, res) => {
+        this.app.get('/ready', (0, cache_control_1.noStore)(), async (req, res) => {
             try {
                 const health = await this.getHealthStatus();
                 const isReady = health.status === 'healthy';
@@ -298,9 +308,9 @@ class Application {
             }
         });
         // Basic metrics endpoint (JSON). Prometheus format can be added later.
-        this.app.get('/metrics', (0, request_logger_1.createMetricsEndpoint)());
+        this.app.get('/metrics', (0, cache_control_1.noStore)(), (0, request_logger_1.createMetricsEndpoint)());
         // API version endpoint
-        this.app.get('/version', (req, res) => {
+        this.app.get('/version', (0, cache_control_1.shortPublicCache)(60), (req, res) => {
             res.json({
                 name: 'CI/CD Pipeline Analyzer',
                 version: process.env.npm_package_version || '1.0.0',

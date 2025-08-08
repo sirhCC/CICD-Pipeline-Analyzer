@@ -192,7 +192,8 @@ export class RequestLoggerService {
     if (!this.isEnabled) return false;
 
     // Check skip paths
-  if (this.options.skipPaths?.some(path => req.path.startsWith(path))) {
+  const reqPath = (req as any).path || req.originalUrl || req.url || '';
+  if (this.options.skipPaths?.some(path => typeof reqPath === 'string' && reqPath.startsWith(path))) {
       return false;
     }
 
@@ -220,8 +221,9 @@ export class RequestLoggerService {
     if (seen.has(data as object)) return '[CIRCULAR]';
     seen.add(data as object);
 
-    const maxDepth = this.options.maxMaskDepth ?? 2;
-    if (depth >= maxDepth) return '[REDACTED]';
+  const maxDepth = this.options.maxMaskDepth ?? 2;
+  // Allow masking at maxDepth but do not recurse beyond
+  if (depth > maxDepth) return '[REDACTED]';
 
     const sensitiveFields = this.options.sensitiveFields || [];
     const maskField = (k: string) => sensitiveFields.some(f => k.toLowerCase().includes(f.toLowerCase()));
@@ -668,8 +670,10 @@ export const requestLoggerService = new RequestLoggerService();
  * Request logger middleware factory
  */
 export function createRequestLogger(options: RequestLoggerOptions = {}) {
+  // Merge with defaults to avoid leaking state across callers
+  const mergedOptions: RequestLoggerOptions = { ...defaultOptions, ...options };
   // Use the singleton service to avoid duplicate metric registration and unify metrics
-  requestLoggerService.updateOptions(options);
+  requestLoggerService.updateOptions(mergedOptions);
   const service = requestLoggerService;
 
   return (req: Request, res: Response, next: NextFunction) => {
@@ -691,7 +695,7 @@ export function createRequestLogger(options: RequestLoggerOptions = {}) {
     (req as any).logContext = context;
 
     // Capture response body if enabled
-    if (options.logResponseBody) {
+  if (mergedOptions.logResponseBody) {
       const originalSend = res.send;
       res.send = function(body: any) {
         res.locals.body = body;
