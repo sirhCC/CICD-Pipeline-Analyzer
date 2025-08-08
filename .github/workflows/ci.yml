@@ -34,7 +34,7 @@ jobs:
           cache: 'npm'
 
       - name: 📦 Install Dependencies
-        run: npm ci --prefer-offline --no-audit
+        run: npm install --prefer-offline --no-audit --no-fund
 
       - name: 🎨 ESLint Check
         run: npm run lint || echo "⚠️ ESLint not configured"
@@ -81,7 +81,7 @@ jobs:
           cache: 'npm'
 
       - name: 📦 Install Dependencies
-        run: npm ci --prefer-offline
+        run: npm install --prefer-offline --no-audit --no-fund
 
       - name: 🏗️ Build Project
         run: npm run build
@@ -90,12 +90,24 @@ jobs:
         run: npm run test:unit
         env:
           NODE_ENV: test
+          JWT_SECRET: test-jwt-secret-that-is-at-least-32-characters-long
+          JWT_REFRESH_SECRET: test-refresh-secret-that-is-at-least-32-characters
+          API_KEY_SECRET: test-api-key-secret-that-is-at-least-32-characters
+          SKIP_DB_INIT: 'true'
+          SKIP_REDIS_INIT: 'true'
+          PROMETHEUS_ENABLED: 'false'
 
       - name: 📊 Generate Coverage Report
         if: matrix.node-version == '18'
         run: npm run test:coverage || echo "Coverage skipped"
         env:
           NODE_ENV: test
+          JWT_SECRET: test-jwt-secret-that-is-at-least-32-characters-long
+          JWT_REFRESH_SECRET: test-refresh-secret-that-is-at-least-32-characters
+          API_KEY_SECRET: test-api-key-secret-that-is-at-least-32-characters
+          SKIP_DB_INIT: 'true'
+          SKIP_REDIS_INIT: 'true'
+          PROMETHEUS_ENABLED: 'false'
         continue-on-error: true
 
       - name: 📤 Upload Coverage
@@ -153,7 +165,7 @@ jobs:
           cache: 'npm'
 
       - name: 📦 Install Dependencies
-        run: npm ci --prefer-offline
+        run: npm install --prefer-offline --no-audit --no-fund
 
       - name: 🏗️ Build Project
         run: npm run build
@@ -185,6 +197,10 @@ jobs:
           REDIS_HOST: localhost
           REDIS_PORT: 6379
           JWT_SECRET: test-jwt-secret-that-is-at-least-32-characters-long-for-security
+          JWT_REFRESH_SECRET: test-refresh-secret-that-is-at-least-32-characters
+          API_KEY_SECRET: test-api-key-secret-that-is-at-least-32-characters
+          SKIP_REDIS_INIT: 'true'
+          PROMETHEUS_ENABLED: 'false'
 
   # ================================
   # 🐳 DOCKER BUILD
@@ -258,7 +274,7 @@ jobs:
           cache: 'npm'
 
       - name: 📦 Install Dependencies
-        run: npm ci --prefer-offline
+        run: npm install --prefer-offline --no-audit --no-fund
 
       - name: 🏗️ Build Project
         run: npm run build
@@ -299,7 +315,7 @@ jobs:
           cache: 'npm'
 
       - name: 📦 Install Dependencies
-        run: npm ci --prefer-offline
+        run: npm install --prefer-offline --no-audit --no-fund
 
       - name: 🏗️ Build Project
         run: npm run build
