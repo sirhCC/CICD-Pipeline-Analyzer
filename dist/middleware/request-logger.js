@@ -27,7 +27,7 @@ const logger_1 = require("../shared/logger");
 // Default configuration
 const defaultOptions = {
     enabled: true,
-    skipPaths: ['/health', '/metrics', '/favicon.ico'],
+    skipPaths: ['/health', '/ready', '/metrics', '/favicon.ico'],
     skipMethods: ['OPTIONS'],
     logRequestBody: true,
     logResponseBody: false,
