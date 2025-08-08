@@ -24,9 +24,8 @@ import { createBackgroundJobService, getBackgroundJobService } from './services/
 import { responseMiddleware } from './middleware/response';
 import { createAllVersionedRouters, createVersionInfoRouter } from './config/router';
 import { errorHandler } from '@/middleware/error-handler';
-import { createRequestLogger } from '@/middleware/request-logger';
+import { createRequestLogger, createMetricsEndpoint } from '@/middleware/request-logger';
 import { rateLimiter } from '@/middleware/rate-limiter';
-import { authenticateJWT } from '@/middleware/auth';
 
 class Application {
   private app: express.Application;
@@ -126,8 +125,11 @@ class Application {
       try {
         const backgroundJobService = getBackgroundJobService();
         await backgroundJobService.shutdown();
-      } catch (error) {
-        this.logger.warn('Background job service not initialized or already shut down');
+      } catch (err) {
+        const meta: Record<string, unknown> = err instanceof Error
+          ? { error: { name: err.name, message: err.message, stack: err.stack } }
+          : { error: err as unknown };
+        this.logger.warn('Background job service not initialized or already shut down', meta);
       }
 
       // Shutdown WebSocket service
@@ -193,15 +195,26 @@ class Application {
   private async initializeCoreServices(): Promise<void> {
     this.logger.info('Initializing core services...');
 
-    // Initialize database with enhanced initialization
-    await databaseInitializer.initialize({
-      runMigrations: !configManager.isTest(),
-      seedData: configManager.isDevelopment(),
-      enableMonitoring: true
-    });
+    const skipDb = (process.env.SKIP_DB_INIT || 'false').toLowerCase() === 'true';
+    const skipRedis = (process.env.SKIP_REDIS_INIT || 'false').toLowerCase() === 'true';
 
-    // Initialize Redis cache
-    await redisManager.initialize();
+    // Initialize database with enhanced initialization (unless skipped)
+    if (skipDb) {
+      this.logger.warn('Skipping database initialization due to SKIP_DB_INIT=true');
+    } else {
+      await databaseInitializer.initialize({
+        runMigrations: !configManager.isTest(),
+        seedData: configManager.isDevelopment(),
+        enableMonitoring: true
+      });
+    }
+
+    // Initialize Redis cache (unless skipped)
+    if (skipRedis) {
+      this.logger.warn('Skipping Redis initialization due to SKIP_REDIS_INIT=true');
+    } else {
+      await redisManager.initialize();
+    }
 
     // Initialize background job service
     createBackgroundJobService({
@@ -285,20 +298,45 @@ class Application {
   private async configureRoutes(): Promise<void> {
     this.logger.info('Configuring routes...');
 
-    // Health check endpoint
-    this.app.get('/health', async (req, res) => {
+    // Liveness endpoint (fast, no external deps)
+    this.app.get('/health', (req, res) => {
+      const uptime = process.uptime();
+      const memoryUsage = process.memoryUsage();
+      res.status(200).json({
+        status: 'alive',
+        timestamp: new Date().toISOString(),
+        uptime: `${Math.floor(uptime)}s`,
+        pid: process.pid,
+        version: process.env.npm_package_version || '1.0.0',
+        environment: process.env.NODE_ENV || 'development',
+        memory: {
+          rss: `${Math.round(memoryUsage.rss / 1024 / 1024)}MB`,
+          heapTotal: `${Math.round(memoryUsage.heapTotal / 1024 / 1024)}MB`,
+          heapUsed: `${Math.round(memoryUsage.heapUsed / 1024 / 1024)}MB`
+        }
+      });
+    });
+
+    // Readiness endpoint (checks external dependencies)
+    this.app.get('/ready', async (req, res) => {
       try {
         const health = await this.getHealthStatus();
-        const statusCode = health.status === 'healthy' ? 200 : 503;
-        res.status(statusCode).json(health);
+        const isReady = health.status === 'healthy';
+        res.status(isReady ? 200 : 503).json({
+          status: isReady ? 'ready' : 'not-ready',
+          ...health
+        });
       } catch (error) {
-        this.logger.error('Health check failed', error);
+        this.logger.error('Readiness check failed', error);
         res.status(503).json({
-          status: 'unhealthy',
-          error: 'Health check failed',
+          status: 'not-ready',
+          error: 'Readiness check failed'
         });
       }
     });
+
+    // Basic metrics endpoint (JSON). Prometheus format can be added later.
+    this.app.get('/metrics', createMetricsEndpoint());
 
     // API version endpoint
     this.app.get('/version', (req, res) => {
@@ -395,14 +433,18 @@ class Application {
    * Get application health status
    */
   private async getHealthStatus(): Promise<any> {
-    const checks = await Promise.allSettled([
-      enhancedDatabaseService.getHealthStatus(),
-      redisManager.healthCheck(),
-    ]);
+  const skipDb = (process.env.SKIP_DB_INIT || 'false').toLowerCase() === 'true';
+  const skipRedis = (process.env.SKIP_REDIS_INIT || 'false').toLowerCase() === 'true';
 
-    const dbHealth = checks[0].status === 'fulfilled' ? checks[0].value : null;
-    const dbHealthy = dbHealth?.isHealthy || false;
-    const redisHealthy = checks[1].status === 'fulfilled' && checks[1].value;
+  const promises: Promise<any>[] = [];
+  if (!skipDb) promises.push(enhancedDatabaseService.getHealthStatus());
+  if (!skipRedis) promises.push(redisManager.healthCheck());
+  const checks = await Promise.allSettled(promises);
+
+  const dbHealth = !skipDb && checks[0] && checks[0].status === 'fulfilled' ? (checks[0] as PromiseFulfilledResult<any>).value : null;
+  const dbHealthy = skipDb ? false : (dbHealth?.isHealthy || false);
+  const redisIndex = skipDb ? 0 : 1;
+  const redisHealthy = skipRedis ? false : (checks[redisIndex] && (checks[redisIndex] as PromiseSettledResult<any>).status === 'fulfilled' && (checks[redisIndex] as PromiseFulfilledResult<any>).value);
 
     const overall = dbHealthy && redisHealthy ? 'healthy' : 'degraded';
 
@@ -478,16 +520,18 @@ async function bootstrap(): Promise<void> {
   try {
     await app.initialize();
     await app.start();
-  } catch (error) {
-    console.error('Failed to start application:', error);
+  } catch (err) {
+    const logger = new Logger('Bootstrap');
+    logger.error('Failed to start application', err);
     process.exit(1);
   }
 }
 
 // Start the application if this file is run directly
 if (require.main === module) {
-  bootstrap().catch((error) => {
-    console.error('Bootstrap error:', error);
+  bootstrap().catch((err) => {
+    const logger = new Logger('Bootstrap');
+    logger.error('Bootstrap error', err);
     process.exit(1);
   });
 }
