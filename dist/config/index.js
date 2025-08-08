@@ -13,6 +13,27 @@ const joi_1 = __importDefault(require("joi"));
 const types_1 = require("../types");
 // Load environment variables
 (0, dotenv_1.config)();
+// === Backward-compatible ENV key mapping ===
+// Accept DATABASE_* and SERVER_* aliases by mapping them to DB_* and HOST/PORT
+const env = process.env;
+// Database aliases
+if (!env.DB_HOST && env.DATABASE_HOST)
+    env.DB_HOST = env.DATABASE_HOST;
+if (!env.DB_PORT && env.DATABASE_PORT)
+    env.DB_PORT = env.DATABASE_PORT;
+if (!env.DB_NAME && env.DATABASE_NAME)
+    env.DB_NAME = env.DATABASE_NAME;
+if (!env.DB_USERNAME && env.DATABASE_USERNAME)
+    env.DB_USERNAME = env.DATABASE_USERNAME;
+if (!env.DB_PASSWORD && env.DATABASE_PASSWORD)
+    env.DB_PASSWORD = env.DATABASE_PASSWORD;
+if (!env.DB_SSL && env.DATABASE_SSL)
+    env.DB_SSL = env.DATABASE_SSL;
+// Server aliases
+if (!env.HOST && (env.SERVER_HOST || env.SERVERNAME))
+    env.HOST = env.SERVER_HOST || env.SERVERNAME;
+if (!env.PORT && env.SERVER_PORT)
+    env.PORT = env.SERVER_PORT;
 // === Environment Validation Schema ===
 const configSchema = joi_1.default.object({
     // Server Configuration
@@ -277,9 +298,12 @@ class ConfigManager {
         if (this.config.auth.jwtSecret.length < 32) {
             throw new Error('JWT secret must be at least 32 characters long');
         }
-        // Validate database configuration
-        if (!this.config.database.database || !this.config.database.username) {
-            throw new Error('Database configuration is incomplete');
+        // Validate database configuration unless DB init is intentionally skipped
+        const skipDb = (process.env.SKIP_DB_INIT || 'false').toLowerCase() === 'true';
+        if (!skipDb) {
+            if (!this.config.database.database || !this.config.database.username) {
+                throw new Error('Database configuration is incomplete');
+            }
         }
     }
     // === Runtime Configuration Updates ===
