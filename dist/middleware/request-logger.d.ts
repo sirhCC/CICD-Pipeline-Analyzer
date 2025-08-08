@@ -17,6 +17,7 @@
  * @version 1.0.0
  */
 import { Request, Response, NextFunction } from 'express';
+import client from 'prom-client';
 export interface RequestLogContext {
     requestId: string;
     userId?: string | undefined;
@@ -82,6 +83,10 @@ export declare class RequestLoggerService {
     private metrics;
     private isEnabled;
     private startTime;
+    private promRegistry;
+    private promHttpRequestsTotal;
+    private promHttpRequestDuration;
+    private promHttpRequestsInFlight;
     constructor(options?: RequestLoggerOptions);
     /**
      * Check if request should be logged
@@ -139,6 +144,10 @@ export declare class RequestLoggerService {
      * Update options
      */
     updateOptions(options: Partial<RequestLoggerOptions>): void;
+    /**
+     * Expose Prometheus registry (read-only usage)
+     */
+    getPrometheusRegistry(): client.Registry;
 }
 export declare const requestLoggerService: RequestLoggerService;
 /**
@@ -153,6 +162,7 @@ export declare function createHealthCheckEndpoint(): (req: Request, res: Respons
  * Metrics endpoint for monitoring
  */
 export declare function createMetricsEndpoint(): (req: Request, res: Response) => void;
+export declare function getPrometheusRegister(): client.Registry<"text/plain; version=0.0.4; charset=utf-8">;
 /**
  * Pre-configured request loggers
  */
