@@ -49,6 +49,9 @@ export interface RequestLoggerOptions {
     logQuery?: boolean;
     maxBodySize?: number;
     maxHeaderSize?: number;
+    maxMaskDepth?: number;
+    maxObjectKeys?: number;
+    maxArrayLength?: number;
     slowRequestThreshold?: number;
     enableMetrics?: boolean;
     enableSecurityLogging?: boolean;

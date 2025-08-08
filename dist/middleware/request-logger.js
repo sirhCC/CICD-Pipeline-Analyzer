@@ -41,6 +41,9 @@ const defaultOptions = {
     logQuery: true,
     maxBodySize: 10000, // 10KB
     maxHeaderSize: 2000, // 2KB
+    maxMaskDepth: 2,
+    maxObjectKeys: 50,
+    maxArrayLength: 100,
     slowRequestThreshold: 1000, // 1 second
     enableMetrics: true,
     enableSecurityLogging: true,
@@ -114,7 +117,7 @@ class RequestLoggerService {
         if (!this.isEnabled)
             return false;
         // Check skip paths
-        if (this.options.skipPaths?.some(path => req.path.includes(path))) {
+        if (this.options.skipPaths?.some(path => req.path.startsWith(path))) {
             return false;
         }
         // Check skip methods
@@ -130,43 +133,67 @@ class RequestLoggerService {
     /**
      * Mask sensitive data in objects
      */
-    maskSensitiveData(data) {
-        if (!this.options.maskSensitiveData || !data || typeof data !== 'object') {
+    maskSensitiveData(data, depth = 0, seen = new WeakSet()) {
+        if (!this.options.maskSensitiveData || data == null)
             return data;
-        }
-        const masked = Array.isArray(data) ? [...data] : { ...data };
+        const type = typeof data;
+        if (type !== 'object')
+            return data;
+        if (seen.has(data))
+            return '[CIRCULAR]';
+        seen.add(data);
+        const maxDepth = this.options.maxMaskDepth ?? 2;
+        if (depth >= maxDepth)
+            return '[REDACTED]';
         const sensitiveFields = this.options.sensitiveFields || [];
-        for (const [key, value] of Object.entries(masked)) {
-            const lowerKey = key.toLowerCase();
-            if (sensitiveFields.some(field => lowerKey.includes(field.toLowerCase()))) {
-                masked[key] = '[MASKED]';
-            }
-            else if (typeof value === 'object' && value !== null) {
-                masked[key] = this.maskSensitiveData(value);
-            }
+        const maskField = (k) => sensitiveFields.some(f => k.toLowerCase().includes(f.toLowerCase()));
+        if (Array.isArray(data)) {
+            const limit = this.options.maxArrayLength ?? 100;
+            const arr = data.slice(0, limit).map((v) => this.maskSensitiveData(v, depth + 1, seen));
+            if (data.length > limit)
+                arr.push('[TRUNCATED_ARRAY]');
+            return arr;
         }
-        return masked;
+        const out = {};
+        const keys = Object.keys(data);
+        const limit = this.options.maxObjectKeys ?? 50;
+        const upto = Math.min(keys.length, limit);
+        for (let i = 0; i < upto; i++) {
+            const k = keys[i];
+            if (typeof k !== 'string')
+                continue;
+            const key = k;
+            const value = data[key];
+            out[key] = maskField(key) ? '[MASKED]' : this.maskSensitiveData(value, depth + 1, seen);
+        }
+        if (keys.length > limit)
+            out['__truncated_keys__'] = keys.length - limit;
+        return out;
     }
     /**
      * Truncate large payloads
      */
     truncatePayload(data, maxSize) {
-        if (!data)
+        if (data == null)
             return data;
-        const jsonString = JSON.stringify(data);
-        if (jsonString.length <= maxSize) {
-            return data;
-        }
-        const truncated = jsonString.substring(0, maxSize);
+        // Fast path for strings and buffers
+        if (typeof data === 'string')
+            return data.length <= maxSize ? data : data.slice(0, maxSize);
+        if (Buffer.isBuffer(data))
+            return data.length <= maxSize ? data : data.subarray(0, maxSize);
+        // For objects, stringify once and provide a preview if too large
         try {
-            return JSON.parse(truncated + '"}');
-        }
-        catch {
+            const s = JSON.stringify(data);
+            if (s.length <= maxSize)
+                return data;
             return {
                 _truncated: true,
-                _originalSize: jsonString.length,
-                _preview: truncated
+                _originalSize: s.length,
+                _preview: s.slice(0, maxSize)
             };
+        }
+        catch {
+            return '[UNSERIALIZABLE]';
         }
     }
     /**
