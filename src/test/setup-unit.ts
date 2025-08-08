@@ -13,6 +13,13 @@ process.env.SERVER_PORT = '3000';
 process.env.JWT_SECRET = 'test-jwt-secret-that-is-at-least-32-characters-long-for-security';
 process.env.JWT_EXPIRES_IN = '1h';
 process.env.CORS_ORIGIN = 'http://localhost:3000';
+// Ensure refresh/API secrets exist for auth unit tests
+process.env.JWT_REFRESH_SECRET =
+  process.env.JWT_REFRESH_SECRET ||
+  'test-refresh-secret-abcdefghijklmnopqrstuvwxyz-1234567890-THIS-IS-LONG';
+process.env.API_KEY_SECRET =
+  process.env.API_KEY_SECRET ||
+  'test-api-key-secret-abcdefghijklmnopqrstuvwxyz-1234567890-THIS-IS-LONG';
 
 // Mock database config (not actually used)
 process.env.DB_TYPE = 'postgres';
