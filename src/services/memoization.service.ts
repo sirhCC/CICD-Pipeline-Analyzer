@@ -1,6 +1,6 @@
 /**
  * Advanced Memoization Service - High-Performance Function Caching
- * 
+ *
  * Features:
  * - LRU cache with configurable size limits
  * - Time-based expiration (TTL)
@@ -9,7 +9,7 @@
  * - Performance metrics and analytics
  * - Memory-efficient storage with compression
  * - Cache warming and preloading capabilities
- * 
+ *
  * @author sirhCC
  * @version 1.0.0
  */
@@ -60,7 +60,7 @@ export class MemoizationService {
       enableMetrics: true,
       enableCompression: false,
       cleanupInterval: 60000, // 1 minute
-      ...config
+      ...config,
     };
 
     this.metrics = {
@@ -70,7 +70,7 @@ export class MemoizationService {
       memoryUsage: 0,
       hitRatio: 0,
       averageAccessTime: 0,
-      totalRequests: 0
+      totalRequests: 0,
     };
 
     this.startCleanupTimer();
@@ -101,7 +101,7 @@ export class MemoizationService {
     return (...args: TArgs): TReturn => {
       const startTime = performance.now();
       const key = keyGenerator(...args);
-      
+
       // Try to get from cache
       const cached = this.get<TReturn>(key);
       if (cached !== null) {
@@ -111,7 +111,7 @@ export class MemoizationService {
 
       // Execute function
       const result = fn(...args);
-      
+
       // Cache result if it meets criteria
       if (shouldCache(result)) {
         this.set(key, result, ttl);
@@ -141,7 +141,7 @@ export class MemoizationService {
     return async (...args: TArgs): Promise<TReturn> => {
       const startTime = performance.now();
       const key = keyGenerator(...args);
-      
+
       // Try to get from cache
       const cached = this.get<TReturn>(key);
       if (cached !== null) {
@@ -161,7 +161,7 @@ export class MemoizationService {
 
       try {
         const result = await promise;
-        
+
         // Cache result if it meets criteria
         if (shouldCache(result)) {
           this.set(key, result, ttl);
@@ -204,13 +204,13 @@ export class MemoizationService {
   private set<T>(key: string, value: T, ttl: number): void {
     const expiry = Date.now() + ttl;
     const size = this.calculateSize(value);
-    
+
     const entry: CacheEntry<T> = {
       value,
       expiry,
       accessCount: 1,
       lastAccessed: Date.now(),
-      size
+      size,
     };
 
     // Check if we need to evict items
@@ -252,10 +252,7 @@ export class MemoizationService {
       return value;
     });
 
-    return crypto.createHash('sha256')
-      .update(serialized)
-      .digest('hex')
-      .substring(0, 32); // Use first 32 characters for performance
+    return crypto.createHash('sha256').update(serialized).digest('hex').substring(0, 32); // Use first 32 characters for performance
   }
 
   /**
@@ -324,7 +321,7 @@ export class MemoizationService {
     }
 
     this.metrics.totalRequests++;
-    
+
     if (isHit) {
       this.metrics.hits++;
     } else {
@@ -332,11 +329,11 @@ export class MemoizationService {
     }
 
     this.metrics.hitRatio = this.metrics.hits / this.metrics.totalRequests;
-    
+
     // Update average access time (exponential moving average)
     const alpha = 0.1;
-    this.metrics.averageAccessTime = 
-      (alpha * accessTime) + ((1 - alpha) * this.metrics.averageAccessTime);
+    this.metrics.averageAccessTime =
+      alpha * accessTime + (1 - alpha) * this.metrics.averageAccessTime;
   }
 
   /**
@@ -390,7 +387,7 @@ export class MemoizationService {
       memoryUsage: 0,
       hitRatio: 0,
       averageAccessTime: 0,
-      totalRequests: 0
+      totalRequests: 0,
     };
     this.logger.info('Cache cleared');
   }
@@ -425,7 +422,7 @@ export class MemoizationService {
       size: this.cache.size,
       maxSize: this.config.maxSize,
       metrics: this.getMetrics(),
-      config: this.config
+      config: this.config,
     };
   }
 
