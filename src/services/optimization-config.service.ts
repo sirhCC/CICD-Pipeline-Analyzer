@@ -1,13 +1,13 @@
 /**
  * Optimization Configuration Service - Centralized Performance Settings
- * 
+ *
  * Features:
  * - Centralized configuration management
  * - Environment-specific optimizations
  * - Runtime configuration updates
  * - Performance profiling integration
  * - Auto-tuning capabilities
- * 
+ *
  * @author sirhCC
  * @version 1.0.0
  */
@@ -18,7 +18,7 @@ import { EventEmitter } from 'events';
 export interface OptimizationProfile {
   name: string;
   description: string;
-  
+
   // Memoization settings
   memoization: {
     enabled: boolean;
@@ -26,7 +26,7 @@ export interface OptimizationProfile {
     defaultTtl: number;
     enableMetrics: boolean;
   };
-  
+
   // Batch processing settings
   batchProcessing: {
     enabled: boolean;
@@ -35,7 +35,7 @@ export interface OptimizationProfile {
     memoryThreshold: number;
     enableParallelProcessing: boolean;
   };
-  
+
   // Caching settings
   caching: {
     enabled: boolean;
@@ -45,7 +45,7 @@ export interface OptimizationProfile {
     enablePredictive: boolean;
     enableAnalytics: boolean;
   };
-  
+
   // Performance monitoring
   performance: {
     enabled: boolean;
@@ -54,7 +54,7 @@ export interface OptimizationProfile {
     cpuWarningThreshold: number;
     slowQueryThreshold: number;
   };
-  
+
   // Mathematical optimizations
   math: {
     enableVectorization: boolean;
@@ -62,7 +62,7 @@ export interface OptimizationProfile {
     numericalPrecision: 'standard' | 'high' | 'extended';
     enableStatisticalCaching: boolean;
   };
-  
+
   // Stream processing
   streaming: {
     enabled: boolean;
@@ -102,20 +102,20 @@ export class OptimizationConfigService extends EventEmitter {
   private constructor() {
     super();
     this.logger = new Logger('OptimizationConfig');
-    
+
     // Initialize default profiles
     this.initializeDefaultProfiles();
-    
+
     // Set default profile based on environment
     this.currentProfile = this.getDefaultProfile();
-    
+
     // Auto-tuning configuration
     this.autoTuningConfig = {
       enabled: process.env.NODE_ENV === 'production',
       analysisWindow: 60, // 1 hour
       adjustmentThreshold: 10, // 10% change needed
       maxAdjustmentPercent: 20, // max 20% adjustment
-      tuningInterval: 30 // 30 minutes
+      tuningInterval: 30, // 30 minutes
     };
 
     this.startAutoTuning();
@@ -147,16 +147,16 @@ export class OptimizationConfigService extends EventEmitter {
 
     const oldProfile = this.currentProfile.name;
     this.currentProfile = { ...profile };
-    
+
     this.logger.info('Optimization profile switched', {
       from: oldProfile,
-      to: profileName
+      to: profileName,
     });
 
     this.emit('profileChanged', {
       oldProfile: oldProfile,
       newProfile: profileName,
-      config: this.currentProfile
+      config: this.currentProfile,
     });
 
     return true;
@@ -180,12 +180,12 @@ export class OptimizationConfigService extends EventEmitter {
       ...base,
       ...overrides,
       name,
-      description: overrides.description || `Custom profile based on ${baseProfile}`
+      description: overrides.description || `Custom profile based on ${baseProfile}`,
     };
 
     this.profiles.set(name, customProfile);
     this.logger.info(`Custom profile '${name}' created`);
-    
+
     return true;
   }
 
@@ -195,16 +195,16 @@ export class OptimizationConfigService extends EventEmitter {
   public updateCurrentProfile(updates: Partial<OptimizationProfile>): void {
     const oldConfig = { ...this.currentProfile };
     this.currentProfile = { ...this.currentProfile, ...updates };
-    
+
     this.logger.info('Current profile updated', {
       profile: this.currentProfile.name,
-      changes: Object.keys(updates)
+      changes: Object.keys(updates),
     });
 
     this.emit('configUpdated', {
       oldConfig,
       newConfig: this.currentProfile,
-      changes: updates
+      changes: updates,
     });
   }
 
@@ -228,12 +228,10 @@ export class OptimizationConfigService extends EventEmitter {
    */
   public recordPerformanceMetrics(metrics: PerformanceMetrics): void {
     this.performanceHistory.push(metrics);
-    
+
     // Keep only recent metrics (last 24 hours)
-    const cutoff = Date.now() - (24 * 60 * 60 * 1000);
-    this.performanceHistory = this.performanceHistory.filter(
-      m => m.timestamp.getTime() > cutoff
-    );
+    const cutoff = Date.now() - 24 * 60 * 60 * 1000;
+    this.performanceHistory = this.performanceHistory.filter(m => m.timestamp.getTime() > cutoff);
 
     this.emit('metricsRecorded', metrics);
   }
@@ -247,17 +245,15 @@ export class OptimizationConfigService extends EventEmitter {
     latencyTrend: 'improving' | 'degrading' | 'stable';
     recommendations: string[];
   } {
-    const cutoff = Date.now() - (minutes * 60 * 1000);
-    const recentMetrics = this.performanceHistory.filter(
-      m => m.timestamp.getTime() > cutoff
-    );
+    const cutoff = Date.now() - minutes * 60 * 1000;
+    const recentMetrics = this.performanceHistory.filter(m => m.timestamp.getTime() > cutoff);
 
     if (recentMetrics.length < 10) {
       return {
         memoryTrend: 'stable',
         cpuTrend: 'stable',
         latencyTrend: 'stable',
-        recommendations: ['Insufficient data for trend analysis']
+        recommendations: ['Insufficient data for trend analysis'],
       };
     }
 
@@ -276,7 +272,7 @@ export class OptimizationConfigService extends EventEmitter {
       memoryTrend,
       cpuTrend,
       latencyTrend,
-      recommendations
+      recommendations,
     };
   }
 
@@ -318,7 +314,7 @@ export class OptimizationConfigService extends EventEmitter {
     return {
       currentProfile: this.currentProfile.name,
       profiles: profilesObject,
-      autoTuningConfig: this.autoTuningConfig
+      autoTuningConfig: this.autoTuningConfig,
     };
   }
 
@@ -349,7 +345,7 @@ export class OptimizationConfigService extends EventEmitter {
 
       this.logger.info('Configuration imported successfully');
       this.emit('configurationImported', config);
-      
+
       return true;
     } catch (error) {
       this.logger.error('Failed to import configuration', error);
@@ -368,14 +364,14 @@ export class OptimizationConfigService extends EventEmitter {
         enabled: true,
         maxSize: 100,
         defaultTtl: 60000, // 1 minute
-        enableMetrics: true
+        enableMetrics: true,
       },
       batchProcessing: {
         enabled: true,
         batchSize: 50,
         maxConcurrency: 2,
         memoryThreshold: 256,
-        enableParallelProcessing: false
+        enableParallelProcessing: false,
       },
       caching: {
         enabled: true,
@@ -383,27 +379,27 @@ export class OptimizationConfigService extends EventEmitter {
         maxItems: 1000,
         defaultTtl: 300000, // 5 minutes
         enablePredictive: false,
-        enableAnalytics: true
+        enableAnalytics: true,
       },
       performance: {
         enabled: true,
         monitoringInterval: 10000, // 10 seconds
         memoryWarningThreshold: 0.7,
         cpuWarningThreshold: 0.8,
-        slowQueryThreshold: 500
+        slowQueryThreshold: 500,
       },
       math: {
         enableVectorization: true,
         enableParallelComputation: false,
         numericalPrecision: 'standard',
-        enableStatisticalCaching: true
+        enableStatisticalCaching: true,
       },
       streaming: {
         enabled: true,
         highWaterMark: 1000,
         backpressureThreshold: 5000,
-        enableCompression: false
-      }
+        enableCompression: false,
+      },
     });
 
     // Production profile - maximum optimization
@@ -414,14 +410,14 @@ export class OptimizationConfigService extends EventEmitter {
         enabled: true,
         maxSize: 10000,
         defaultTtl: 300000, // 5 minutes
-        enableMetrics: true
+        enableMetrics: true,
       },
       batchProcessing: {
         enabled: true,
         batchSize: 1000,
         maxConcurrency: 8,
         memoryThreshold: 1024,
-        enableParallelProcessing: true
+        enableParallelProcessing: true,
       },
       caching: {
         enabled: true,
@@ -429,27 +425,27 @@ export class OptimizationConfigService extends EventEmitter {
         maxItems: 50000,
         defaultTtl: 600000, // 10 minutes
         enablePredictive: true,
-        enableAnalytics: true
+        enableAnalytics: true,
       },
       performance: {
         enabled: true,
         monitoringInterval: 30000, // 30 seconds
         memoryWarningThreshold: 0.8,
         cpuWarningThreshold: 0.9,
-        slowQueryThreshold: 1000
+        slowQueryThreshold: 1000,
       },
       math: {
         enableVectorization: true,
         enableParallelComputation: true,
         numericalPrecision: 'high',
-        enableStatisticalCaching: true
+        enableStatisticalCaching: true,
       },
       streaming: {
         enabled: true,
         highWaterMark: 10000,
         backpressureThreshold: 50000,
-        enableCompression: true
-      }
+        enableCompression: true,
+      },
     });
 
     // High-throughput profile - optimized for maximum data processing
@@ -460,14 +456,14 @@ export class OptimizationConfigService extends EventEmitter {
         enabled: true,
         maxSize: 5000,
         defaultTtl: 600000, // 10 minutes
-        enableMetrics: false // Reduce overhead
+        enableMetrics: false, // Reduce overhead
       },
       batchProcessing: {
         enabled: true,
         batchSize: 5000,
         maxConcurrency: 16,
         memoryThreshold: 2048,
-        enableParallelProcessing: true
+        enableParallelProcessing: true,
       },
       caching: {
         enabled: true,
@@ -475,27 +471,27 @@ export class OptimizationConfigService extends EventEmitter {
         maxItems: 100000,
         defaultTtl: 1800000, // 30 minutes
         enablePredictive: true,
-        enableAnalytics: false
+        enableAnalytics: false,
       },
       performance: {
         enabled: true,
         monitoringInterval: 60000, // 1 minute
         memoryWarningThreshold: 0.9,
         cpuWarningThreshold: 0.95,
-        slowQueryThreshold: 2000
+        slowQueryThreshold: 2000,
       },
       math: {
         enableVectorization: true,
         enableParallelComputation: true,
         numericalPrecision: 'standard', // Trade precision for speed
-        enableStatisticalCaching: true
+        enableStatisticalCaching: true,
       },
       streaming: {
         enabled: true,
         highWaterMark: 50000,
         backpressureThreshold: 100000,
-        enableCompression: true
-      }
+        enableCompression: true,
+      },
     });
 
     this.logger.info('Default optimization profiles initialized');
@@ -503,7 +499,7 @@ export class OptimizationConfigService extends EventEmitter {
 
   private getDefaultProfile(): OptimizationProfile {
     const env = process.env.NODE_ENV || 'development';
-    
+
     switch (env) {
       case 'production':
         return this.profiles.get('production')!;
@@ -519,17 +515,20 @@ export class OptimizationConfigService extends EventEmitter {
       return;
     }
 
-    this.autoTuningTimer = setInterval(async () => {
-      try {
-        await this.performAutoTuning();
-      } catch (error) {
-        this.logger.error('Auto-tuning failed', error);
-      }
-    }, this.autoTuningConfig.tuningInterval * 60 * 1000);
+    this.autoTuningTimer = setInterval(
+      async () => {
+        try {
+          await this.performAutoTuning();
+        } catch (error) {
+          this.logger.error('Auto-tuning failed', error);
+        }
+      },
+      this.autoTuningConfig.tuningInterval * 60 * 1000
+    );
 
     this.logger.info('Auto-tuning started', {
       interval: this.autoTuningConfig.tuningInterval,
-      enabled: this.autoTuningConfig.enabled
+      enabled: this.autoTuningConfig.enabled,
     });
   }
 
@@ -588,14 +587,17 @@ export class OptimizationConfigService extends EventEmitter {
     if (trend.memoryTrend === 'degrading') {
       adjustments.batchProcessing = {
         ...this.currentProfile.batchProcessing,
-        batchSize: Math.max(50, Math.floor(this.currentProfile.batchProcessing.batchSize * 0.9))
+        batchSize: Math.max(50, Math.floor(this.currentProfile.batchProcessing.batchSize * 0.9)),
       };
     }
 
     if (trend.cpuTrend === 'degrading') {
       adjustments.batchProcessing = {
-        ...adjustments.batchProcessing || this.currentProfile.batchProcessing,
-        maxConcurrency: Math.max(1, Math.floor(this.currentProfile.batchProcessing.maxConcurrency * 0.8))
+        ...(adjustments.batchProcessing || this.currentProfile.batchProcessing),
+        maxConcurrency: Math.max(
+          1,
+          Math.floor(this.currentProfile.batchProcessing.maxConcurrency * 0.8)
+        ),
       };
     }
 

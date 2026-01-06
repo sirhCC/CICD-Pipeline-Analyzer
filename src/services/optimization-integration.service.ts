@@ -1,34 +1,34 @@
 /**
  * Optimization Integration Service - Coordinated Performance Management
- * 
+ *
  * This service coordinates all optimization components and provides a unified
  * interface for managing performance improvements across the application.
- * 
+ *
  * Features:
  * - Centralized optimization coordination
  * - Automatic service configuration synchronization
  * - Performance monitoring and alerting
  * - Health checks and diagnostics
  * - Graceful degradation management
- * 
+ *
  * @author sirhCC
  * @version 1.0.0
  */
 
 import { Logger } from '@/shared/logger';
 import { EventEmitter } from 'events';
-import { 
+import {
   enhancedStatisticalAnalyticsService,
-  EnhancedStatisticalAnalyticsService 
+  EnhancedStatisticalAnalyticsService,
 } from './enhanced-statistical-analytics.service';
 import { memoizationService, MemoizationService } from './memoization.service';
 import { batchProcessingService, BatchProcessingService } from './batch-processing.service';
 import { PerformanceMonitorService } from './performance-monitor.service';
 import { AdvancedCacheService } from './advanced-cache.service';
-import { 
-  optimizationConfigService, 
+import type { OptimizationProfile } from './optimization-config.service';
+import {
+  optimizationConfigService,
   OptimizationConfigService,
-  OptimizationProfile 
 } from './optimization-config.service';
 
 export interface OptimizationStatus {
@@ -113,22 +113,22 @@ export class OptimizationIntegrationService extends EventEmitter {
     try {
       // Get current optimization profile
       const profile = optimizationConfigService.getCurrentProfile();
-      
+
       // Configure all services based on the profile
       await this.applyOptimizationProfile(profile);
-      
+
       // Set up event listeners for configuration changes
       this.setupEventListeners();
-      
+
       // Start health monitoring
       this.startHealthMonitoring();
-      
+
       // Start configuration synchronization
       this.startConfigurationSync();
-      
+
       this.isInitialized = true;
       this.logger.info('Optimization integration initialized successfully');
-      
+
       this.emit('initialized', { profile: profile.name });
     } catch (error) {
       this.logger.error('Failed to initialize optimization integration', error);
@@ -148,7 +148,7 @@ export class OptimizationIntegrationService extends EventEmitter {
         const memoConfig = {
           maxSize: profile.memoization.maxSize,
           defaultTtl: profile.memoization.defaultTtl,
-          enableMetrics: profile.memoization.enableMetrics
+          enableMetrics: profile.memoization.enableMetrics,
         };
         // Apply configuration (service supports dynamic reconfiguration)
         this.logger.debug('Memoization configured', memoConfig);
@@ -160,7 +160,7 @@ export class OptimizationIntegrationService extends EventEmitter {
           batchSize: profile.batchProcessing.batchSize,
           maxConcurrency: profile.batchProcessing.maxConcurrency,
           memoryThreshold: profile.batchProcessing.memoryThreshold,
-          enableParallelProcessing: profile.batchProcessing.enableParallelProcessing
+          enableParallelProcessing: profile.batchProcessing.enableParallelProcessing,
         });
       }
 
@@ -176,7 +176,7 @@ export class OptimizationIntegrationService extends EventEmitter {
         cacheEnabled: profile.caching.enabled,
         cacheTtl: profile.caching.defaultTtl,
         enablePerformanceTracking: profile.performance.enabled,
-        slowQueryThreshold: profile.performance.slowQueryThreshold
+        slowQueryThreshold: profile.performance.slowQueryThreshold,
       });
 
       // Configure performance monitoring
@@ -187,8 +187,8 @@ export class OptimizationIntegrationService extends EventEmitter {
         perfMonitor.stopMonitoring();
       }
 
-      this.logger.info('Optimization profile applied successfully', { 
-        profile: profile.name 
+      this.logger.info('Optimization profile applied successfully', {
+        profile: profile.name,
       });
 
       this.emit('profileApplied', { profile: profile.name });
@@ -215,20 +215,20 @@ export class OptimizationIntegrationService extends EventEmitter {
       memoization: this.getServiceStatus('memoization', {
         hits: memoStats.hits,
         hitRatio: memoStats.hitRatio,
-        memoryUsage: memoStats.memoryUsage
+        memoryUsage: memoStats.memoryUsage,
       }),
       batchProcessing: this.getServiceStatus('batchProcessing', {
         activeProcessors: batchStats.activeProcessors,
         queueLength: batchStats.queueLength,
-        memoryUsage: batchStats.memoryUsage
+        memoryUsage: batchStats.memoryUsage,
       }),
       performanceMonitor: this.getServiceStatus('performanceMonitor'),
       advancedCache: this.getServiceStatus('advancedCache'),
-      enhancedAnalytics: this.getServiceStatus('enhancedAnalytics')
+      enhancedAnalytics: this.getServiceStatus('enhancedAnalytics'),
     };
 
     const overall = this.calculateOverallStatus(services);
-    
+
     const status: OptimizationStatus = {
       overall,
       services,
@@ -237,9 +237,9 @@ export class OptimizationIntegrationService extends EventEmitter {
         cpuUsage: 0, // Would be calculated from performance monitor
         cacheHitRatio: memoStats.hitRatio,
         averageResponseTime: memoStats.averageAccessTime,
-        throughput: 0 // Would be calculated from performance metrics
+        throughput: 0, // Would be calculated from performance metrics
       },
-      recommendations: this.generateRecommendations(services, memoryUsage)
+      recommendations: this.generateRecommendations(services, memoryUsage),
     };
 
     return status;
@@ -260,29 +260,29 @@ export class OptimizationIntegrationService extends EventEmitter {
       performanceTrend: {
         period: '1 hour',
         improvement: 0, // Would be calculated from historical data
-        degradation: 0
+        degradation: 0,
       },
       resourceUtilization: {
         memory: {
           used: status.metrics.memoryUsage,
           available: 1024, // Would be calculated from system info
-          efficiency: Math.max(0, 100 - (status.metrics.memoryUsage / 1024) * 100)
+          efficiency: Math.max(0, 100 - (status.metrics.memoryUsage / 1024) * 100),
         },
         cpu: {
           usage: status.metrics.cpuUsage,
-          efficiency: Math.max(0, 100 - status.metrics.cpuUsage)
+          efficiency: Math.max(0, 100 - status.metrics.cpuUsage),
         },
         cache: {
           hitRatio: status.metrics.cacheHitRatio,
           size: 0, // Would be calculated from cache stats
-          efficiency: status.metrics.cacheHitRatio
-        }
+          efficiency: status.metrics.cacheHitRatio,
+        },
       },
       recommendations: {
         immediate: trend.recommendations.slice(0, 3),
         shortTerm: this.generateShortTermRecommendations(status),
-        longTerm: this.generateLongTermRecommendations(profile, status)
-      }
+        longTerm: this.generateLongTermRecommendations(profile, status),
+      },
     };
 
     this.lastOptimizationReport = report;
@@ -320,14 +320,12 @@ export class OptimizationIntegrationService extends EventEmitter {
     // Consider profile switching for severe degradation
     if (status.overall === 'critical') {
       const currentProfileName = profile.name;
-      
+
       if (currentProfileName !== 'high-throughput') {
         const switched = optimizationConfigService.switchProfile('high-throughput');
         if (switched) {
           changes.push('Switched to high-throughput profile');
-          await this.applyOptimizationProfile(
-            optimizationConfigService.getCurrentProfile()
-          );
+          await this.applyOptimizationProfile(optimizationConfigService.getCurrentProfile());
         }
       }
     }
@@ -337,7 +335,7 @@ export class OptimizationIntegrationService extends EventEmitter {
     changes.push(...serviceOptimizations);
 
     const applied = changes.length > 0;
-    
+
     if (applied) {
       this.logger.info('Automatic optimization completed', { changes });
       this.emit('automaticOptimizationApplied', { changes });
@@ -346,7 +344,7 @@ export class OptimizationIntegrationService extends EventEmitter {
     return {
       applied,
       changes,
-      newProfile: optimizationConfigService.getCurrentProfile().name
+      newProfile: optimizationConfigService.getCurrentProfile().name,
     };
   }
 
@@ -363,13 +361,13 @@ export class OptimizationIntegrationService extends EventEmitter {
   public async performHealthCheck(): Promise<OptimizationStatus> {
     this.logger.debug('Performing health check...');
     const status = await this.getOptimizationStatus();
-    
+
     this.emit('healthCheckCompleted', status);
-    
+
     if (status.overall === 'critical' || status.overall === 'degraded') {
       this.logger.warn('Health check detected issues', {
         overall: status.overall,
-        issues: status.recommendations
+        issues: status.recommendations,
       });
     }
 
@@ -380,19 +378,19 @@ export class OptimizationIntegrationService extends EventEmitter {
 
   private setupEventListeners(): void {
     // Listen for configuration changes
-    optimizationConfigService.on('profileChanged', async (event) => {
+    optimizationConfigService.on('profileChanged', async event => {
       this.logger.info('Optimization profile changed', event);
       await this.applyOptimizationProfile(event.config);
     });
 
-    optimizationConfigService.on('configUpdated', async (event) => {
+    optimizationConfigService.on('configUpdated', async event => {
       this.logger.info('Configuration updated', event);
       await this.applyOptimizationProfile(event.newConfig);
     });
 
     // Listen for performance alerts
     const perfMonitor = PerformanceMonitorService.getInstance();
-    perfMonitor.on('metrics', (metrics) => {
+    perfMonitor.on('metrics', metrics => {
       optimizationConfigService.recordPerformanceMetrics(metrics);
     });
   }
@@ -410,31 +408,31 @@ export class OptimizationIntegrationService extends EventEmitter {
   }
 
   private startConfigurationSync(): void {
-    this.configSyncInterval = setInterval(async () => {
-      try {
-        const status = await this.getOptimizationStatus();
-        
-        // Trigger automatic optimization if needed
-        if (status.overall === 'degraded' || status.overall === 'critical') {
-          await this.performAutomaticOptimization();
+    this.configSyncInterval = setInterval(
+      async () => {
+        try {
+          const status = await this.getOptimizationStatus();
+
+          // Trigger automatic optimization if needed
+          if (status.overall === 'degraded' || status.overall === 'critical') {
+            await this.performAutomaticOptimization();
+          }
+        } catch (error) {
+          this.logger.error('Configuration sync failed', error);
         }
-      } catch (error) {
-        this.logger.error('Configuration sync failed', error);
-      }
-    }, 5 * 60 * 1000); // Every 5 minutes
+      },
+      5 * 60 * 1000
+    ); // Every 5 minutes
 
     this.logger.debug('Configuration sync started');
   }
 
-  private getServiceStatus(
-    serviceName: string, 
-    metrics?: Record<string, number>
-  ): ServiceStatus {
+  private getServiceStatus(serviceName: string, metrics?: Record<string, number>): ServiceStatus {
     // Simplified service status check
     const status: ServiceStatus = {
       status: 'healthy',
       uptime: process.uptime(),
-      configuredCorrectly: true
+      configuredCorrectly: true,
     };
 
     if (metrics) {
@@ -445,7 +443,7 @@ export class OptimizationIntegrationService extends EventEmitter {
   }
 
   private calculateOverallStatus(services: any): 'optimal' | 'good' | 'degraded' | 'critical' {
-    const statuses = Object.values(services) as ServiceStatus[];
+    const statuses = Object.values(services);
     const errorCount = statuses.filter(s => s.status === 'error').length;
     const warningCount = statuses.filter(s => s.status === 'warning').length;
 
@@ -474,24 +472,22 @@ export class OptimizationIntegrationService extends EventEmitter {
     return [
       'Monitor memory usage trends',
       'Review batch processing configurations',
-      'Optimize frequently used queries'
+      'Optimize frequently used queries',
     ];
   }
 
   private generateLongTermRecommendations(
-    profile: OptimizationProfile, 
+    profile: OptimizationProfile,
     status: OptimizationStatus
   ): string[] {
     return [
       'Consider upgrading infrastructure for better performance',
       'Implement distributed caching for horizontal scaling',
-      'Review and optimize algorithm implementations'
+      'Review and optimize algorithm implementations',
     ];
   }
 
-  private async applyServiceSpecificOptimizations(
-    status: OptimizationStatus
-  ): Promise<string[]> {
+  private async applyServiceSpecificOptimizations(status: OptimizationStatus): Promise<string[]> {
     const optimizations: string[] = [];
 
     // Clear caches if memory usage is high
