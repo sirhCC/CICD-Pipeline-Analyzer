@@ -30,7 +30,7 @@ describe('Error Handler Middleware Tests', () => {
   describe('Error Classes', () => {
     it('should create AppError with all properties', () => {
       const error = new AppError('Test error', 400, true, 'TEST_ERROR', { detail: 'test' });
-      
+
       expect(error).toBeInstanceOf(Error);
       expect(error).toBeInstanceOf(AppError);
       expect(error.message).toBe('Test error');
@@ -42,7 +42,7 @@ describe('Error Handler Middleware Tests', () => {
 
     it('should create ValidationError correctly', () => {
       const error = new ValidationError('Invalid input', { field: 'email' });
-      
+
       expect(error).toBeInstanceOf(AppError);
       expect(error).toBeInstanceOf(ValidationError);
       expect(error.statusCode).toBe(400);
@@ -52,7 +52,7 @@ describe('Error Handler Middleware Tests', () => {
 
     it('should create AuthenticationError correctly', () => {
       const error = new AuthenticationError();
-      
+
       expect(error).toBeInstanceOf(AppError);
       expect(error).toBeInstanceOf(AuthenticationError);
       expect(error.statusCode).toBe(401);
@@ -62,7 +62,7 @@ describe('Error Handler Middleware Tests', () => {
 
     it('should create AuthorizationError correctly', () => {
       const error = new AuthorizationError();
-      
+
       expect(error).toBeInstanceOf(AppError);
       expect(error).toBeInstanceOf(AuthorizationError);
       expect(error.statusCode).toBe(403);
@@ -72,7 +72,7 @@ describe('Error Handler Middleware Tests', () => {
 
     it('should create NotFoundError correctly', () => {
       const error = new NotFoundError('Pipeline');
-      
+
       expect(error).toBeInstanceOf(AppError);
       expect(error).toBeInstanceOf(NotFoundError);
       expect(error.statusCode).toBe(404);
@@ -82,7 +82,7 @@ describe('Error Handler Middleware Tests', () => {
 
     it('should create RateLimitError correctly', () => {
       const error = new RateLimitError();
-      
+
       expect(error).toBeInstanceOf(AppError);
       expect(error).toBeInstanceOf(RateLimitError);
       expect(error.statusCode).toBe(429);
@@ -93,7 +93,7 @@ describe('Error Handler Middleware Tests', () => {
     it('should create DatabaseError correctly', () => {
       const originalError = new Error('Connection failed');
       const error = new DatabaseError('Database operation failed', originalError);
-      
+
       expect(error).toBeInstanceOf(AppError);
       expect(error).toBeInstanceOf(DatabaseError);
       expect(error.statusCode).toBe(500);
@@ -106,7 +106,7 @@ describe('Error Handler Middleware Tests', () => {
 
     it('should create ExternalServiceError correctly', () => {
       const error = new ExternalServiceError('GitHub', 'API unavailable', 503);
-      
+
       expect(error).toBeInstanceOf(AppError);
       expect(error).toBeInstanceOf(ExternalServiceError);
       expect(error.statusCode).toBe(503);
@@ -125,9 +125,7 @@ describe('Error Handler Middleware Tests', () => {
       // Add error handler AFTER route
       app.use(errorHandler);
 
-      const response = await request(app)
-        .get('/test-app-error')
-        .expect(422);
+      const response = await request(app).get('/test-app-error').expect(422);
 
       expect(response.body).toMatchObject({
         success: false,
@@ -149,9 +147,7 @@ describe('Error Handler Middleware Tests', () => {
 
       app.use(errorHandler);
 
-      const response = await request(app)
-        .get('/test-validation-error')
-        .expect(400);
+      const response = await request(app).get('/test-validation-error').expect(400);
 
       expect(response.body).toMatchObject({
         success: false,
@@ -170,9 +166,7 @@ describe('Error Handler Middleware Tests', () => {
 
       app.use(errorHandler);
 
-      const response = await request(app)
-        .get('/test-auth-error')
-        .expect(401);
+      const response = await request(app).get('/test-auth-error').expect(401);
 
       expect(response.body).toMatchObject({
         success: false,
@@ -190,9 +184,7 @@ describe('Error Handler Middleware Tests', () => {
 
       app.use(errorHandler);
 
-      const response = await request(app)
-        .get('/test-generic-error')
-        .expect(500);
+      const response = await request(app).get('/test-generic-error').expect(500);
 
       expect(response.body).toMatchObject({
         success: false,
@@ -213,9 +205,7 @@ describe('Error Handler Middleware Tests', () => {
 
       app.use(errorHandler);
 
-      const response = await request(app)
-        .get('/test-syntax-error')
-        .expect(400);
+      const response = await request(app).get('/test-syntax-error').expect(400);
 
       expect(response.body).toMatchObject({
         success: false,
@@ -233,9 +223,7 @@ describe('Error Handler Middleware Tests', () => {
 
       app.use(errorHandler);
 
-      const response = await request(app)
-        .get('/test-security-headers')
-        .expect(400);
+      const response = await request(app).get('/test-security-headers').expect(400);
 
       expect(response.headers['x-content-type-options']).toBe('nosniff');
       expect(response.headers['x-frame-options']).toBe('DENY');
@@ -252,9 +240,7 @@ describe('Error Handler Middleware Tests', () => {
       app.get('/test-async', asyncRoute);
       app.use(errorHandler);
 
-      const response = await request(app)
-        .get('/test-async')
-        .expect(400);
+      const response = await request(app).get('/test-async').expect(400);
 
       expect(response.body).toMatchObject({
         success: false,
@@ -272,9 +258,7 @@ describe('Error Handler Middleware Tests', () => {
       app.get('/test-async-rejection', asyncRoute);
       app.use(errorHandler);
 
-      const response = await request(app)
-        .get('/test-async-rejection')
-        .expect(400);
+      const response = await request(app).get('/test-async-rejection').expect(400);
 
       expect(response.body).toMatchObject({
         success: false,
@@ -291,9 +275,7 @@ describe('Error Handler Middleware Tests', () => {
       app.use(notFoundHandler);
       app.use(errorHandler);
 
-      const response = await request(app)
-        .get('/non-existent-route')
-        .expect(404);
+      const response = await request(app).get('/non-existent-route').expect(404);
 
       expect(response.body).toMatchObject({
         success: false,
@@ -313,9 +295,7 @@ describe('Error Handler Middleware Tests', () => {
 
       app.use(errorHandler);
 
-      const response = await request(app)
-        .get('/test-format')
-        .expect(400);
+      const response = await request(app).get('/test-format').expect(400);
 
       // Verify response structure
       expect(response.body).toHaveProperty('success', false);
@@ -327,7 +307,9 @@ describe('Error Handler Middleware Tests', () => {
       expect(response.body.error).toHaveProperty('requestId');
 
       // Verify timestamp format (ISO string)
-      expect(new Date(response.body.error.timestamp).toISOString()).toBe(response.body.error.timestamp);
+      expect(new Date(response.body.error.timestamp).toISOString()).toBe(
+        response.body.error.timestamp
+      );
     });
 
     it('should omit undefined fields from response', async () => {
@@ -337,9 +319,7 @@ describe('Error Handler Middleware Tests', () => {
 
       app.use(errorHandler);
 
-      const response = await request(app)
-        .get('/test-minimal')
-        .expect(400);
+      const response = await request(app).get('/test-minimal').expect(400);
 
       expect(response.body.error).not.toHaveProperty('code');
       expect(response.body.error).not.toHaveProperty('details');

@@ -37,13 +37,10 @@ describe('Provider Factory Tests', () => {
     it('should create GitHub Actions provider with valid config', () => {
       const config = {
         apiKey: 'test-github-token',
-        baseUrl: 'https://api.github.com'
+        baseUrl: 'https://api.github.com',
       };
 
-      const provider = providerFactory.createProvider(
-        PipelineProvider.GITHUB_ACTIONS,
-        config
-      );
+      const provider = providerFactory.createProvider(PipelineProvider.GITHUB_ACTIONS, config);
 
       expect(provider).toBeInstanceOf(GitHubActionsProvider);
       expect(provider.getProviderType()).toBe(PipelineProvider.GITHUB_ACTIONS);
@@ -52,13 +49,10 @@ describe('Provider Factory Tests', () => {
     it('should create GitLab CI provider with valid config', () => {
       const config = {
         apiKey: 'test-gitlab-token',
-        baseUrl: 'https://gitlab.com/api/v4'
+        baseUrl: 'https://gitlab.com/api/v4',
       };
 
-      const provider = providerFactory.createProvider(
-        PipelineProvider.GITLAB_CI,
-        config
-      );
+      const provider = providerFactory.createProvider(PipelineProvider.GITLAB_CI, config);
 
       expect(provider).toBeInstanceOf(GitLabCIProvider);
       expect(provider.getProviderType()).toBe(PipelineProvider.GITLAB_CI);
@@ -66,7 +60,7 @@ describe('Provider Factory Tests', () => {
 
     it('should throw error for invalid GitHub config', () => {
       const config = {
-        baseUrl: 'https://api.github.com'
+        baseUrl: 'https://api.github.com',
         // Missing apiKey
       };
 
@@ -77,7 +71,7 @@ describe('Provider Factory Tests', () => {
 
     it('should throw error for invalid GitLab config', () => {
       const config = {
-        apiKey: 'test-token'
+        apiKey: 'test-token',
         // Missing baseUrl
       };
 
@@ -99,7 +93,7 @@ describe('Provider Factory Tests', () => {
     it('should validate GitHub Actions config correctly', () => {
       const validConfig = {
         apiKey: 'test-token',
-        baseUrl: 'https://api.github.com'
+        baseUrl: 'https://api.github.com',
       };
 
       const result = providerFactory.validateProviderConfig(
@@ -114,7 +108,7 @@ describe('Provider Factory Tests', () => {
     it('should validate GitLab CI config correctly', () => {
       const validConfig = {
         apiKey: 'test-token',
-        baseUrl: 'https://gitlab.com/api/v4'
+        baseUrl: 'https://gitlab.com/api/v4',
       };
 
       const result = providerFactory.validateProviderConfig(
@@ -128,7 +122,7 @@ describe('Provider Factory Tests', () => {
 
     it('should return validation errors for missing required fields', () => {
       const invalidConfig = {
-        baseUrl: 'https://gitlab.com/api/v4'
+        baseUrl: 'https://gitlab.com/api/v4',
         // Missing apiKey
       };
 
@@ -144,10 +138,7 @@ describe('Provider Factory Tests', () => {
     it('should return error for unknown provider', () => {
       const config = { apiKey: 'test' };
 
-      const result = providerFactory.validateProviderConfig(
-        'UNKNOWN' as PipelineProvider,
-        config
-      );
+      const result = providerFactory.validateProviderConfig('UNKNOWN' as PipelineProvider, config);
 
       expect(result.valid).toBe(false);
       expect(result.errors).toContain('Provider UNKNOWN is not registered');
@@ -158,7 +149,7 @@ describe('Provider Factory Tests', () => {
     it('should cache and retrieve provider instances', () => {
       const config = {
         apiKey: 'test-token',
-        baseUrl: 'https://api.github.com'
+        baseUrl: 'https://api.github.com',
       };
 
       const instanceId = 'test-github-instance';
@@ -175,15 +166,11 @@ describe('Provider Factory Tests', () => {
     it('should remove cached instances', () => {
       const config = {
         apiKey: 'test-token',
-        baseUrl: 'https://gitlab.com/api/v4'
+        baseUrl: 'https://gitlab.com/api/v4',
       };
 
       const instanceId = 'test-gitlab-instance';
-      providerFactory.createProvider(
-        PipelineProvider.GITLAB_CI,
-        config,
-        instanceId
-      );
+      providerFactory.createProvider(PipelineProvider.GITLAB_CI, config, instanceId);
 
       expect(providerFactory.getInstance(instanceId)).toBeDefined();
 
@@ -194,7 +181,7 @@ describe('Provider Factory Tests', () => {
 
     it('should clear all instances', () => {
       const config = { apiKey: 'test', baseUrl: 'https://api.github.com' };
-      
+
       providerFactory.createProvider(PipelineProvider.GITHUB_ACTIONS, config, 'instance1');
       providerFactory.createProvider(PipelineProvider.GITLAB_CI, config, 'instance2');
 
@@ -252,13 +239,13 @@ describe('Provider Factory Tests', () => {
 
     it('should return correct statistics', () => {
       const config = { apiKey: 'test', baseUrl: 'https://api.example.com' };
-      
+
       providerFactory.createProvider(PipelineProvider.GITHUB_ACTIONS, config, 'github1');
       providerFactory.createProvider(PipelineProvider.GITHUB_ACTIONS, config, 'github2');
       providerFactory.createProvider(PipelineProvider.GITLAB_CI, config, 'gitlab1');
 
       const stats = providerFactory.getProviderStatistics();
-      
+
       expect(stats.totalProviders).toBeGreaterThanOrEqual(2); // At least GitHub and GitLab
       expect(stats.activeInstances).toBe(3);
       expect(stats.instancesPerProvider[PipelineProvider.GITHUB_ACTIONS]).toBe(2);
@@ -270,13 +257,13 @@ describe('Provider Factory Tests', () => {
     it('should perform health check on active instances', async () => {
       // Clear cache to ensure clean state
       providerFactory.clearInstances();
-      
+
       const config = { apiKey: 'test', baseUrl: 'https://api.github.com' };
-      
+
       providerFactory.createProvider(PipelineProvider.GITHUB_ACTIONS, config, 'health-test');
 
       const healthResults = await providerFactory.healthCheck();
-      
+
       expect(healthResults).toHaveLength(1);
       expect(healthResults[0]?.instanceId).toBe('health-test');
       expect(healthResults[0]?.provider).toBe(PipelineProvider.GITHUB_ACTIONS);

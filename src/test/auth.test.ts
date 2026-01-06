@@ -1,6 +1,6 @@
 /**
  * Comprehensive JWT Authentication Middleware Tests
- * 
+ *
  * Tests covering:
  * - JWT token generation and verification
  * - API key authentication
@@ -9,7 +9,7 @@
  * - Security features (MFA, IP whitelisting, rate limiting)
  * - Error handling scenarios
  * - Utility functions
- * 
+ *
  * @author sirhCC
  * @version 1.0.0
  */
@@ -17,7 +17,7 @@
 import request from 'supertest';
 import express, { Application } from 'express';
 import jwt from 'jsonwebtoken';
-import { 
+import {
   AuthService,
   getAuthService,
   authenticateJWT,
@@ -32,7 +32,7 @@ import {
   Permission,
   JWTPayload,
   AuthenticatedRequest,
-  ROLE_PERMISSIONS
+  ROLE_PERMISSIONS,
 } from '../middleware/auth';
 import { AuthenticationError, AuthorizationError } from '../middleware/error-handler';
 import { errorHandler } from '../middleware/error-handler';
@@ -45,75 +45,79 @@ describe('JWT Authentication Middleware Tests', () => {
   beforeEach(() => {
     app = express();
     app.use(express.json());
-    
+
     testUserId = 'test-user-123';
     testSessionId = generateSessionId();
-    
+
     // Test routes for authentication
     app.get('/public', (req, res) => {
       res.json({ message: 'Public endpoint' });
     });
-    
+
     app.get('/protected', authenticateJWT, (req: AuthenticatedRequest, res) => {
-      res.json({ 
-        message: 'Protected endpoint', 
+      res.json({
+        message: 'Protected endpoint',
         user: req.user,
-        authenticated: true 
+        authenticated: true,
       });
     });
-    
-    app.get('/admin-only', 
-      authenticateJWT, 
-      requireRole(UserRole.ADMIN), 
+
+    app.get(
+      '/admin-only',
+      authenticateJWT,
+      requireRole(UserRole.ADMIN),
       (req: AuthenticatedRequest, res) => {
-        res.json({ 
-          message: 'Admin only endpoint', 
-          user: req.user 
+        res.json({
+          message: 'Admin only endpoint',
+          user: req.user,
         });
       }
     );
-    
-    app.get('/analyst-or-admin', 
-      authenticateJWT, 
-      requireRole(UserRole.ANALYST, UserRole.ADMIN), 
+
+    app.get(
+      '/analyst-or-admin',
+      authenticateJWT,
+      requireRole(UserRole.ANALYST, UserRole.ADMIN),
       (req: AuthenticatedRequest, res) => {
-        res.json({ 
-          message: 'Analyst or Admin endpoint', 
-          user: req.user 
+        res.json({
+          message: 'Analyst or Admin endpoint',
+          user: req.user,
         });
       }
     );
-    
-    app.get('/pipelines-read', 
-      authenticateJWT, 
-      requirePermission(Permission.PIPELINES_READ), 
+
+    app.get(
+      '/pipelines-read',
+      authenticateJWT,
+      requirePermission(Permission.PIPELINES_READ),
       (req: AuthenticatedRequest, res) => {
-        res.json({ 
-          message: 'Pipelines read endpoint', 
-          user: req.user 
+        res.json({
+          message: 'Pipelines read endpoint',
+          user: req.user,
         });
       }
     );
-    
-    app.get('/system-config', 
-      authenticateJWT, 
-      requirePermission(Permission.SYSTEM_CONFIG, Permission.SYSTEM_LOGS), 
+
+    app.get(
+      '/system-config',
+      authenticateJWT,
+      requirePermission(Permission.SYSTEM_CONFIG, Permission.SYSTEM_LOGS),
       (req: AuthenticatedRequest, res) => {
-        res.json({ 
-          message: 'System config endpoint', 
-          user: req.user 
+        res.json({
+          message: 'System config endpoint',
+          user: req.user,
         });
       }
     );
-    
+
     app.get('/optional', optionalAuth, (req: AuthenticatedRequest, res) => {
-      res.json({ 
-        message: 'Optional auth endpoint', 
+      res.json({
+        message: 'Optional auth endpoint',
         authenticated: !!req.user,
-        user: req.user 
+        user: req.user,
       });
     });
-    
+
     // Add error handler
     app.use(errorHandler);
   });
@@ -131,13 +135,13 @@ describe('JWT Authentication Middleware Tests', () => {
           email: 'test@example.com',
           role: UserRole.ANALYST,
           permissions: getRolePermissions(UserRole.ANALYST),
-          sessionId: testSessionId
+          sessionId: testSessionId,
         };
 
         const token = getAuthService().generateAccessToken(payload);
         expect(token).toBeDefined();
         expect(typeof token).toBe('string');
-        
+
         // Verify token can be decoded
         const decoded = jwt.verify(token, String(getAuthService().config.jwtSecret)) as JWTPayload;
         expect(decoded.userId).toBe(testUserId);
@@ -146,15 +150,19 @@ describe('JWT Authentication Middleware Tests', () => {
       });
 
       test('should generate valid refresh token', () => {
-        const token = getAuthService().generateRefreshToken(testUserId, testSessionId, 'family-123');
+        const token = getAuthService().generateRefreshToken(
+          testUserId,
+          testSessionId,
+          'family-123'
+        );
         expect(token).toBeDefined();
         expect(typeof token).toBe('string');
-        
+
         const decoded = jwt.verify(token, String(getAuthService().config.jwtRefreshSecret));
         expect(decoded).toMatchObject({
           userId: testUserId,
           sessionId: testSessionId,
-          tokenFamily: 'family-123'
+          tokenFamily: 'family-123',
         });
       });
 
@@ -164,19 +172,19 @@ describe('JWT Authentication Middleware Tests', () => {
           userId: testUserId,
           permissions: ['pipelines:read', 'reports:read'],
           rateLimit: 1000,
-          allowedIPs: ['192.168.1.1']
+          allowedIPs: ['192.168.1.1'],
         });
-        
+
         expect(apiKey).toBeDefined();
         expect(typeof apiKey).toBe('string');
-        
+
         const decoded = jwt.verify(apiKey, String(getAuthService().config.apiKeySecret));
         expect(decoded).toMatchObject({
           keyId: 'api-key-123',
           userId: testUserId,
           permissions: ['pipelines:read', 'reports:read'],
           rateLimit: 1000,
-          allowedIPs: ['192.168.1.1']
+          allowedIPs: ['192.168.1.1'],
         });
       });
     });
@@ -188,12 +196,15 @@ describe('JWT Authentication Middleware Tests', () => {
           email: 'test@example.com',
           role: UserRole.ANALYST,
           permissions: getRolePermissions(UserRole.ANALYST),
-          sessionId: testSessionId
+          sessionId: testSessionId,
         };
 
         const token = getAuthService().generateAccessToken(payload);
-        const decoded = getAuthService().verifyToken(token, String(getAuthService().config.jwtSecret));
-        
+        const decoded = getAuthService().verifyToken(
+          token,
+          String(getAuthService().config.jwtSecret)
+        );
+
         expect(decoded.userId).toBe(testUserId);
         expect(decoded.role).toBe(UserRole.ANALYST);
       });
@@ -203,7 +214,7 @@ describe('JWT Authentication Middleware Tests', () => {
           { userId: testUserId, exp: Math.floor(Date.now() / 1000) - 3600 },
           String(getAuthService().config.jwtSecret)
         );
-        
+
         expect(() => {
           getAuthService().verifyToken(expiredToken, String(getAuthService().config.jwtSecret));
         }).toThrow(AuthenticationError);
@@ -217,7 +228,7 @@ describe('JWT Authentication Middleware Tests', () => {
 
       test('should throw AuthenticationError for wrong secret', () => {
         const token = jwt.sign({ userId: testUserId }, 'wrong-secret');
-        
+
         expect(() => {
           getAuthService().verifyToken(token, String(getAuthService().config.jwtSecret));
         }).toThrow(AuthenticationError);
@@ -228,7 +239,7 @@ describe('JWT Authentication Middleware Tests', () => {
       test('should blacklist tokens', () => {
         const token = 'test-token-123';
         expect(getAuthService().isTokenBlacklisted(token)).toBe(false);
-        
+
         getAuthService().blacklistToken(token);
         expect(getAuthService().isTokenBlacklisted(token)).toBe(true);
       });
@@ -237,24 +248,24 @@ describe('JWT Authentication Middleware Tests', () => {
     describe('Failed Attempts Tracking', () => {
       test('should track failed login attempts', () => {
         const identifier = 'user@example.com';
-        
+
         expect(getAuthService().isAccountLocked(identifier)).toBe(false);
-        
+
         // Simulate multiple failed attempts
         for (let i = 0; i < 5; i++) {
           getAuthService().trackFailedAttempt(identifier);
         }
-        
+
         expect(getAuthService().isAccountLocked(identifier)).toBe(true);
       });
 
       test('should clear failed attempts on successful login', () => {
         const identifier = 'user@example.com';
-        
+
         getAuthService().trackFailedAttempt(identifier);
         getAuthService().trackFailedAttempt(identifier);
         getAuthService().clearFailedAttempts(identifier);
-        
+
         expect(getAuthService().isAccountLocked(identifier)).toBe(false);
       });
     });
@@ -267,22 +278,22 @@ describe('JWT Authentication Middleware Tests', () => {
 
       test('should check IP whitelist when provided', () => {
         const allowedIPs = ['192.168.1.1', '10.0.0.1'];
-        
+
         // For testing, we need to override the config temporarily
         const originalConfig = getAuthService().config.enableIpWhitelisting;
         (getAuthService() as any).authConfig.enableIpWhitelisting = true;
-        
+
         expect(getAuthService().isIpAllowed('192.168.1.1', allowedIPs)).toBe(true);
         expect(getAuthService().isIpAllowed('192.168.1.2', allowedIPs)).toBe(false);
         expect(getAuthService().isIpAllowed('*', allowedIPs)).toBe(false);
-        
+
         // Restore original config
         (getAuthService() as any).authConfig.enableIpWhitelisting = originalConfig;
       });
 
       test('should allow wildcard IP', () => {
         const allowedIPs = ['*'];
-        
+
         expect(getAuthService().isIpAllowed('192.168.1.1', allowedIPs)).toBe(true);
         expect(getAuthService().isIpAllowed('10.0.0.1', allowedIPs)).toBe(true);
       });
@@ -296,11 +307,11 @@ describe('JWT Authentication Middleware Tests', () => {
         email: 'test@example.com',
         role: UserRole.ANALYST,
         permissions: getRolePermissions(UserRole.ANALYST),
-        sessionId: testSessionId
+        sessionId: testSessionId,
       };
 
       const token = getAuthService().generateAccessToken(payload);
-      
+
       const response = await request(app)
         .get('/protected')
         .set('Authorization', `Bearer ${token}`)
@@ -316,13 +327,10 @@ describe('JWT Authentication Middleware Tests', () => {
         keyId: 'api-key-123',
         userId: testUserId,
         permissions: getRolePermissions(UserRole.DEVELOPER),
-        rateLimit: 1000
+        rateLimit: 1000,
       });
-      
-      const response = await request(app)
-        .get('/protected')
-        .set('x-api-key', apiKey)
-        .expect(200);
+
+      const response = await request(app).get('/protected').set('x-api-key', apiKey).expect(200);
 
       expect(response.body.authenticated).toBe(true);
       expect(response.body.user.userId).toBe(testUserId);
@@ -330,16 +338,11 @@ describe('JWT Authentication Middleware Tests', () => {
     });
 
     test('should reject missing authorization header', async () => {
-      await request(app)
-        .get('/protected')
-        .expect(401);
+      await request(app).get('/protected').expect(401);
     });
 
     test('should reject invalid authorization header format', async () => {
-      await request(app)
-        .get('/protected')
-        .set('Authorization', 'InvalidFormat token')
-        .expect(401);
+      await request(app).get('/protected').set('Authorization', 'InvalidFormat token').expect(401);
     });
 
     test('should reject blacklisted token', async () => {
@@ -348,28 +351,25 @@ describe('JWT Authentication Middleware Tests', () => {
         email: 'test@example.com',
         role: UserRole.ANALYST,
         permissions: getRolePermissions(UserRole.ANALYST),
-        sessionId: testSessionId
+        sessionId: testSessionId,
       };
 
       const token = getAuthService().generateAccessToken(payload);
       getAuthService().blacklistToken(token);
-      
-      await request(app)
-        .get('/protected')
-        .set('Authorization', `Bearer ${token}`)
-        .expect(401);
+
+      await request(app).get('/protected').set('Authorization', `Bearer ${token}`).expect(401);
     });
 
     test('should reject expired token', async () => {
       const expiredToken = jwt.sign(
-        { 
+        {
           userId: testUserId,
           role: UserRole.ANALYST,
-          exp: Math.floor(Date.now() / 1000) - 3600 
+          exp: Math.floor(Date.now() / 1000) - 3600,
         },
         String(getAuthService().config.jwtSecret)
       );
-      
+
       await request(app)
         .get('/protected')
         .set('Authorization', `Bearer ${expiredToken}`)
@@ -384,15 +384,12 @@ describe('JWT Authentication Middleware Tests', () => {
         email: 'admin@example.com',
         role: UserRole.ADMIN,
         permissions: getRolePermissions(UserRole.ADMIN),
-        sessionId: testSessionId
+        sessionId: testSessionId,
       };
 
       const token = getAuthService().generateAccessToken(payload);
-      
-      await request(app)
-        .get('/admin-only')
-        .set('Authorization', `Bearer ${token}`)
-        .expect(200);
+
+      await request(app).get('/admin-only').set('Authorization', `Bearer ${token}`).expect(200);
     });
 
     test('should deny access for incorrect role', async () => {
@@ -401,15 +398,12 @@ describe('JWT Authentication Middleware Tests', () => {
         email: 'user@example.com',
         role: UserRole.VIEWER,
         permissions: getRolePermissions(UserRole.VIEWER),
-        sessionId: testSessionId
+        sessionId: testSessionId,
       };
 
       const token = getAuthService().generateAccessToken(payload);
-      
-      await request(app)
-        .get('/admin-only')
-        .set('Authorization', `Bearer ${token}`)
-        .expect(403);
+
+      await request(app).get('/admin-only').set('Authorization', `Bearer ${token}`).expect(403);
     });
 
     test('should allow access for multiple allowed roles', async () => {
@@ -418,7 +412,7 @@ describe('JWT Authentication Middleware Tests', () => {
         email: 'analyst@example.com',
         role: UserRole.ANALYST,
         permissions: getRolePermissions(UserRole.ANALYST),
-        sessionId: testSessionId
+        sessionId: testSessionId,
       };
 
       const adminPayload = {
@@ -426,12 +420,12 @@ describe('JWT Authentication Middleware Tests', () => {
         email: 'admin@example.com',
         role: UserRole.ADMIN,
         permissions: getRolePermissions(UserRole.ADMIN),
-        sessionId: testSessionId
+        sessionId: testSessionId,
       };
 
       const analystToken = getAuthService().generateAccessToken(analystPayload);
       const adminToken = getAuthService().generateAccessToken(adminPayload);
-      
+
       await request(app)
         .get('/analyst-or-admin')
         .set('Authorization', `Bearer ${analystToken}`)
@@ -451,15 +445,12 @@ describe('JWT Authentication Middleware Tests', () => {
         email: 'analyst@example.com',
         role: UserRole.ANALYST,
         permissions: getRolePermissions(UserRole.ANALYST),
-        sessionId: testSessionId
+        sessionId: testSessionId,
       };
 
       const token = getAuthService().generateAccessToken(payload);
-      
-      await request(app)
-        .get('/pipelines-read')
-        .set('Authorization', `Bearer ${token}`)
-        .expect(200);
+
+      await request(app).get('/pipelines-read').set('Authorization', `Bearer ${token}`).expect(200);
     });
 
     test('should deny access without required permission', async () => {
@@ -468,15 +459,12 @@ describe('JWT Authentication Middleware Tests', () => {
         email: 'viewer@example.com',
         role: UserRole.VIEWER,
         permissions: getRolePermissions(UserRole.VIEWER),
-        sessionId: testSessionId
+        sessionId: testSessionId,
       };
 
       const token = getAuthService().generateAccessToken(payload);
-      
-      await request(app)
-        .get('/system-config')
-        .set('Authorization', `Bearer ${token}`)
-        .expect(403);
+
+      await request(app).get('/system-config').set('Authorization', `Bearer ${token}`).expect(403);
     });
 
     test('should require all specified permissions', async () => {
@@ -485,23 +473,18 @@ describe('JWT Authentication Middleware Tests', () => {
         email: 'admin@example.com',
         role: UserRole.ADMIN,
         permissions: getRolePermissions(UserRole.ADMIN),
-        sessionId: testSessionId
+        sessionId: testSessionId,
       };
 
       const token = getAuthService().generateAccessToken(payload);
-      
-      await request(app)
-        .get('/system-config')
-        .set('Authorization', `Bearer ${token}`)
-        .expect(200);
+
+      await request(app).get('/system-config').set('Authorization', `Bearer ${token}`).expect(200);
     });
   });
 
   describe('Optional Authentication', () => {
     test('should work without authentication', async () => {
-      const response = await request(app)
-        .get('/optional')
-        .expect(200);
+      const response = await request(app).get('/optional').expect(200);
 
       expect(response.body.authenticated).toBe(false);
       expect(response.body.user).toBeUndefined();
@@ -513,11 +496,11 @@ describe('JWT Authentication Middleware Tests', () => {
         email: 'user@example.com',
         role: UserRole.VIEWER,
         permissions: getRolePermissions(UserRole.VIEWER),
-        sessionId: testSessionId
+        sessionId: testSessionId,
       };
 
       const token = getAuthService().generateAccessToken(payload);
-      
+
       const response = await request(app)
         .get('/optional')
         .set('Authorization', `Bearer ${token}`)
@@ -541,14 +524,14 @@ describe('JWT Authentication Middleware Tests', () => {
     test('should hash and verify passwords correctly', async () => {
       const password = 'testPassword123!';
       const hash = await hashPassword(password);
-      
+
       expect(hash).toBeDefined();
       expect(hash).not.toBe(password);
       expect(hash.length).toBeGreaterThan(50);
-      
+
       const isValid = await verifyPassword(password, hash);
       expect(isValid).toBe(true);
-      
+
       const isInvalid = await verifyPassword('wrongPassword', hash);
       expect(isInvalid).toBe(false);
     });
@@ -570,13 +553,13 @@ describe('JWT Authentication Middleware Tests', () => {
       // Admin should have all permissions
       const allPermissions = Object.values(Permission);
       expect(getRolePermissions(UserRole.ADMIN)).toEqual(allPermissions);
-      
+
       // Analyst should have subset of permissions
       const analystPermissions = getRolePermissions(UserRole.ANALYST);
       expect(analystPermissions).toContain(Permission.PIPELINES_READ);
       expect(analystPermissions).toContain(Permission.PIPELINES_WRITE);
       expect(analystPermissions).not.toContain(Permission.SYSTEM_CONFIG);
-      
+
       // Viewer should have minimal permissions
       const viewerPermissions = getRolePermissions(UserRole.VIEWER);
       expect(viewerPermissions).toContain(Permission.PIPELINES_READ);
@@ -589,24 +572,24 @@ describe('JWT Authentication Middleware Tests', () => {
     test('should generate unique session IDs', () => {
       const sessionId1 = generateSessionId();
       const sessionId2 = generateSessionId();
-      
+
       expect(sessionId1).toBeDefined();
       expect(sessionId2).toBeDefined();
       expect(sessionId1).not.toBe(sessionId2);
-      expect(sessionId1).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/);
+      expect(sessionId1).toMatch(
+        /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/
+      );
     });
   });
 
   describe('Security Headers and Best Practices', () => {
     test('should not expose sensitive information in errors', async () => {
-      const response = await request(app)
-        .get('/protected')
-        .expect(401);
+      const response = await request(app).get('/protected').expect(401);
 
       // Check that error response exists and has proper format
       expect(response.body).toBeDefined();
       expect(response.body.error || response.body.message).toBeDefined();
-      
+
       // Ensure no sensitive information is exposed
       const responseText = JSON.stringify(response.body);
       expect(responseText).not.toContain(getAuthService().config.jwtSecret);

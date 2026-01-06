@@ -36,9 +36,9 @@ describe('API Versioning System', () => {
       const req = {
         headers: { 'x-api-version': 'v1' },
         query: {},
-        originalUrl: '/api/v1/test'
+        originalUrl: '/api/v1/test',
       };
-      
+
       const version = apiVersionManager.extractVersionFromRequest(req);
       expect(version).toBe('v1');
     });
@@ -47,9 +47,9 @@ describe('API Versioning System', () => {
       const req = {
         headers: {},
         query: {},
-        originalUrl: '/api/v1/pipelines'
+        originalUrl: '/api/v1/pipelines',
       };
-      
+
       const version = apiVersionManager.extractVersionFromRequest(req);
       expect(version).toBe('v1');
     });
@@ -58,9 +58,9 @@ describe('API Versioning System', () => {
       const req = {
         headers: {},
         query: {},
-        originalUrl: '/api/test'
+        originalUrl: '/api/test',
       };
-      
+
       const version = apiVersionManager.extractVersionFromRequest(req);
       expect(version).toBe('v1');
     });
@@ -75,7 +75,7 @@ describe('API Versioning System', () => {
       expect(metadata).toMatchObject({
         version: 'v1',
         features: expect.arrayContaining(['authentication', 'pipeline-management']),
-        breaking: false
+        breaking: false,
       });
     });
 
@@ -87,7 +87,7 @@ describe('API Versioning System', () => {
     it('should include deprecation warnings for deprecated versions', () => {
       // First deprecate v1 for testing
       apiVersionManager.deprecateVersion('v1', '2025-12-31', '2026-06-30');
-      
+
       const headers = apiVersionManager.getResponseHeaders('v1');
       expect(headers['X-API-Deprecation-Warning']).toContain('deprecated');
       expect(headers['X-API-Sunset']).toBe('2026-06-30');
@@ -97,7 +97,7 @@ describe('API Versioning System', () => {
   describe('ResponseBuilder with Versioning', () => {
     it('should include version in success responses', () => {
       const response = ResponseBuilder.success({ test: 'data' }, undefined, 'req-123', 'v1');
-      
+
       expect(response.success).toBe(true);
       expect(response.version).toBe('v1');
       expect(response.requestId).toBe('req-123');
@@ -112,7 +112,7 @@ describe('API Versioning System', () => {
         'req-123',
         'v1'
       );
-      
+
       expect(response.success).toBe(false);
       expect(response.version).toBe('v1');
       expect(response.requestId).toBe('req-123');
@@ -121,13 +121,13 @@ describe('API Versioning System', () => {
 
     it('should use current version when no version specified', () => {
       const response = ResponseBuilder.success({ test: 'data' });
-      
+
       expect(response.version).toBe('v1');
     });
 
     it('should handle created responses with versioning', () => {
       const response = ResponseBuilder.created({ id: 1, name: 'test' }, 'req-123', 'v1');
-      
+
       expect(response.success).toBe(true);
       expect(response.version).toBe('v1');
       expect(response.data?.created).toBe(true);
@@ -135,7 +135,7 @@ describe('API Versioning System', () => {
 
     it('should handle not found responses with versioning', () => {
       const response = ResponseBuilder.notFound('Pipeline', '123', 'req-123', 'v1');
-      
+
       expect(response.success).toBe(false);
       expect(response.version).toBe('v1');
       expect(response.error?.message).toContain('Pipeline');
@@ -146,7 +146,7 @@ describe('API Versioning System', () => {
   describe('Version Features', () => {
     it('should define features for v1', () => {
       const versionConfig = apiVersionManager.getVersionConfig('v1');
-      
+
       expect(versionConfig?.features).toContain('authentication');
       expect(versionConfig?.features).toContain('pipeline-management');
       expect(versionConfig?.features).toContain('basic-analytics');
@@ -172,7 +172,7 @@ describe('API Versioning System', () => {
 
       apiVersionManager.addVersion(newVersionConfig);
       const retrievedConfig = apiVersionManager.getVersionConfig('v2');
-      
+
       expect(retrievedConfig).toMatchObject(newVersionConfig);
     });
 
@@ -189,7 +189,7 @@ describe('API Versioning System', () => {
 
       // Deprecate v1
       apiVersionManager.deprecateVersion('v1', '2025-12-31', '2026-06-30');
-      
+
       const v1Config = apiVersionManager.getVersionConfig('v1');
       expect(v1Config?.deprecated).toBe(true);
       expect(v1Config?.deprecationDate).toBe('2025-12-31');
@@ -203,7 +203,7 @@ describe('API Versioning System', () => {
 
     it('should handle version unsupporting', () => {
       apiVersionManager.unsupportVersion('v1');
-      
+
       const v1Config = apiVersionManager.getVersionConfig('v1');
       expect(v1Config?.supported).toBe(false);
       expect(apiVersionManager.isVersionSupported('v1')).toBe(false);
@@ -215,9 +215,9 @@ describe('API Versioning System', () => {
       const req = {
         headers: { 'x-api-version': 'v99' },
         query: {},
-        originalUrl: '/api/v99/test'
+        originalUrl: '/api/v99/test',
       };
-      
+
       const version = apiVersionManager.extractVersionFromRequest(req);
       expect(version).toBe('v1'); // Falls back to default
     });
@@ -226,9 +226,9 @@ describe('API Versioning System', () => {
       const req = {
         headers: { 'x-api-version': 'invalid-version' },
         query: { version: 'also-invalid' },
-        originalUrl: '/api/malformed/test'
+        originalUrl: '/api/malformed/test',
       };
-      
+
       const version = apiVersionManager.extractVersionFromRequest(req);
       expect(version).toBe('v1'); // Falls back to default
     });

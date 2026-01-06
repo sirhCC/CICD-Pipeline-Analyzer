@@ -3,7 +3,10 @@
  * Tests for the Phase 3 Statistical Analytics Engine
  */
 
-import { getStatisticalAnalyticsService, StatisticalDataPoint } from '../services/statistical-analytics.service';
+import {
+  getStatisticalAnalyticsService,
+  StatisticalDataPoint,
+} from '../services/statistical-analytics.service';
 import { AppError } from '../middleware/error-handler';
 
 describe('StatisticalAnalyticsService', () => {
@@ -30,7 +33,7 @@ describe('StatisticalAnalyticsService', () => {
       ];
 
       const results = service.detectAnomalies(data, 'z-score');
-      
+
       expect(results).toHaveLength(1);
       expect(results[0]?.isAnomaly).toBe(true);
       expect(results[0]?.method).toBe('z-score');
@@ -43,12 +46,12 @@ describe('StatisticalAnalyticsService', () => {
         timestamp: new Date(`2024-01-${i + 1}`),
         value: 10 + Math.random() * 2, // Values around 10-12
       }));
-      
+
       // Add clear outlier
       data.push({ timestamp: new Date('2024-01-21'), value: 100 });
 
       const results = service.detectAnomalies(data, 'percentile');
-      
+
       expect(results.length).toBeGreaterThan(0);
       const outlier = results.find(r => r.actualValue === 100);
       expect(outlier).toBeDefined();
@@ -56,9 +59,7 @@ describe('StatisticalAnalyticsService', () => {
     });
 
     it('should throw error for insufficient data', () => {
-      const data: StatisticalDataPoint[] = [
-        { timestamp: new Date('2024-01-01'), value: 10 },
-      ];
+      const data: StatisticalDataPoint[] = [{ timestamp: new Date('2024-01-01'), value: 10 }];
 
       expect(() => service.detectAnomalies(data)).toThrow(AppError);
     });
@@ -72,7 +73,7 @@ describe('StatisticalAnalyticsService', () => {
       }));
 
       const result = service.analyzeTrend(data);
-      
+
       expect(result.trend).toBe('increasing');
       expect(result.slope).toBeGreaterThan(0);
       expect(result.correlation).toBeGreaterThan(0.9);
@@ -85,7 +86,7 @@ describe('StatisticalAnalyticsService', () => {
       }));
 
       const result = service.analyzeTrend(data);
-      
+
       expect(result.trend).toBe('decreasing');
       expect(result.slope).toBeLessThan(0);
       expect(result.changeRate).toBeLessThan(0);
@@ -98,15 +99,13 @@ describe('StatisticalAnalyticsService', () => {
       }));
 
       const result = service.analyzeTrend(data);
-      
+
       expect(result.trend).toBe('stable');
       expect(Math.abs(result.slope)).toBeLessThan(1);
     });
 
     it('should throw error for insufficient data', () => {
-      const data: StatisticalDataPoint[] = [
-        { timestamp: new Date('2024-01-01'), value: 10 },
-      ];
+      const data: StatisticalDataPoint[] = [{ timestamp: new Date('2024-01-01'), value: 10 }];
 
       expect(() => service.analyzeTrend(data)).toThrow(AppError);
     });
@@ -121,7 +120,7 @@ describe('StatisticalAnalyticsService', () => {
 
       const currentValue = 35; // Above average
       const result = service.generateBenchmark(currentValue, historicalData);
-      
+
       expect(result.currentValue).toBe(35);
       expect(result.benchmark).toBeGreaterThan(20);
       expect(result.benchmark).toBeLessThan(30);
@@ -148,7 +147,7 @@ describe('StatisticalAnalyticsService', () => {
       }));
 
       const result = service.monitorSLA(85, 95, historicalData, 'performance');
-      
+
       expect(result.violated).toBe(true);
       expect(result.slaTarget).toBe(95);
       expect(result.actualValue).toBe(85);
@@ -161,7 +160,7 @@ describe('StatisticalAnalyticsService', () => {
     it('should not detect violations when within SLA', () => {
       const historicalData: StatisticalDataPoint[] = [];
       const result = service.monitorSLA(98, 95, historicalData, 'availability');
-      
+
       expect(result.violated).toBe(false);
       expect(result.violationPercent).toBe(0);
     });
@@ -171,7 +170,7 @@ describe('StatisticalAnalyticsService', () => {
     it('should analyze costs and provide optimization recommendations', () => {
       const historicalCostData: StatisticalDataPoint[] = Array.from({ length: 30 }, (_, i) => ({
         timestamp: new Date(Date.now() - (30 - i) * 24 * 60 * 60 * 1000),
-        value: 0.50 + Math.random() * 0.20, // $0.50-$0.70
+        value: 0.5 + Math.random() * 0.2, // $0.50-$0.70
       }));
 
       const resourceUsage = {
@@ -182,7 +181,7 @@ describe('StatisticalAnalyticsService', () => {
       };
 
       const result = service.analyzeCosts(45, resourceUsage, historicalCostData);
-      
+
       expect(result.totalCost).toBeGreaterThan(0);
       expect(result.costPerMinute).toBeGreaterThan(0);
       expect(result.optimizationOpportunities.length).toBeGreaterThan(0);
@@ -206,7 +205,7 @@ describe('StatisticalAnalyticsService', () => {
       };
 
       const result = service.analyzeCosts(30, resourceUsage, []);
-      
+
       expect(result.totalCost).toBeGreaterThan(0);
       expect(result.costPerMinute).toBeGreaterThan(0);
       expect(result.costTrend).toBe(null);
@@ -228,7 +227,7 @@ describe('StatisticalAnalyticsService', () => {
       const trendResult = service.analyzeTrend(data);
       expect(trendResult.slope).toBeGreaterThan(0); // Should detect upward trend
       expect(trendResult.correlation).toBeGreaterThan(0.9); // Strong correlation
-      
+
       const benchmarkResult = service.generateBenchmark(3, data);
       expect(benchmarkResult.benchmark).toBe(3); // Mean of 1,2,3,4,5
       expect(benchmarkResult.percentile).toBe(60); // 3 is 60th percentile in [1,2,3,4,5]
@@ -243,9 +242,7 @@ describe('StatisticalAnalyticsService', () => {
     });
 
     it('should handle single data point', () => {
-      const singlePoint: StatisticalDataPoint[] = [
-        { timestamp: new Date(), value: 42 }
-      ];
+      const singlePoint: StatisticalDataPoint[] = [{ timestamp: new Date(), value: 42 }];
 
       expect(() => service.detectAnomalies(singlePoint)).toThrow(AppError);
       expect(() => service.analyzeTrend(singlePoint)).toThrow(AppError);

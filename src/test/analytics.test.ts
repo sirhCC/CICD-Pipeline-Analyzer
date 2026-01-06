@@ -15,7 +15,7 @@ jest.mock('../repositories/factory.enhanced', () => {
     description: 'Test pipeline description',
     isActive: true,
     createdAt: new Date('2024-01-01'),
-    updatedAt: new Date('2024-01-01')
+    updatedAt: new Date('2024-01-01'),
   };
 
   // Mock pipeline runs
@@ -27,7 +27,7 @@ jest.mock('../repositories/factory.enhanced', () => {
       startTime: new Date('2024-01-01T10:00:00Z'),
       endTime: new Date('2024-01-01T10:30:00Z'),
       duration: 1800,
-      errorMessage: null
+      errorMessage: null,
     },
     {
       id: 'run-2',
@@ -36,8 +36,8 @@ jest.mock('../repositories/factory.enhanced', () => {
       startTime: new Date('2024-01-01T11:00:00Z'),
       endTime: new Date('2024-01-01T11:15:00Z'),
       duration: 900,
-      errorMessage: 'Test error message'
-    }
+      errorMessage: 'Test error message',
+    },
   ];
 
   // Mock alerts
@@ -50,7 +50,7 @@ jest.mock('../repositories/factory.enhanced', () => {
       severity: 'warning',
       acknowledged: false,
       acknowledgedBy: null,
-      createdAt: new Date('2024-01-01')
+      createdAt: new Date('2024-01-01'),
     },
     {
       id: '550e8400-e29b-41d4-a716-446655440000',
@@ -60,8 +60,8 @@ jest.mock('../repositories/factory.enhanced', () => {
       severity: 'info',
       acknowledged: true,
       acknowledgedBy: 'admin',
-      createdAt: new Date('2024-01-01')
-    }
+      createdAt: new Date('2024-01-01'),
+    },
   ];
 
   // Mock metrics
@@ -75,15 +75,18 @@ jest.mock('../repositories/factory.enhanced', () => {
       failedRuns: 2,
       avgDuration: 1500,
       successRate: 0.8,
-      createdAt: new Date('2024-01-01')
-    }
+      createdAt: new Date('2024-01-01'),
+    },
   ];
 
   return {
     repositoryFactory: {
       getPipelineRepository: jest.fn().mockReturnValue({
         findOne: jest.fn().mockImplementation(({ where }) => {
-          if (where?.id === 'test-pipeline-id' || where?.id === '550e8400-e29b-41d4-a716-446655440000') {
+          if (
+            where?.id === 'test-pipeline-id' ||
+            where?.id === '550e8400-e29b-41d4-a716-446655440000'
+          ) {
             return Promise.resolve(mockPipeline);
           }
           return Promise.resolve(null);
@@ -101,13 +104,16 @@ jest.mock('../repositories/factory.enhanced', () => {
         find: jest.fn().mockResolvedValue(mockRuns),
         count: jest.fn().mockResolvedValue(mockRuns.length),
       }),
-      getRepository: jest.fn().mockImplementation((entity) => {
+      getRepository: jest.fn().mockImplementation(entity => {
         const entityName = entity.name || (typeof entity === 'string' ? entity : 'Unknown');
-        
+
         if (entityName === 'Pipeline') {
           return {
             findOne: jest.fn().mockImplementation(({ where }) => {
-              if (where?.id === 'test-pipeline-id' || where?.id === '550e8400-e29b-41d4-a716-446655440000') {
+              if (
+                where?.id === 'test-pipeline-id' ||
+                where?.id === '550e8400-e29b-41d4-a716-446655440000'
+              ) {
                 return Promise.resolve(mockPipeline);
               }
               return Promise.resolve(null);
@@ -116,7 +122,7 @@ jest.mock('../repositories/factory.enhanced', () => {
             count: jest.fn().mockResolvedValue(1),
           };
         }
-        
+
         if (entityName === 'PipelineRun') {
           return {
             findOne: jest.fn().mockResolvedValue(mockRuns[0]),
@@ -124,7 +130,7 @@ jest.mock('../repositories/factory.enhanced', () => {
             count: jest.fn().mockResolvedValue(mockRuns.length),
           };
         }
-        
+
         if (entityName === 'AnalyticsAlert') {
           return {
             findOne: jest.fn().mockImplementation(({ where }) => {
@@ -138,19 +144,23 @@ jest.mock('../repositories/factory.enhanced', () => {
             }),
             find: jest.fn().mockResolvedValue(mockAlerts),
             count: jest.fn().mockResolvedValue(mockAlerts.length),
-            save: jest.fn().mockImplementation((alert) => Promise.resolve({ ...alert, id: alert.id || 'mock-alert-id' })),
+            save: jest
+              .fn()
+              .mockImplementation(alert =>
+                Promise.resolve({ ...alert, id: alert.id || 'mock-alert-id' })
+              ),
             update: jest.fn().mockResolvedValue({ affected: 1 }),
           };
         }
-        
+
         // Default repository for metrics, patterns, etc.
         return {
           findOne: jest.fn().mockResolvedValue(null),
           find: jest.fn().mockResolvedValue([]),
           findAndCount: jest.fn().mockResolvedValue([[], 0]),
           count: jest.fn().mockResolvedValue(0),
-          save: jest.fn().mockImplementation((entity) => Promise.resolve(entity)),
-          create: jest.fn().mockImplementation((data) => ({ id: 'mock-id', ...data })),
+          save: jest.fn().mockImplementation(entity => Promise.resolve(entity)),
+          create: jest.fn().mockImplementation(data => ({ id: 'mock-id', ...data })),
           update: jest.fn().mockResolvedValue({ affected: 1 }),
           delete: jest.fn().mockResolvedValue({ affected: 1 }),
           createQueryBuilder: jest.fn(() => ({
@@ -171,14 +181,19 @@ jest.mock('../repositories/factory.enhanced', () => {
           })),
         };
       }),
-    }
+    },
   };
 });
 
 import { AnalyticsService } from '../services/analytics.service';
 import analyticsRoutes from '../routes/analytics.routes';
 import { AuthService, UserRole, getAuthService } from '../middleware/auth';
-import { PipelineMetrics, FailurePattern, OptimizationRecommendation, AnalyticsAlert } from '../entities/pipeline-metrics.entity';
+import {
+  PipelineMetrics,
+  FailurePattern,
+  OptimizationRecommendation,
+  AnalyticsAlert,
+} from '../entities/pipeline-metrics.entity';
 
 // Mock config manager
 jest.mock('../config', () => {
@@ -192,13 +207,13 @@ jest.mock('../config', () => {
       requireMfa: false,
       enableApiKeys: true,
       maxFailedAttempts: 5,
-      lockoutDuration: 15
+      lockoutDuration: 15,
     },
     logging: {
       level: 'info',
       format: 'json',
       enableConsole: true,
-      enableFile: false
+      enableFile: false,
     },
     database: {
       type: 'postgres',
@@ -206,8 +221,8 @@ jest.mock('../config', () => {
       port: 5432,
       database: 'test_db',
       username: 'test',
-      password: 'test'
-    }
+      password: 'test',
+    },
   };
 
   return {
@@ -238,21 +253,21 @@ jest.mock('../config', () => {
         maxFiles: 5,
         maxSize: '10m',
         format: 'json',
-        logging: mockConfig.logging
+        logging: mockConfig.logging,
       }),
       getDatabase: jest.fn().mockReturnValue(mockConfig.database),
       getSecurity: jest.fn().mockReturnValue({
         ...mockConfig.auth,
-        auth: mockConfig.auth
+        auth: mockConfig.auth,
       }),
-      getConfig: jest.fn().mockReturnValue(mockConfig)
-    }
+      getConfig: jest.fn().mockReturnValue(mockConfig),
+    },
   };
 });
 
 describe('Analytics Service Tests', () => {
   let analyticsService: AnalyticsService;
-  
+
   beforeEach(() => {
     analyticsService = new AnalyticsService({
       enableRealTimeAnalysis: false, // Disable to prevent setInterval open handles
@@ -260,10 +275,10 @@ describe('Analytics Service Tests', () => {
       alertThresholds: {
         failureRate: 0.15,
         avgDuration: 1800,
-        errorSpike: 5
+        errorSpike: 5,
       },
       batchSize: 100,
-      analysisInterval: 15
+      analysisInterval: 15,
     });
   });
 
@@ -285,14 +300,14 @@ describe('Analytics Service Tests', () => {
         enableRealTimeAnalysis: false,
         metricRetentionDays: 30,
         alertThresholds: {
-          failureRate: 0.20,
+          failureRate: 0.2,
           avgDuration: 2400,
-          errorSpike: 10
+          errorSpike: 10,
         },
         batchSize: 50,
-        analysisInterval: 30
+        analysisInterval: 30,
       };
-      
+
       const service = new AnalyticsService(config);
       expect(service).toBeDefined();
     });
@@ -302,9 +317,9 @@ describe('Analytics Service Tests', () => {
     it('should calculate metrics for hourly period', async () => {
       const pipelineId = 'test-pipeline-id';
       const metrics = await analyticsService.calculateMetrics(pipelineId, 'hourly');
-      
+
       expect(Array.isArray(metrics)).toBe(true);
-      
+
       if (metrics.length > 0) {
         const metric = metrics[0];
         expect(metric).toBeDefined();
@@ -321,11 +336,11 @@ describe('Analytics Service Tests', () => {
     it('should calculate metrics for different time periods', async () => {
       const pipelineId = 'test-pipeline-id';
       const periods = ['hourly', 'daily', 'weekly', 'monthly'] as const;
-      
+
       for (const period of periods) {
         const metrics = await analyticsService.calculateMetrics(pipelineId, period);
         expect(Array.isArray(metrics)).toBe(true);
-        
+
         if (metrics.length > 0 && metrics[0]) {
           expect(metrics[0].aggregationPeriod).toBe(period);
         }
@@ -334,8 +349,9 @@ describe('Analytics Service Tests', () => {
 
     it('should handle metrics calculation for non-existent pipeline', async () => {
       // This should throw an error for non-existent pipeline
-      await expect(analyticsService.calculateMetrics('non-existent', 'daily'))
-        .rejects.toThrow('Pipeline not found');
+      await expect(analyticsService.calculateMetrics('non-existent', 'daily')).rejects.toThrow(
+        'Pipeline not found'
+      );
     });
   });
 
@@ -343,9 +359,9 @@ describe('Analytics Service Tests', () => {
     it('should detect patterns for specific pipeline', async () => {
       const pipelineId = 'test-pipeline-id';
       const patterns = await analyticsService.detectFailurePatterns(pipelineId);
-      
+
       expect(Array.isArray(patterns)).toBe(true);
-      
+
       if (patterns.length > 0) {
         const pattern = patterns[0];
         expect(pattern).toBeDefined();
@@ -365,9 +381,9 @@ describe('Analytics Service Tests', () => {
 
     it('should detect global patterns across all pipelines', async () => {
       const patterns = await analyticsService.detectFailurePatterns();
-      
+
       expect(Array.isArray(patterns)).toBe(true);
-      
+
       if (patterns.length > 0) {
         const pattern = patterns[0];
         expect(pattern).toBeDefined();
@@ -388,10 +404,11 @@ describe('Analytics Service Tests', () => {
   describe('Optimization Recommendations', () => {
     it('should generate recommendations for pipeline', async () => {
       const pipelineId = 'test-pipeline-id';
-      const recommendations = await analyticsService.generateOptimizationRecommendations(pipelineId);
-      
+      const recommendations =
+        await analyticsService.generateOptimizationRecommendations(pipelineId);
+
       expect(Array.isArray(recommendations)).toBe(true);
-      
+
       if (recommendations.length > 0) {
         const recommendation = recommendations[0];
         expect(recommendation).toBeDefined();
@@ -410,10 +427,11 @@ describe('Analytics Service Tests', () => {
     });
 
     it('should generate different types of recommendations', async () => {
-      const recommendations = await analyticsService.generateOptimizationRecommendations('test-pipeline-id');
-      
+      const recommendations =
+        await analyticsService.generateOptimizationRecommendations('test-pipeline-id');
+
       const types = ['performance', 'reliability', 'cost', 'security', 'maintainability'];
-      
+
       if (recommendations.length > 0) {
         recommendations.forEach(rec => {
           expect(typeof rec.recommendationType).toBe('string');
@@ -426,7 +444,7 @@ describe('Analytics Service Tests', () => {
   describe('Dashboard Generation', () => {
     it('should generate dashboard data with default parameters', async () => {
       const dashboard = await analyticsService.generateDashboard({});
-      
+
       expect(dashboard).toBeDefined();
       expect(typeof dashboard.summary).toBe('object');
       expect(typeof dashboard.summary.totalPipelines).toBe('number');
@@ -443,16 +461,16 @@ describe('Analytics Service Tests', () => {
       const pipelineId = 'test-pipeline-id';
       const dashboard = await analyticsService.generateDashboard({
         pipelineId,
-        timeRange: 'daily'
+        timeRange: 'daily',
       });
-      
+
       expect(dashboard).toBeDefined();
       expect(dashboard.summary.totalPipelines).toBe(1);
     });
 
     it('should generate dashboard for different time ranges', async () => {
       const timeRanges = ['hourly', 'daily', 'weekly', 'monthly'];
-      
+
       for (const timeRange of timeRanges) {
         const dashboard = await analyticsService.generateDashboard({ timeRange });
         expect(dashboard).toBeDefined();
@@ -463,9 +481,9 @@ describe('Analytics Service Tests', () => {
   describe('Alert Management', () => {
     it('should generate alerts based on thresholds', async () => {
       const alerts = await analyticsService.generateAlerts();
-      
+
       expect(Array.isArray(alerts)).toBe(true);
-      
+
       if (alerts.length > 0) {
         const alert = alerts[0];
         expect(alert).toBeDefined();
@@ -490,9 +508,9 @@ describe('Analytics Service Tests', () => {
       const mockAlertId = 'test-alert-id';
       const updatedAlert = await analyticsService.updateAlert(mockAlertId, {
         acknowledged: true,
-        acknowledgedBy: 'test-user'
+        acknowledgedBy: 'test-user',
       });
-      
+
       expect(updatedAlert).toBeDefined();
       // The updated alert should have acknowledged status
       expect(updatedAlert.acknowledged).toBe(true);
@@ -503,14 +521,14 @@ describe('Analytics Service Tests', () => {
   describe('Async Analysis', () => {
     it('should trigger async analysis for pipeline', async () => {
       const pipelineId = 'test-pipeline-id';
-      
+
       // Should not throw error
       await expect(analyticsService.analyzeAsync(pipelineId)).resolves.toBeUndefined();
     });
 
     it('should handle async analysis errors gracefully', async () => {
       const pipelineId = 'error-pipeline';
-      
+
       // Should not throw error even if internal processing fails
       await expect(analyticsService.analyzeAsync(pipelineId)).resolves.toBeUndefined();
     });
@@ -526,7 +544,7 @@ describe('Analytics Routes Tests', () => {
     // Setup test app
     app = express();
     app.use(express.json());
-    
+
     // Initialize auth service
     authService = getAuthService();
 
@@ -537,7 +555,7 @@ describe('Analytics Routes Tests', () => {
       role: UserRole.ADMIN,
       permissions: [
         'pipelines:read',
-        'pipelines:write', 
+        'pipelines:write',
         'pipelines:delete',
         'pipelines:analyze',
         'system:metrics',
@@ -546,9 +564,9 @@ describe('Analytics Routes Tests', () => {
         'users:read',
         'users:write',
         'reports:read',
-        'reports:write'
+        'reports:write',
       ],
-      sessionId: 'test-session'
+      sessionId: 'test-session',
     });
 
     // Mount analytics routes
@@ -557,9 +575,7 @@ describe('Analytics Routes Tests', () => {
 
   describe('GET /analytics/dashboard', () => {
     it('should require authentication', async () => {
-      const response = await request(app)
-        .get('/analytics/dashboard')
-        .expect(401);
+      const response = await request(app).get('/analytics/dashboard').expect(401);
     });
 
     it('should return dashboard data with valid auth', async () => {
@@ -657,7 +673,7 @@ describe('Analytics Routes Tests', () => {
         email: 'test@example.com',
         role: UserRole.VIEWER,
         permissions: ['PIPELINES_READ'],
-        sessionId: 'limited-session'
+        sessionId: 'limited-session',
       });
 
       const response = await request(app)
@@ -699,7 +715,7 @@ describe('Analytics Routes Tests', () => {
         .set('Authorization', `Bearer ${validToken}`)
         .send({
           acknowledged: true,
-          acknowledgedBy: 'test-user'
+          acknowledgedBy: 'test-user',
         })
         .expect(200);
 
@@ -713,7 +729,7 @@ describe('Analytics Routes Tests', () => {
         .put(`/analytics/alerts/${alertId}`)
         .set('Authorization', `Bearer ${validToken}`)
         .send({
-          acknowledged: 'invalid'
+          acknowledged: 'invalid',
         })
         .expect(400);
     });
@@ -724,7 +740,7 @@ describe('Analytics Routes Tests', () => {
         email: 'test@example.com',
         role: UserRole.VIEWER,
         permissions: ['PIPELINES_READ'],
-        sessionId: 'limited-session'
+        sessionId: 'limited-session',
       });
 
       const alertId = '550e8400-e29b-41d4-a716-446655440000';
@@ -732,7 +748,7 @@ describe('Analytics Routes Tests', () => {
         .put(`/analytics/alerts/${alertId}`)
         .set('Authorization', `Bearer ${limitedToken}`)
         .send({
-          acknowledged: true
+          acknowledged: true,
         })
         .expect(403);
     });
@@ -756,7 +772,7 @@ describe('Analytics Routes Tests', () => {
         email: 'test@example.com',
         role: UserRole.VIEWER,
         permissions: ['PIPELINES_READ'],
-        sessionId: 'limited-session'
+        sessionId: 'limited-session',
       });
 
       const response = await request(app)
@@ -785,7 +801,7 @@ describe('Analytics Routes Tests', () => {
         email: 'test@example.com',
         role: UserRole.VIEWER,
         permissions: ['PIPELINES_READ'],
-        sessionId: 'limited-session'
+        sessionId: 'limited-session',
       });
 
       const response = await request(app)
@@ -809,13 +825,11 @@ describe('Analytics Routes Tests', () => {
 
     it('should handle concurrent requests efficiently', async () => {
       const promises = Array.from({ length: 5 }, () =>
-        request(app)
-          .get('/analytics/dashboard')
-          .set('Authorization', `Bearer ${validToken}`)
+        request(app).get('/analytics/dashboard').set('Authorization', `Bearer ${validToken}`)
       );
 
       const responses = await Promise.all(promises);
-      
+
       responses.forEach(response => {
         expect(response.status).toBe(200);
         expect(response.body.success).toBe(true);

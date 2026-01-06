@@ -70,13 +70,15 @@ afterAll(async () => {
     // Import services to clean up
     const { memoizationService } = await import('@/services/memoization.service');
     const { advancedCache } = await import('@/services/advanced-cache.service');
-    const { advancedDataProcessingService } = await import('@/services/advanced-data-processing.service');
-    
+    const { advancedDataProcessingService } = await import(
+      '@/services/advanced-data-processing.service'
+    );
+
     // Clean up all services that have timers
     memoizationService.destroy();
     advancedCache.shutdown();
     advancedDataProcessingService.destroy();
-    
+
     // Give a small delay for cleanup to complete
     await new Promise(resolve => setTimeout(resolve, 100));
   } catch {

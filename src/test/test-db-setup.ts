@@ -30,7 +30,7 @@ export const createTestDataSource = (): DataSource => {
       AnomalyHistory,
       StatisticalCache,
       StatisticalResult,
-      TrendHistory
+      TrendHistory,
     ],
     synchronize: true,
     logging: false,

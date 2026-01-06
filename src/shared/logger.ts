@@ -25,11 +25,8 @@ export class Logger {
 
   private createLogger(): winston.Logger {
     const config = configManager.getMonitoring();
-    
-    const formats = [
-      winston.format.timestamp(),
-      winston.format.errors({ stack: true }),
-    ];
+
+    const formats = [winston.format.timestamp(), winston.format.errors({ stack: true })];
 
     if (config.logging.format === 'json') {
       formats.push(winston.format.json());
@@ -90,7 +87,10 @@ export class Logger {
     return parseInt(number, 10) * (units[unit] || 1);
   }
 
-  private formatMessage(message: string, meta?: Record<string, unknown>): [string, Record<string, unknown>] {
+  private formatMessage(
+    message: string,
+    meta?: Record<string, unknown>
+  ): [string, Record<string, unknown>] {
     const logMeta = {
       ...this.context,
       ...meta,
@@ -102,7 +102,7 @@ export class Logger {
 
   public error(message: string, error?: Error | unknown, meta?: Record<string, unknown>): void {
     const [msg, logMeta] = this.formatMessage(message, meta);
-    
+
     if (error instanceof Error) {
       logMeta.error = {
         name: error.name,
@@ -139,11 +139,11 @@ export class Logger {
   // === Performance Logging ===
   public startTimer(operation: string): () => void {
     const start = process.hrtime.bigint();
-    
+
     return () => {
       const end = process.hrtime.bigint();
       const duration = Number(end - start) / 1000000; // Convert to milliseconds
-      
+
       this.info(`Operation completed: ${operation}`, {
         operation,
         duration,
@@ -153,9 +153,15 @@ export class Logger {
   }
 
   // === Request Logging ===
-  public logRequest(method: string, url: string, statusCode: number, duration: number, meta?: Record<string, unknown>): void {
+  public logRequest(
+    method: string,
+    url: string,
+    statusCode: number,
+    duration: number,
+    meta?: Record<string, unknown>
+  ): void {
     const level = statusCode >= 400 ? 'warn' : 'info';
-    
+
     this[level](`${method} ${url} ${statusCode}`, {
       method,
       url,
@@ -176,7 +182,11 @@ export class Logger {
     });
   }
 
-  public logCacheOperation(operation: 'hit' | 'miss' | 'set' | 'del', key: string, meta?: Record<string, unknown>): void {
+  public logCacheOperation(
+    operation: 'hit' | 'miss' | 'set' | 'del',
+    key: string,
+    meta?: Record<string, unknown>
+  ): void {
     this.debug(`Cache ${operation}`, {
       operation,
       key,
@@ -185,9 +195,13 @@ export class Logger {
     });
   }
 
-  public logSecurityEvent(event: string, severity: 'low' | 'medium' | 'high' | 'critical', meta?: Record<string, unknown>): void {
+  public logSecurityEvent(
+    event: string,
+    severity: 'low' | 'medium' | 'high' | 'critical',
+    meta?: Record<string, unknown>
+  ): void {
     const level = severity === 'critical' || severity === 'high' ? 'error' : 'warn';
-    
+
     this[level](`Security event: ${event}`, {
       event,
       severity,
@@ -197,9 +211,14 @@ export class Logger {
   }
 
   // === Health Check Logging ===
-  public logHealthCheck(service: string, status: 'healthy' | 'unhealthy', responseTime?: number, meta?: Record<string, unknown>): void {
+  public logHealthCheck(
+    service: string,
+    status: 'healthy' | 'unhealthy',
+    responseTime?: number,
+    meta?: Record<string, unknown>
+  ): void {
     const level = status === 'healthy' ? 'info' : 'error';
-    
+
     this[level](`Health check: ${service} - ${status}`, {
       service,
       status,
@@ -215,14 +234,11 @@ const globalLogger = new Logger('global');
 
 // === Convenience Functions ===
 export const log = {
-  error: (message: string, error?: Error | unknown, meta?: Record<string, unknown>) => 
+  error: (message: string, error?: Error | unknown, meta?: Record<string, unknown>) =>
     globalLogger.error(message, error, meta),
-  warn: (message: string, meta?: Record<string, unknown>) => 
-    globalLogger.warn(message, meta),
-  info: (message: string, meta?: Record<string, unknown>) => 
-    globalLogger.info(message, meta),
-  debug: (message: string, meta?: Record<string, unknown>) => 
-    globalLogger.debug(message, meta),
+  warn: (message: string, meta?: Record<string, unknown>) => globalLogger.warn(message, meta),
+  info: (message: string, meta?: Record<string, unknown>) => globalLogger.info(message, meta),
+  debug: (message: string, meta?: Record<string, unknown>) => globalLogger.debug(message, meta),
 };
 
 export default Logger;

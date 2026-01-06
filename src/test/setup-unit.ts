@@ -71,9 +71,11 @@ afterAll(async () => {
 const originalConsoleWarn = console.warn;
 console.warn = (message: string, ...args: any[]) => {
   // Only show warnings that are not about missing database/redis
-  if (!message.includes('Database not available') && 
-      !message.includes('Redis not available') &&
-      !message.includes('ECONNREFUSED')) {
+  if (
+    !message.includes('Database not available') &&
+    !message.includes('Redis not available') &&
+    !message.includes('ECONNREFUSED')
+  ) {
     originalConsoleWarn(message, ...args);
   }
 };

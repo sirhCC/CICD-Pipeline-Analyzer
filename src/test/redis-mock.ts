@@ -14,7 +14,7 @@ export class MockRedis {
   async set(key: string, value: any, options?: { EX?: number }): Promise<string> {
     this.data.set(key, value);
     if (options?.EX) {
-      const expiration = Date.now() + (options.EX * 1000);
+      const expiration = Date.now() + options.EX * 1000;
       this.expirations.set(key, expiration);
     }
     return 'OK';
@@ -90,7 +90,7 @@ export class MockRedis {
 
   async expire(key: string, seconds: number): Promise<number> {
     if (this.data.has(key)) {
-      const expiration = Date.now() + (seconds * 1000);
+      const expiration = Date.now() + seconds * 1000;
       this.expirations.set(key, expiration);
       return 1;
     }
@@ -124,7 +124,7 @@ export class MockRedisManager {
   async healthCheck(): Promise<{ status: string; latency: number }> {
     return {
       status: this.connected ? 'connected' : 'disconnected',
-      latency: 1
+      latency: 1,
     };
   }
 }

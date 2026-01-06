@@ -64,7 +64,7 @@ describe('Phase 1 Foundation Tests', () => {
 
     it('should have type definitions', async () => {
       const types = await import('../types');
-      
+
       expect(types.PipelineProvider).toBeDefined();
       expect(types.PipelineStatus).toBeDefined();
       expect(types.PipelineVisibility).toBeDefined();
