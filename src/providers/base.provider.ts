@@ -3,7 +3,8 @@
  * Abstract foundation for all CI/CD provider integrations
  */
 
-import { PipelineProvider, PipelineStatus } from '../types';
+import type { PipelineProvider } from '../types';
+import { PipelineStatus } from '../types';
 
 export interface ProviderConfig {
   apiKey?: string;
@@ -184,10 +185,7 @@ export abstract class BaseCICDProvider {
   /**
    * Fetch pipeline run details
    */
-  abstract fetchPipelineRun(
-    pipelineId: string,
-    runId: string
-  ): Promise<PipelineData>;
+  abstract fetchPipelineRun(pipelineId: string, runId: string): Promise<PipelineData>;
 
   /**
    * Fetch logs for a specific job or step
@@ -207,10 +205,7 @@ export abstract class BaseCICDProvider {
   /**
    * Verify webhook signature
    */
-  abstract verifyWebhookSignature(
-    payload: string,
-    signature: string
-  ): boolean;
+  abstract verifyWebhookSignature(payload: string, signature: string): boolean;
 
   /**
    * Get supported webhook events
@@ -238,33 +233,31 @@ export abstract class BaseCICDProvider {
    */
   protected updateMetrics(responseTime: number, success: boolean, error?: string): void {
     this.metrics.apiCallsCount++;
-    this.metrics.averageResponseTime = 
-      (this.metrics.averageResponseTime * (this.metrics.apiCallsCount - 1) + responseTime) / 
+    this.metrics.averageResponseTime =
+      (this.metrics.averageResponseTime * (this.metrics.apiCallsCount - 1) + responseTime) /
       this.metrics.apiCallsCount;
-    
+
     if (success) {
-      this.metrics.apiCallsSuccessRate = 
-        (this.metrics.apiCallsSuccessRate * (this.metrics.apiCallsCount - 1) + 100) / 
+      this.metrics.apiCallsSuccessRate =
+        (this.metrics.apiCallsSuccessRate * (this.metrics.apiCallsCount - 1) + 100) /
         this.metrics.apiCallsCount;
     } else {
       this.metrics.errorCount++;
       if (error) {
         this.metrics.lastError = error;
       }
-      this.metrics.apiCallsSuccessRate = 
-        (this.metrics.apiCallsSuccessRate * (this.metrics.apiCallsCount - 1)) / 
+      this.metrics.apiCallsSuccessRate =
+        (this.metrics.apiCallsSuccessRate * (this.metrics.apiCallsCount - 1)) /
         this.metrics.apiCallsCount;
     }
-    
+
     this.metrics.lastSyncTime = new Date();
   }
 
   /**
    * Execute API call with metrics tracking
    */
-  protected async executeWithMetrics<T>(
-    operation: () => Promise<T>
-  ): Promise<T> {
+  protected async executeWithMetrics<T>(operation: () => Promise<T>): Promise<T> {
     const startTime = Date.now();
     try {
       const result = await operation();
@@ -272,8 +265,8 @@ export abstract class BaseCICDProvider {
       return result;
     } catch (error) {
       this.updateMetrics(
-        Date.now() - startTime, 
-        false, 
+        Date.now() - startTime,
+        false,
         error instanceof Error ? error.message : String(error)
       );
       throw error;
@@ -286,22 +279,22 @@ export abstract class BaseCICDProvider {
   protected normalizePipelineStatus(providerStatus: string): PipelineStatus {
     const statusMap: Record<string, PipelineStatus> = {
       // Common status mappings
-      'success': PipelineStatus.SUCCESS,
-      'completed': PipelineStatus.SUCCESS,
-      'passed': PipelineStatus.SUCCESS,
-      'failed': PipelineStatus.FAILED,
-      'failure': PipelineStatus.FAILED,
-      'error': PipelineStatus.FAILED,
-      'running': PipelineStatus.RUNNING,
-      'in_progress': PipelineStatus.RUNNING,
-      'pending': PipelineStatus.PENDING,
-      'queued': PipelineStatus.PENDING,
-      'waiting': PipelineStatus.PENDING,
-      'cancelled': PipelineStatus.CANCELLED,
-      'canceled': PipelineStatus.CANCELLED,
-      'skipped': PipelineStatus.SKIPPED,
-      'timeout': PipelineStatus.TIMEOUT,
-      'timed_out': PipelineStatus.TIMEOUT,
+      success: PipelineStatus.SUCCESS,
+      completed: PipelineStatus.SUCCESS,
+      passed: PipelineStatus.SUCCESS,
+      failed: PipelineStatus.FAILED,
+      failure: PipelineStatus.FAILED,
+      error: PipelineStatus.FAILED,
+      running: PipelineStatus.RUNNING,
+      in_progress: PipelineStatus.RUNNING,
+      pending: PipelineStatus.PENDING,
+      queued: PipelineStatus.PENDING,
+      waiting: PipelineStatus.PENDING,
+      cancelled: PipelineStatus.CANCELLED,
+      canceled: PipelineStatus.CANCELLED,
+      skipped: PipelineStatus.SKIPPED,
+      timeout: PipelineStatus.TIMEOUT,
+      timed_out: PipelineStatus.TIMEOUT,
     };
 
     return statusMap[providerStatus.toLowerCase()] || PipelineStatus.UNKNOWN;
@@ -310,15 +303,12 @@ export abstract class BaseCICDProvider {
   /**
    * Parse duration from various formats
    */
-  protected parseDuration(
-    startTime: string | Date,
-    endTime?: string | Date
-  ): number | undefined {
+  protected parseDuration(startTime: string | Date, endTime?: string | Date): number | undefined {
     if (!endTime) return undefined;
-    
+
     const start = typeof startTime === 'string' ? new Date(startTime) : startTime;
     const end = typeof endTime === 'string' ? new Date(endTime) : endTime;
-    
+
     return Math.max(0, end.getTime() - start.getTime());
   }
 
@@ -327,33 +317,43 @@ export abstract class BaseCICDProvider {
    */
   protected sanitizeData(data: any): any {
     const sensitiveKeys = [
-      'password', 'token', 'key', 'secret', 'credential',
-      'auth', 'authorization', 'bearer', 'api_key'
+      'password',
+      'token',
+      'key',
+      'secret',
+      'credential',
+      'auth',
+      'authorization',
+      'bearer',
+      'api_key',
     ];
-    
+
     if (typeof data === 'string') {
       // Mask potential secrets in strings
-      return data.replace(/([a-zA-Z0-9_-]*(?:password|token|key|secret)[a-zA-Z0-9_-]*\s*[:=]\s*)([^\s\n]+)/gi, '$1***');
+      return data.replace(
+        /([a-zA-Z0-9_-]*(?:password|token|key|secret)[a-zA-Z0-9_-]*\s*[:=]\s*)([^\s\n]+)/gi,
+        '$1***'
+      );
     }
-    
+
     if (typeof data === 'object' && data !== null) {
       const sanitized = Array.isArray(data) ? [] : {};
-      
+
       for (const [key, value] of Object.entries(data)) {
-        const isSensitive = sensitiveKeys.some(sensitiveKey => 
+        const isSensitive = sensitiveKeys.some(sensitiveKey =>
           key.toLowerCase().includes(sensitiveKey)
         );
-        
+
         if (isSensitive) {
           (sanitized as any)[key] = '***';
         } else {
           (sanitized as any)[key] = this.sanitizeData(value);
         }
       }
-      
+
       return sanitized;
     }
-    
+
     return data;
   }
 }
