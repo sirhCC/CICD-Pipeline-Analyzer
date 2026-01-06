@@ -1,23 +1,31 @@
 /**
- * Trend Analysis History Entity - Phase 3 Data Persistence  
+ * Trend Analysis History Entity - Phase 3 Data Persistence
  * Stores historical trend analysis results for long-term pattern tracking
  */
 
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, Index, ManyToOne, JoinColumn } from 'typeorm';
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  CreateDateColumn,
+  Index,
+  ManyToOne,
+  JoinColumn,
+} from 'typeorm';
 import { Pipeline } from './pipeline.entity';
 
 export enum TrendDirection {
   IMPROVING = 'improving',
-  DEGRADING = 'degrading', 
+  DEGRADING = 'degrading',
   STABLE = 'stable',
-  VOLATILE = 'volatile'
+  VOLATILE = 'volatile',
 }
 
 export enum TrendStrength {
   WEAK = 'weak',
   MODERATE = 'moderate',
   STRONG = 'strong',
-  VERY_STRONG = 'very_strong'
+  VERY_STRONG = 'very_strong',
 }
 
 @Entity('trend_history')
@@ -41,13 +49,13 @@ export class TrendHistory {
 
   @Column({
     type: 'enum',
-    enum: TrendDirection
+    enum: TrendDirection,
   })
   trend!: TrendDirection;
 
   @Column({
-    type: 'enum', 
-    enum: TrendStrength
+    type: 'enum',
+    enum: TrendStrength,
   })
   strength!: TrendStrength;
 
