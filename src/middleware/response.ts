@@ -3,8 +3,9 @@
  * Automatically wraps responses in standard format and adds metadata
  */
 
-import { Request, Response, NextFunction } from 'express';
-import { ApiResponse, ResponseBuilder, PerformanceMeta, getRequestId } from '../shared/api-response';
+import type { Request, Response, NextFunction } from 'express';
+import type { ApiResponse, PerformanceMeta } from '../shared/api-response';
+import { ResponseBuilder, getRequestId } from '../shared/api-response';
 import { apiVersionManager } from '../config/versioning';
 import { Logger } from '../shared/logger';
 
@@ -44,8 +45,8 @@ declare global {
  */
 export function extractApiVersion(req: Request, res: Response, next: NextFunction): void {
   const requestedVersion = apiVersionManager.extractVersionFromRequest(req);
-  const actualVersion = apiVersionManager.isVersionSupported(requestedVersion) 
-    ? requestedVersion 
+  const actualVersion = apiVersionManager.isVersionSupported(requestedVersion)
+    ? requestedVersion
     : apiVersionManager.getDefaultVersion();
 
   // Store versions in request for later use
@@ -74,10 +75,10 @@ export function initializeResponseTracking(req: Request, res: Response, next: Ne
 
   // Track performance metrics
   const originalJson = res.json;
-  res.json = function(body: any) {
+  res.json = function (body: any) {
     if (req.responseEnhancement) {
       const executionTime = Date.now() - req.responseEnhancement.startTime;
-      
+
       // Add performance metadata if response has meta object
       if (body && typeof body === 'object' && body.meta) {
         body.meta.performance = {
@@ -103,15 +104,15 @@ export function addResponseHelpers(req: Request, res: Response, next: NextFuncti
   const version = req.apiVersion;
 
   // Success response
-  res.apiSuccess = function<T>(data: T, meta?: any) {
+  res.apiSuccess = function <T>(data: T, meta?: any) {
     const response = ResponseBuilder.success(data, meta, requestId, version);
     return this.status(200).json(response);
   };
 
   // Error response
-  res.apiError = function(error: any, statusCode = 500) {
+  res.apiError = function (error: any, statusCode = 500) {
     let response: ApiResponse;
-    
+
     if (error?.code && error?.message) {
       // Already formatted error
       response = ResponseBuilder.error(error, undefined, requestId, version);
@@ -139,43 +140,43 @@ export function addResponseHelpers(req: Request, res: Response, next: NextFuncti
   };
 
   // Created response (201)
-  res.apiCreated = function<T>(data: T) {
+  res.apiCreated = function <T>(data: T) {
     const response = ResponseBuilder.created(data, requestId, version);
     return this.status(201).json(response);
   };
 
   // No content response (204)
-  res.apiNoContent = function() {
+  res.apiNoContent = function () {
     const response = ResponseBuilder.noContent(requestId, version);
     return this.status(204).json(response);
   };
 
   // Not found response (404)
-  res.apiNotFound = function(resource: string, id?: string) {
+  res.apiNotFound = function (resource: string, id?: string) {
     const response = ResponseBuilder.notFound(resource, id, requestId, version);
     return this.status(404).json(response);
   };
 
   // Validation error response (422)
-  res.apiValidationError = function(message: string, details?: any, field?: string) {
+  res.apiValidationError = function (message: string, details?: any, field?: string) {
     const response = ResponseBuilder.validationError(message, details, field, requestId, version);
     return this.status(422).json(response);
   };
 
   // Unauthorized response (401)
-  res.apiUnauthorized = function(message?: string) {
+  res.apiUnauthorized = function (message?: string) {
     const response = ResponseBuilder.unauthorized(message, requestId, version);
     return this.status(401).json(response);
   };
 
   // Forbidden response (403)
-  res.apiForbidden = function(message?: string) {
+  res.apiForbidden = function (message?: string) {
     const response = ResponseBuilder.forbidden(message, requestId, version);
     return this.status(403).json(response);
   };
 
   // Rate limited response (429)
-  res.apiRateLimited = function(retryAfter?: number) {
+  res.apiRateLimited = function (retryAfter?: number) {
     const response = ResponseBuilder.rateLimited(retryAfter, requestId, version);
     const headers: any = {};
     if (retryAfter) headers['Retry-After'] = retryAfter;
@@ -183,7 +184,7 @@ export function addResponseHelpers(req: Request, res: Response, next: NextFuncti
   };
 
   // Internal server error response (500)
-  res.apiInternalError = function(message?: string, details?: any) {
+  res.apiInternalError = function (message?: string, details?: any) {
     const response = ResponseBuilder.internalError(message, details, undefined, requestId, version);
     return this.status(500).json(response);
   };
@@ -194,10 +195,15 @@ export function addResponseHelpers(req: Request, res: Response, next: NextFuncti
 /**
  * Error response handler - catches errors and formats them
  */
-export function errorResponseHandler(error: any, req: Request, res: Response, next: NextFunction): void {
+export function errorResponseHandler(
+  error: any,
+  req: Request,
+  res: Response,
+  next: NextFunction
+): void {
   const requestId = getRequestId(req);
   const version = req.apiVersion;
-  
+
   logger.error('Unhandled API error', {
     error: error.message,
     stack: error.stack,
