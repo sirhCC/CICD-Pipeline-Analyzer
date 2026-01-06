@@ -3,11 +3,15 @@
  * Provides live updates for pipeline statistics, anomalies, and insights
  */
 
-import { Server as HttpServer } from 'http';
-import { Server as SocketIOServer, Socket } from 'socket.io';
+import type { Server as HttpServer } from 'http';
+import type { Socket } from 'socket.io';
+import { Server as SocketIOServer } from 'socket.io';
 import { Logger } from '@/shared/logger';
 import { authenticateJWT, UserRole, Permission } from '@/middleware/auth';
-import { getStatisticalAnalyticsService, StatisticalDataPoint } from './statistical-analytics.service';
+import {
+  getStatisticalAnalyticsService,
+  StatisticalDataPoint,
+} from './statistical-analytics.service';
 import { AppError } from '@/middleware/error-handler';
 
 export interface WebSocketConfig {
@@ -60,40 +64,40 @@ export class WebSocketService {
     messagesSent: 0,
     bytesTransferred: 0,
     errorCount: 0,
-    lastReset: new Date()
+    lastReset: new Date(),
   };
 
   constructor(httpServer: HttpServer, config: Partial<WebSocketConfig> = {}) {
     this.logger = new Logger('WebSocketService');
     this.clients = new Map();
-    
+
     this.config = {
       cors: {
         origin: process.env.ALLOWED_ORIGINS?.split(',') || ['http://localhost:3000'],
-        credentials: true
+        credentials: true,
       },
       heartbeatInterval: 30000, // 30 seconds
       clientTimeout: 60000, // 1 minute
       maxConnections: 1000,
       enableAuth: true,
       enableMetrics: true,
-      ...config
+      ...config,
     };
 
     this.io = new SocketIOServer(httpServer, {
       cors: this.config.cors || {
         origin: ['http://localhost:3000'],
-        credentials: true
+        credentials: true,
       },
       pingTimeout: this.config.clientTimeout || 60000,
       pingInterval: this.config.heartbeatInterval || 30000,
       maxHttpBufferSize: 1e6, // 1MB
-      transports: ['websocket', 'polling']
+      transports: ['websocket', 'polling'],
     });
 
     this.setupEventHandlers();
     this.startHeartbeat();
-    
+
     if (this.config.enableMetrics) {
       this.startMetricsCollection();
     }
@@ -101,7 +105,7 @@ export class WebSocketService {
     this.logger.info('WebSocket service initialized', {
       maxConnections: this.config.maxConnections,
       heartbeatInterval: this.config.heartbeatInterval,
-      authEnabled: this.config.enableAuth
+      authEnabled: this.config.enableAuth,
     });
   }
 
@@ -113,9 +117,9 @@ export class WebSocketService {
       try {
         await this.handleConnection(socket);
       } catch (error) {
-        this.logger.error('Connection setup failed', { 
-          socketId: socket.id, 
-          error: error instanceof Error ? error.message : String(error) 
+        this.logger.error('Connection setup failed', {
+          socketId: socket.id,
+          error: error instanceof Error ? error.message : String(error),
         });
         socket.disconnect(true);
       }
@@ -137,14 +141,14 @@ export class WebSocketService {
       socketId: socket.id,
       clientIP: socket.handshake.address,
       userAgent: socket.handshake.headers['user-agent'],
-      activeConnections: this.metrics.activeConnections
+      activeConnections: this.metrics.activeConnections,
     });
 
     // Check connection limit
     if (this.metrics.activeConnections > this.config.maxConnections!) {
       this.logger.warn('Connection limit exceeded', {
         activeConnections: this.metrics.activeConnections,
-        maxConnections: this.config.maxConnections
+        maxConnections: this.config.maxConnections,
       });
       socket.emit('error', { code: 'CONNECTION_LIMIT_EXCEEDED' });
       socket.disconnect(true);
@@ -164,12 +168,12 @@ export class WebSocketService {
         // Authenticate token (simplified for WebSocket)
         const token = auth.token.replace('Bearer ', '');
         // Note: In production, integrate with actual auth service
-        const user = { 
-          id: 'websocket-user', 
-          role: UserRole.ADMIN, 
-          permissions: [Permission.ANALYTICS_READ, Permission.ANALYTICS_WRITE] 
+        const user = {
+          id: 'websocket-user',
+          role: UserRole.ADMIN,
+          permissions: [Permission.ANALYTICS_READ, Permission.ANALYTICS_WRITE],
         };
-        
+
         this.clients.set(socket.id, {
           socketId: socket.id,
           userId: user.id,
@@ -178,21 +182,20 @@ export class WebSocketService {
           subscriptions: {
             pipelines: [],
             alertTypes: [],
-            globalInsights: false
+            globalInsights: false,
           },
-          lastSeen: new Date()
+          lastSeen: new Date(),
         });
 
         this.logger.info('WebSocket client authenticated', {
           socketId: socket.id,
           userId: user.id,
-          role: user.role
+          role: user.role,
         });
-
       } catch (error) {
         this.logger.error('WebSocket authentication failed', {
           socketId: socket.id,
-          error: error instanceof Error ? error.message : String(error)
+          error: error instanceof Error ? error.message : String(error),
         });
         socket.emit('error', { code: 'AUTHENTICATION_FAILED' });
         socket.disconnect(true);
@@ -206,7 +209,7 @@ export class WebSocketService {
     socket.emit('connected', {
       socketId: socket.id,
       timestamp: new Date(),
-      features: ['real-time-analytics', 'anomaly-alerts', 'trend-updates']
+      features: ['real-time-analytics', 'anomaly-alerts', 'trend-updates'],
     });
   }
 
@@ -249,10 +252,10 @@ export class WebSocketService {
     });
 
     // Error handling
-    socket.on('error', (error) => {
+    socket.on('error', error => {
       this.logger.error('WebSocket client error', {
         socketId: socket.id,
-        error: error instanceof Error ? error.message : String(error)
+        error: error instanceof Error ? error.message : String(error),
       });
       this.metrics.errorCount++;
     });
@@ -268,11 +271,11 @@ export class WebSocketService {
     if (!client.subscriptions.pipelines.includes(pipelineId)) {
       client.subscriptions.pipelines.push(pipelineId);
       this.clients.set(socket.id, client);
-      
+
       this.logger.info('Client subscribed to pipeline', {
         socketId: socket.id,
         pipelineId,
-        totalSubscriptions: client.subscriptions.pipelines.length
+        totalSubscriptions: client.subscriptions.pipelines.length,
       });
 
       socket.emit('subscribed', { type: 'pipeline', id: pipelineId });
@@ -290,10 +293,10 @@ export class WebSocketService {
     if (index > -1) {
       client.subscriptions.pipelines.splice(index, 1);
       this.clients.set(socket.id, client);
-      
+
       this.logger.info('Client unsubscribed from pipeline', {
         socketId: socket.id,
-        pipelineId
+        pipelineId,
       });
 
       socket.emit('unsubscribed', { type: 'pipeline', id: pipelineId });
@@ -307,13 +310,15 @@ export class WebSocketService {
     const client = this.clients.get(socket.id);
     if (!client) return;
 
-    client.subscriptions.alertTypes = [...new Set([...client.subscriptions.alertTypes, ...alertTypes])];
+    client.subscriptions.alertTypes = [
+      ...new Set([...client.subscriptions.alertTypes, ...alertTypes]),
+    ];
     this.clients.set(socket.id, client);
 
     this.logger.info('Client subscribed to alerts', {
       socketId: socket.id,
       alertTypes,
-      totalAlertTypes: client.subscriptions.alertTypes.length
+      totalAlertTypes: client.subscriptions.alertTypes.length,
     });
 
     socket.emit('subscribed', { type: 'alerts', types: alertTypes });
@@ -330,7 +335,7 @@ export class WebSocketService {
     this.clients.set(socket.id, client);
 
     this.logger.info('Client subscribed to global insights', {
-      socketId: socket.id
+      socketId: socket.id,
     });
 
     socket.emit('subscribed', { type: 'global' });
@@ -339,7 +344,10 @@ export class WebSocketService {
   /**
    * Handle immediate analysis request
    */
-  private async handleAnalysisRequest(socket: Socket, data: { pipelineId: string; metric: string }): Promise<void> {
+  private async handleAnalysisRequest(
+    socket: Socket,
+    data: { pipelineId: string; metric: string }
+  ): Promise<void> {
     try {
       const client = this.clients.get(socket.id);
       if (!client) return;
@@ -347,14 +355,14 @@ export class WebSocketService {
       this.logger.info('Real-time analysis requested', {
         socketId: socket.id,
         pipelineId: data.pipelineId,
-        metric: data.metric
+        metric: data.metric,
       });
 
       // Perform statistical analysis
       const [anomalies, trends, benchmark] = await Promise.all([
         this.statisticalService.analyzePipelineAnomalies(data.pipelineId, data.metric as any),
         this.statisticalService.analyzePipelineTrends(data.pipelineId, data.metric as any),
-        this.statisticalService.benchmarkPipelinePerformance(data.pipelineId, data.metric as any)
+        this.statisticalService.benchmarkPipelinePerformance(data.pipelineId, data.metric as any),
       ]);
 
       const analysis = {
@@ -366,33 +374,32 @@ export class WebSocketService {
             detected: a.isAnomaly,
             score: a.anomalyScore,
             severity: a.severity,
-            method: a.method
+            method: a.method,
           })),
           trend: {
             direction: trends.trend,
             strength: trends.correlation,
-            prediction: trends.prediction
+            prediction: trends.prediction,
           },
           benchmark: {
             performance: benchmark.performance,
             percentile: benchmark.percentile,
-            deviation: benchmark.deviationPercent
-          }
-        }
+            deviation: benchmark.deviationPercent,
+          },
+        },
       };
 
       socket.emit('analysis:result', analysis);
       this.metrics.messagesSent++;
-
     } catch (error) {
       this.logger.error('Analysis request failed', {
         socketId: socket.id,
-        error: error instanceof Error ? error.message : String(error)
+        error: error instanceof Error ? error.message : String(error),
       });
-      
+
       socket.emit('analysis:error', {
         message: 'Analysis failed',
-        code: 'ANALYSIS_ERROR'
+        code: 'ANALYSIS_ERROR',
       });
     }
   }
@@ -406,7 +413,7 @@ export class WebSocketService {
 
     this.logger.info('WebSocket client disconnected', {
       socketId: socket.id,
-      activeConnections: this.metrics.activeConnections
+      activeConnections: this.metrics.activeConnections,
     });
   }
 
@@ -433,12 +440,12 @@ export class WebSocketService {
     });
 
     this.metrics.messagesPublished++;
-    
+
     this.logger.info('Statistical update published', {
       type: update.type,
       pipelineId: update.pipelineId,
       recipients,
-      severity: update.severity
+      severity: update.severity,
     });
   }
 
@@ -474,8 +481,8 @@ export class WebSocketService {
 
       this.clients.forEach((client, socketId) => {
         const socket = this.io.sockets.sockets.get(socketId);
-        
-        if (!socket || (now.getTime() - client.lastSeen.getTime()) > this.config.clientTimeout!) {
+
+        if (!socket || now.getTime() - client.lastSeen.getTime() > this.config.clientTimeout!) {
           this.clients.delete(socketId);
           disconnectedClients++;
           if (socket) {
@@ -489,10 +496,9 @@ export class WebSocketService {
       if (disconnectedClients > 0) {
         this.logger.info('Cleaned up disconnected clients', {
           disconnectedClients,
-          activeConnections: this.clients.size
+          activeConnections: this.clients.size,
         });
       }
-
     }, this.config.heartbeatInterval);
   }
 
@@ -504,7 +510,7 @@ export class WebSocketService {
       this.logger.info('WebSocket metrics', {
         ...this.metrics,
         activeConnections: this.clients.size,
-        uptime: new Date().getTime() - this.metrics.lastReset.getTime()
+        uptime: new Date().getTime() - this.metrics.lastReset.getTime(),
       });
     }, 60000); // Every minute
   }
@@ -516,7 +522,7 @@ export class WebSocketService {
     return {
       ...this.metrics,
       activeConnections: this.clients.size,
-      uptime: new Date().getTime() - this.metrics.lastReset.getTime()
+      uptime: new Date().getTime() - this.metrics.lastReset.getTime(),
     };
   }
 
@@ -533,10 +539,10 @@ export class WebSocketService {
   public broadcast(event: string, data: any): void {
     this.io.emit(event, data);
     this.metrics.messagesSent += this.clients.size;
-    
+
     this.logger.info('Broadcasted to all clients', {
       event,
-      recipients: this.clients.size
+      recipients: this.clients.size,
     });
   }
 
@@ -560,14 +566,14 @@ export class WebSocketService {
     if (this.heartbeatInterval) {
       clearInterval(this.heartbeatInterval);
     }
-    
+
     if (this.metricsInterval) {
       clearInterval(this.metricsInterval);
     }
 
     this.io.close();
     this.clients.clear();
-    
+
     this.logger.info('WebSocket service closed');
   }
 }
@@ -575,7 +581,10 @@ export class WebSocketService {
 // Export singleton instance getter
 let _instance: WebSocketService | undefined;
 
-export const createWebSocketService = (httpServer: HttpServer, config?: Partial<WebSocketConfig>): WebSocketService => {
+export const createWebSocketService = (
+  httpServer: HttpServer,
+  config?: Partial<WebSocketConfig>
+): WebSocketService => {
   if (_instance) {
     throw new Error('WebSocket service already initialized');
   }
