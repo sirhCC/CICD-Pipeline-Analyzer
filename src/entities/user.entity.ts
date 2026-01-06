@@ -2,7 +2,16 @@
  * User Entity - Represents system users with authentication and authorization
  */
 
-import { Entity, Column, Index, OneToMany, ManyToOne, JoinColumn, BeforeInsert, BeforeUpdate } from 'typeorm';
+import {
+  Entity,
+  Column,
+  Index,
+  OneToMany,
+  ManyToOne,
+  JoinColumn,
+  BeforeInsert,
+  BeforeUpdate,
+} from 'typeorm';
 import bcrypt from 'bcryptjs';
 import { BaseEntity } from './base.entity';
 import { UserRole } from '../types';
@@ -195,11 +204,11 @@ export class User extends BaseEntity {
   @Column({ type: 'varchar', length: 500 })
   passwordHash!: string;
 
-  @Column({ 
-    type: 'enum', 
+  @Column({
+    type: 'enum',
     enum: UserRole,
     enumName: 'user_role_enum',
-    default: UserRole.VIEWER
+    default: UserRole.VIEWER,
   })
   role!: UserRole;
 
@@ -317,7 +326,7 @@ export class User extends BaseEntity {
    */
   incrementLoginAttempts(): void {
     this.loginAttempts += 1;
-    
+
     // Lock account after 5 failed attempts
     if (this.loginAttempts >= 5) {
       this.lockAccount();
@@ -378,8 +387,8 @@ export class User extends BaseEntity {
    * Generate email verification token
    */
   generateEmailVerificationToken(): string {
-    const token = Math.random().toString(36).substring(2, 15) + 
-                  Math.random().toString(36).substring(2, 15);
+    const token =
+      Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
     this.emailVerificationToken = token;
     return token;
   }
@@ -388,8 +397,8 @@ export class User extends BaseEntity {
    * Generate password reset token
    */
   generatePasswordResetToken(expirationHours: number = 1): string {
-    const token = Math.random().toString(36).substring(2, 15) + 
-                  Math.random().toString(36).substring(2, 15);
+    const token =
+      Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
     this.passwordResetToken = token;
     this.passwordResetExpiresAt = new Date(Date.now() + expirationHours * 60 * 60 * 1000);
     return token;
@@ -409,10 +418,10 @@ export class User extends BaseEntity {
     if (!this.passwordResetToken || !this.passwordResetExpiresAt) {
       return false;
     }
-    
+
     const isValidToken = this.passwordResetToken === token;
     const isNotExpired = new Date() < this.passwordResetExpiresAt;
-    
+
     return isValidToken && isNotExpired;
   }
 
