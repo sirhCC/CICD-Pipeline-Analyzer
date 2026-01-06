@@ -1,6 +1,6 @@
 /**
  * Batch Processing Service - Efficient Large Dataset Processing
- * 
+ *
  * Features:
  * - Configurable batch sizes and processing strategies
  * - Memory-efficient streaming processing
@@ -8,14 +8,14 @@
  * - Progress tracking and error handling
  * - Backpressure management
  * - Resource usage monitoring and throttling
- * 
+ *
  * @author sirhCC
  * @version 1.0.0
  */
 
 import { Logger } from '@/shared/logger';
 import { EventEmitter } from 'events';
-import { Worker } from 'worker_threads';
+import type { Worker } from 'worker_threads';
 import { performance } from 'perf_hooks';
 
 export interface BatchConfig {
@@ -74,7 +74,7 @@ export class BatchProcessingService extends EventEmitter {
       processingTimeout: 30000, // 30 seconds
       retryAttempts: 3,
       backpressureThreshold: 1000,
-      ...config
+      ...config,
     };
   }
 
@@ -108,7 +108,7 @@ export class BatchProcessingService extends EventEmitter {
       totalItems,
       totalBatches,
       batchSize: this.config.batchSize,
-      maxConcurrency: this.config.maxConcurrency
+      maxConcurrency: this.config.maxConcurrency,
     });
 
     const batches = this.createBatches(data, this.config.batchSize);
@@ -118,43 +118,34 @@ export class BatchProcessingService extends EventEmitter {
       const batch = batches[i];
       if (!batch) continue;
 
-      const processPromise = this.processBatchWithRetry(
-        batch,
-        i,
-        processor,
-        {
-          onComplete: (result) => {
-            if (result.success && result.data) {
-              results.push(...result.data);
-              processedItems += result.itemCount;
-            } else {
-              failedItems += result.itemCount;
-            }
-
-            const progress: BatchProgress = {
-              totalItems,
-              processedItems,
-              failedItems,
-              currentBatch: i + 1,
-              totalBatches,
-              percentage: (processedItems / totalItems) * 100,
-              estimatedTimeRemaining: this.calculateETA(
-                startTime,
-                processedItems,
-                totalItems
-              ),
-              memoryUsage: this.getMemoryUsage(),
-              throughput: this.calculateThroughput(startTime, processedItems)
-            };
-
-            options.onProgress?.(progress);
-            options.onBatchComplete?.(result);
-          },
-          onError: (error) => {
-            options.onError?.(error, i);
+      const processPromise = this.processBatchWithRetry(batch, i, processor, {
+        onComplete: result => {
+          if (result.success && result.data) {
+            results.push(...result.data);
+            processedItems += result.itemCount;
+          } else {
+            failedItems += result.itemCount;
           }
-        }
-      );
+
+          const progress: BatchProgress = {
+            totalItems,
+            processedItems,
+            failedItems,
+            currentBatch: i + 1,
+            totalBatches,
+            percentage: (processedItems / totalItems) * 100,
+            estimatedTimeRemaining: this.calculateETA(startTime, processedItems, totalItems),
+            memoryUsage: this.getMemoryUsage(),
+            throughput: this.calculateThroughput(startTime, processedItems),
+          };
+
+          options.onProgress?.(progress);
+          options.onBatchComplete?.(result);
+        },
+        onError: error => {
+          options.onError?.(error, i);
+        },
+      });
 
       processingPromises.push(processPromise);
 
@@ -181,7 +172,7 @@ export class BatchProcessingService extends EventEmitter {
       processedItems,
       failedItems,
       totalTime: `${totalTime.toFixed(2)}ms`,
-      throughput: `${(processedItems / (totalTime / 1000)).toFixed(2)} items/sec`
+      throughput: `${(processedItems / (totalTime / 1000)).toFixed(2)} items/sec`,
     });
 
     return results;
@@ -190,7 +181,7 @@ export class BatchProcessingService extends EventEmitter {
   /**
    * Stream processing for very large datasets
    */
-  public async* processStream<TInput, TOutput>(
+  public async *processStream<TInput, TOutput>(
     dataStream: AsyncIterable<TInput>,
     processor: (item: TInput) => Promise<TOutput>,
     options: {
@@ -204,7 +195,7 @@ export class BatchProcessingService extends EventEmitter {
     const processingQueue: Promise<TOutput | null>[] = [];
 
     for await (const item of dataStream) {
-      const processPromise = semaphore.acquire().then(async (release) => {
+      const processPromise = semaphore.acquire().then(async release => {
         try {
           const result = await processor(item);
           processed.count++;
@@ -226,11 +217,9 @@ export class BatchProcessingService extends EventEmitter {
         if (completed !== null) {
           yield completed;
         }
-        
+
         // Remove completed promise
-        const completedIndex = processingQueue.findIndex(
-          p => p === Promise.resolve(completed)
-        );
+        const completedIndex = processingQueue.findIndex(p => p === Promise.resolve(completed));
         if (completedIndex > -1) {
           processingQueue.splice(completedIndex, 1);
         }
@@ -274,7 +263,7 @@ export class BatchProcessingService extends EventEmitter {
 
         const processingPromise = processor(batch, batchIndex);
         const result = await Promise.race([processingPromise, timeoutPromise]);
-        
+
         const endTime = performance.now();
         const processingTime = endTime - startTime;
 
@@ -283,7 +272,7 @@ export class BatchProcessingService extends EventEmitter {
           data: result,
           processingTime,
           batchIndex,
-          itemCount: batch.length
+          itemCount: batch.length,
         });
 
         return;
@@ -291,19 +280,19 @@ export class BatchProcessingService extends EventEmitter {
         attempts++;
         this.logger.warn(`Batch ${batchIndex} attempt ${attempts} failed`, {
           error: error instanceof Error ? error.message : 'Unknown error',
-          batchSize: batch.length
+          batchSize: batch.length,
         });
 
         if (attempts >= this.config.retryAttempts) {
           const endTime = performance.now();
           const processingTime = endTime - startTime;
-          
+
           callbacks.onComplete({
             success: false,
             error: error as Error,
             processingTime,
             batchIndex,
-            itemCount: batch.length
+            itemCount: batch.length,
           });
 
           callbacks.onError(error as Error);
@@ -333,11 +322,11 @@ export class BatchProcessingService extends EventEmitter {
    */
   private calculateETA(startTime: number, processed: number, total: number): number {
     if (processed === 0) return 0;
-    
+
     const elapsed = performance.now() - startTime;
     const rate = processed / elapsed;
     const remaining = total - processed;
-    
+
     return remaining / rate;
   }
 
@@ -370,13 +359,13 @@ export class BatchProcessingService extends EventEmitter {
    */
   private async waitForMemoryRecovery(): Promise<void> {
     this.logger.debug('Applying backpressure due to high memory usage');
-    
+
     while (this.shouldApplyBackpressure()) {
       // Force garbage collection if available
       if (global.gc) {
         global.gc();
       }
-      
+
       await this.delay(100);
     }
   }
@@ -421,7 +410,7 @@ export class BatchProcessingService extends EventEmitter {
       activeProcessors: this.activeProcessors,
       queueLength: this.processingQueue.length,
       config: this.config,
-      memoryUsage: this.getMemoryUsage()
+      memoryUsage: this.getMemoryUsage(),
     };
   }
 
@@ -462,7 +451,7 @@ class Semaphore {
   }
 
   async acquire(): Promise<() => void> {
-    return new Promise((resolve) => {
+    return new Promise(resolve => {
       if (this.permits > 0) {
         this.permits--;
         resolve(() => this.release());
