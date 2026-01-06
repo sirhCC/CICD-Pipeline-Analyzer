@@ -18,7 +18,10 @@ import { redisManager } from './core/redis';
 import { databaseInitializer } from './core/database-init';
 import { enhancedDatabaseService } from './services/database.enhanced';
 import { WebSocketService } from './services/websocket.service';
-import { createBackgroundJobService, getBackgroundJobService } from './services/background-job.service';
+import {
+  createBackgroundJobService,
+  getBackgroundJobService,
+} from './services/background-job.service';
 
 // Import middleware
 import { responseMiddleware } from './middleware/response';
@@ -62,7 +65,6 @@ class Application {
       await this.initializeModules();
 
       this.logger.info('Application initialized successfully');
-
     } catch (error) {
       this.logger.error('Failed to initialize application', error);
       throw error;
@@ -75,40 +77,39 @@ class Application {
   public async start(): Promise<void> {
     try {
       const config = configManager.getServer();
-      
+
       // Create HTTP server
       this.httpServer = createServer(this.app);
-      
+
       // Initialize WebSocket service
       this.webSocketService = new WebSocketService(this.httpServer, {
         cors: {
           origin: config.cors.origin,
-          credentials: config.cors.credentials
+          credentials: config.cors.credentials,
         },
         heartbeatInterval: 30000,
         clientTimeout: 60000,
         maxConnections: 1000,
         enableAuth: true,
-        enableMetrics: true
+        enableMetrics: true,
       });
-      
+
       // Connect WebSocket service to background job service for real-time alerts
       const backgroundJobService = getBackgroundJobService();
       backgroundJobService.setWebSocketService(this.webSocketService);
-      
+
       this.server = this.httpServer.listen(config.port, config.host, () => {
         this.logger.info(`Server started successfully`, {
           host: config.host,
           port: config.port,
           environment: process.env.NODE_ENV,
           version: process.env.npm_package_version || '1.0.0',
-          websocket: 'enabled'
+          websocket: 'enabled',
         });
       });
 
       // Graceful shutdown handlers
       this.setupGracefulShutdown();
-
     } catch (error) {
       this.logger.error('Failed to start server', error);
       throw error;
@@ -127,9 +128,10 @@ class Application {
         const backgroundJobService = getBackgroundJobService();
         await backgroundJobService.shutdown();
       } catch (err) {
-        const meta: Record<string, unknown> = err instanceof Error
-          ? { error: { name: err.name, message: err.message, stack: err.stack } }
-          : { error: err };
+        const meta: Record<string, unknown> =
+          err instanceof Error
+            ? { error: { name: err.name, message: err.message, stack: err.stack } }
+            : { error: err };
         this.logger.warn('Background job service not initialized or already shut down', meta);
       }
 
@@ -141,7 +143,7 @@ class Application {
 
       // Close server
       if (this.server) {
-        await new Promise<void>((resolve) => {
+        await new Promise<void>(resolve => {
           this.server.close(() => {
             this.logger.info('Server closed');
             resolve();
@@ -159,7 +161,6 @@ class Application {
       await redisManager.close();
 
       this.logger.info('Application shutdown complete');
-
     } catch (error) {
       this.logger.error('Error during shutdown', error);
       throw error;
@@ -171,16 +172,16 @@ class Application {
    */
   private validateConfiguration(): void {
     this.logger.info('Validating configuration...');
-    
+
     try {
       // Validate environment variables first
       const envValidation = environmentValidator.validateEnvironment();
       environmentValidator.printValidationResults(envValidation);
-      
+
       if (!envValidation.isValid) {
         throw new Error('Environment validation failed - check logs for details');
       }
-      
+
       // Validate application configuration
       configManager.validateConfiguration();
       this.logger.info('Configuration validation passed');
@@ -206,7 +207,7 @@ class Application {
       await databaseInitializer.initialize({
         runMigrations: !configManager.isTest(),
         seedData: configManager.isDevelopment(),
-        enableMonitoring: true
+        enableMonitoring: true,
       });
     }
 
@@ -224,7 +225,7 @@ class Application {
       jobTimeout: 300000, // 5 minutes
       enableRealTimeAlerts: true,
       historicalDataRetention: 30,
-      enableMetrics: true
+      enableMetrics: true,
     });
 
     this.logger.info('Core services initialized successfully');
@@ -238,45 +239,51 @@ class Application {
 
     const config = configManager.getServer();
 
-  // Express tuning & security
-  // Trust reverse proxies (needed for correct IPs and HTTPS headers behind proxies/load balancers)
-  this.app.set('trust proxy', true);
-  // Remove X-Powered-By header
-  this.app.disable('x-powered-by');
+    // Express tuning & security
+    // Trust reverse proxies (needed for correct IPs and HTTPS headers behind proxies/load balancers)
+    this.app.set('trust proxy', true);
+    // Remove X-Powered-By header
+    this.app.disable('x-powered-by');
 
     // Security middleware
     if (config.security.helmet) {
-      this.app.use(helmet({
-        contentSecurityPolicy: {
-          directives: {
-            defaultSrc: ["'self'"],
-            styleSrc: ["'self'", "'unsafe-inline'"],
-            scriptSrc: ["'self'"],
-            imgSrc: ["'self'", "data:", "https:"],
+      this.app.use(
+        helmet({
+          contentSecurityPolicy: {
+            directives: {
+              defaultSrc: ["'self'"],
+              styleSrc: ["'self'", "'unsafe-inline'"],
+              scriptSrc: ["'self'"],
+              imgSrc: ["'self'", 'data:', 'https:'],
+            },
           },
-        },
-        hsts: {
-          maxAge: 31536000,
-          includeSubDomains: true,
-          preload: true,
-        },
-      }));
+          hsts: {
+            maxAge: 31536000,
+            includeSubDomains: true,
+            preload: true,
+          },
+        })
+      );
     }
 
     // CORS middleware
-    this.app.use(cors({
-      origin: config.cors.origin,
-      credentials: config.cors.credentials,
-      optionsSuccessStatus: config.cors.optionsSuccessStatus,
-      maxAge: 600
-    }));
+    this.app.use(
+      cors({
+        origin: config.cors.origin,
+        credentials: config.cors.credentials,
+        optionsSuccessStatus: config.cors.optionsSuccessStatus,
+        maxAge: 600,
+      })
+    );
 
     // Compression middleware
     if (config.security.compression) {
-      this.app.use(compression({
-        threshold: '1kb',
-        level: 6
-      }));
+      this.app.use(
+        compression({
+          threshold: '1kb',
+          level: 6,
+        })
+      );
     }
 
     // Body parsing middleware
@@ -291,7 +298,7 @@ class Application {
       enableMetrics: true,
       enableSecurityLogging: true,
       enableAuditTrail: true,
-      logLevel: 'info'
+      logLevel: 'info',
     });
     this.app.use(requestLogger);
 
@@ -309,8 +316,8 @@ class Application {
   private async configureRoutes(): Promise<void> {
     this.logger.info('Configuring routes...');
 
-  // Liveness endpoint (fast, no external deps)
-  this.app.get('/health', noStore(), (req, res) => {
+    // Liveness endpoint (fast, no external deps)
+    this.app.get('/health', noStore(), (req, res) => {
       const uptime = process.uptime();
       const memoryUsage = process.memoryUsage();
       res.status(200).json({
@@ -323,34 +330,34 @@ class Application {
         memory: {
           rss: `${Math.round(memoryUsage.rss / 1024 / 1024)}MB`,
           heapTotal: `${Math.round(memoryUsage.heapTotal / 1024 / 1024)}MB`,
-          heapUsed: `${Math.round(memoryUsage.heapUsed / 1024 / 1024)}MB`
-        }
+          heapUsed: `${Math.round(memoryUsage.heapUsed / 1024 / 1024)}MB`,
+        },
       });
     });
 
     // Readiness endpoint (checks external dependencies)
-  this.app.get('/ready', noStore(), async (req, res) => {
+    this.app.get('/ready', noStore(), async (req, res) => {
       try {
         const health = await this.getHealthStatus();
         const isReady = health.status === 'healthy';
         res.status(isReady ? 200 : 503).json({
           status: isReady ? 'ready' : 'not-ready',
-          ...health
+          ...health,
         });
       } catch (error) {
         this.logger.error('Readiness check failed', error);
         res.status(503).json({
           status: 'not-ready',
-          error: 'Readiness check failed'
+          error: 'Readiness check failed',
         });
       }
     });
 
     // Basic metrics endpoint (JSON). Prometheus format can be added later.
-  this.app.get('/metrics', noStore(), createMetricsEndpoint());
+    this.app.get('/metrics', noStore(), createMetricsEndpoint());
 
     // API version endpoint
-  this.app.get('/version', shortPublicCache(60), (req, res) => {
+    this.app.get('/version', shortPublicCache(60), (req, res) => {
       res.json({
         name: 'CI/CD Pipeline Analyzer',
         version: process.env.npm_package_version || '1.0.0',
@@ -386,7 +393,7 @@ class Application {
 
     // API version information endpoint
     this.app.use('/api/version', createVersionInfoRouter());
-    
+
     // Create and register all versioned API routers
     const versionedRouters = createAllVersionedRouters();
     for (const { version, prefix, router } of versionedRouters) {
@@ -444,18 +451,21 @@ class Application {
    * Get application health status
    */
   private async getHealthStatus(): Promise<any> {
-  const skipDb = (process.env.SKIP_DB_INIT || 'false').toLowerCase() === 'true';
-  const skipRedis = (process.env.SKIP_REDIS_INIT || 'false').toLowerCase() === 'true';
+    const skipDb = (process.env.SKIP_DB_INIT || 'false').toLowerCase() === 'true';
+    const skipRedis = (process.env.SKIP_REDIS_INIT || 'false').toLowerCase() === 'true';
 
-  const promises: Promise<any>[] = [];
-  if (!skipDb) promises.push(enhancedDatabaseService.getHealthStatus());
-  if (!skipRedis) promises.push(redisManager.healthCheck());
-  const checks = await Promise.allSettled(promises);
+    const promises: Promise<any>[] = [];
+    if (!skipDb) promises.push(enhancedDatabaseService.getHealthStatus());
+    if (!skipRedis) promises.push(redisManager.healthCheck());
+    const checks = await Promise.allSettled(promises);
 
-  const dbHealth = !skipDb && checks[0] && checks[0].status === 'fulfilled' ? (checks[0]).value : null;
-  const dbHealthy = skipDb ? false : (dbHealth?.isHealthy || false);
-  const redisIndex = skipDb ? 0 : 1;
-  const redisHealthy = skipRedis ? false : (checks[redisIndex] && (checks[redisIndex]).status === 'fulfilled' && (checks[redisIndex]).value);
+    const dbHealth =
+      !skipDb && checks[0] && checks[0].status === 'fulfilled' ? checks[0].value : null;
+    const dbHealthy = skipDb ? false : dbHealth?.isHealthy || false;
+    const redisIndex = skipDb ? 0 : 1;
+    const redisHealthy = skipRedis
+      ? false
+      : checks[redisIndex] && checks[redisIndex].status === 'fulfilled' && checks[redisIndex].value;
 
     const overall = dbHealthy && redisHealthy ? 'healthy' : 'degraded';
 
@@ -467,12 +477,14 @@ class Application {
         redis: redisHealthy ? 'healthy' : 'unhealthy',
       },
       modules: moduleManager.getModuleStatus(),
-      database: dbHealth ? {
-        connectionStats: dbHealth.connectionStats,
-        performanceMetrics: dbHealth.performanceMetrics,
-        recommendations: dbHealth.recommendations,
-        uptime: dbHealth.uptime
-      } : null
+      database: dbHealth
+        ? {
+            connectionStats: dbHealth.connectionStats,
+            performanceMetrics: dbHealth.performanceMetrics,
+            recommendations: dbHealth.recommendations,
+            uptime: dbHealth.uptime,
+          }
+        : null,
     };
   }
 
@@ -481,11 +493,11 @@ class Application {
    */
   private setupGracefulShutdown(): void {
     const signals = ['SIGTERM', 'SIGINT', 'SIGUSR2'];
-    
-    signals.forEach((signal) => {
+
+    signals.forEach(signal => {
       process.on(signal, async () => {
         this.logger.info(`Received ${signal}, shutting down gracefully...`);
-        
+
         try {
           await this.stop();
           process.exit(0);
@@ -497,7 +509,7 @@ class Application {
     });
 
     // Handle uncaught exceptions
-    process.on('uncaughtException', (error) => {
+    process.on('uncaughtException', error => {
       this.logger.error('Uncaught exception', error);
       process.exit(1);
     });
@@ -527,7 +539,7 @@ class Application {
 // === Application Bootstrap ===
 async function bootstrap(): Promise<void> {
   const app = new Application();
-  
+
   try {
     await app.initialize();
     await app.start();
@@ -540,7 +552,7 @@ async function bootstrap(): Promise<void> {
 
 // Start the application if this file is run directly
 if (require.main === module) {
-  bootstrap().catch((err) => {
+  bootstrap().catch(err => {
     const logger = new Logger('Bootstrap');
     logger.error('Bootstrap error', err);
     process.exit(1);
