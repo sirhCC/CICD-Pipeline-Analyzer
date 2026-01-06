@@ -1,6 +1,6 @@
 /**
  * Advanced Caching Service - High-Performance Intelligent Caching
- * 
+ *
  * Features:
  * - Multi-level caching (Memory + Redis)
  * - LRU eviction with adaptive algorithms
@@ -9,7 +9,7 @@
  * - Intelligent TTL management
  * - Performance analytics and optimization
  * - Circuit breaker for cache failures
- * 
+ *
  * @author sirhCC
  * @version 1.0.0
  */
@@ -99,7 +99,7 @@ export class AdvancedCacheService extends EventEmitter {
       enablePredictiveCaching: true,
       enableAnalytics: true,
       circuitBreakerThreshold: 0.5, // 50% failure rate
-      ...config
+      ...config,
     };
 
     this.stats = {
@@ -113,7 +113,7 @@ export class AdvancedCacheService extends EventEmitter {
       itemCount: 0,
       hitRatio: 0,
       averageAccessTime: 0,
-      memoryLevel: { hits: 0, misses: 0, size: 0, itemCount: 0 }
+      memoryLevel: { hits: 0, misses: 0, size: 0, itemCount: 0 },
     };
 
     this.startCleanupTimer();
@@ -131,11 +131,12 @@ export class AdvancedCacheService extends EventEmitter {
    */
   public async get<T>(key: string): Promise<T | null> {
     const startTime = Date.now();
-    
+
     try {
       // Check circuit breaker
       if (this.circuitBreaker.isOpen) {
-        if (Date.now() - this.circuitBreaker.lastFailure > 60000) { // Reset after 1 minute
+        if (Date.now() - this.circuitBreaker.lastFailure > 60000) {
+          // Reset after 1 minute
           this.circuitBreaker.isOpen = false;
           this.circuitBreaker.failures = 0;
         } else {
@@ -150,7 +151,7 @@ export class AdvancedCacheService extends EventEmitter {
         this.updateAccessPattern(key);
         this.stats.hits++;
         this.stats.memoryLevel.hits++;
-        
+
         if (this.config.enableAnalytics) {
           const accessTime = Date.now() - startTime;
           this.updateAverageAccessTime(accessTime);
@@ -189,9 +190,9 @@ export class AdvancedCacheService extends EventEmitter {
    * Set value in cache with intelligent placement
    */
   public async set<T>(
-    key: string, 
-    value: T, 
-    ttl?: number, 
+    key: string,
+    value: T,
+    ttl?: number,
     metadata?: CacheEntry['metadata']
   ): Promise<boolean> {
     try {
@@ -203,7 +204,7 @@ export class AdvancedCacheService extends EventEmitter {
         accessCount: 1,
         lastAccessed: Date.now(),
         size: this.estimateSize(value),
-        metadata: metadata || {}
+        metadata: metadata || {},
       };
 
       // Check if we need to evict items
@@ -219,7 +220,7 @@ export class AdvancedCacheService extends EventEmitter {
 
       this.stats.sets++;
       this.updateAccessPattern(key);
-      
+
       return true;
     } catch (error) {
       this.handleError('Cache set failed', error, key);
@@ -284,7 +285,9 @@ export class AdvancedCacheService extends EventEmitter {
   /**
    * Warm cache with predicted keys
    */
-  public async warmCache(warmingFunction: (keys: string[]) => Promise<Map<string, any>>): Promise<void> {
+  public async warmCache(
+    warmingFunction: (keys: string[]) => Promise<Map<string, any>>
+  ): Promise<void> {
     if (!this.config.enablePredictiveCaching) return;
 
     try {
@@ -292,9 +295,9 @@ export class AdvancedCacheService extends EventEmitter {
       if (predictedKeys.length === 0) return;
 
       this.logger.info('Warming cache with predicted keys', { count: predictedKeys.length });
-      
+
       const data = await warmingFunction(predictedKeys);
-      
+
       for (const [key, value] of data) {
         await this.set(key, value, undefined, { tags: ['predicted'], priority: 'low' });
       }
@@ -313,11 +316,11 @@ export class AdvancedCacheService extends EventEmitter {
       this.analyzeAccessPatterns();
       this.adjustTtlBasedOnPatterns();
       this.evictUnusedItems();
-      
+
       this.logger.info('Cache optimization completed', {
         patterns: this.accessPatterns.size,
         items: this.memoryCache.size,
-        hitRatio: this.stats.hitRatio
+        hitRatio: this.stats.hitRatio,
       });
     } catch (error) {
       this.handleError('Cache optimization failed', error);
@@ -334,7 +337,7 @@ export class AdvancedCacheService extends EventEmitter {
       ttl: this.config.defaultTtl,
       accessCount: 1,
       lastAccessed: Date.now(),
-      size: this.estimateSize(value)
+      size: this.estimateSize(value),
     };
 
     this.memoryCache.set(key, cacheEntry);
@@ -380,12 +383,12 @@ export class AdvancedCacheService extends EventEmitter {
       frequency: 0,
       lastAccess: 0,
       predictedNextAccess: 0,
-      confidence: 0
+      confidence: 0,
     };
 
     pattern.frequency++;
     pattern.lastAccess = now;
-    
+
     // Simple prediction: assume regular access intervals
     if (pattern.frequency > 1) {
       const interval = now - pattern.lastAccess;
@@ -403,7 +406,8 @@ export class AdvancedCacheService extends EventEmitter {
 
   private updateAverageAccessTime(accessTime: number): void {
     const total = this.stats.hits + this.stats.misses;
-    this.stats.averageAccessTime = (this.stats.averageAccessTime * (total - 1) + accessTime) / total;
+    this.stats.averageAccessTime =
+      (this.stats.averageAccessTime * (total - 1) + accessTime) / total;
   }
 
   private estimateSize(value: any): number {
@@ -415,14 +419,16 @@ export class AdvancedCacheService extends EventEmitter {
   }
 
   private async ensureCapacity(newItemSize: number): Promise<void> {
-    if (this.stats.totalSize + newItemSize <= this.config.maxMemorySize && 
-        this.stats.itemCount < this.config.maxItems) {
+    if (
+      this.stats.totalSize + newItemSize <= this.config.maxMemorySize &&
+      this.stats.itemCount < this.config.maxItems
+    ) {
       return;
     }
 
     // Need to evict items
     const itemsToEvict = this.selectItemsForEviction(newItemSize);
-    
+
     for (const key of itemsToEvict) {
       const entry = this.memoryCache.get(key);
       if (entry) {
@@ -438,20 +444,20 @@ export class AdvancedCacheService extends EventEmitter {
 
   private selectItemsForEviction(requiredSpace: number): string[] {
     const entries = Array.from(this.memoryCache.entries());
-    
+
     // LRU with priority consideration
     entries.sort((a, b) => {
       const [, entryA] = a;
       const [, entryB] = b;
-      
+
       // Priority consideration
       const priorityA = this.getPriorityScore(entryA);
       const priorityB = this.getPriorityScore(entryB);
-      
+
       if (priorityA !== priorityB) {
         return priorityA - priorityB; // Lower priority first
       }
-      
+
       // Then by access time (LRU)
       return entryA.lastAccessed - entryB.lastAccessed;
     });
@@ -479,8 +485,8 @@ export class AdvancedCacheService extends EventEmitter {
     const predicted: string[] = [];
 
     for (const pattern of this.accessPatterns.values()) {
-      if (pattern.confidence > 0.5 && 
-          pattern.predictedNextAccess <= now + 600000) { // Within 10 minutes
+      if (pattern.confidence > 0.5 && pattern.predictedNextAccess <= now + 600000) {
+        // Within 10 minutes
         predicted.push(pattern.key);
       }
     }
@@ -497,8 +503,8 @@ export class AdvancedCacheService extends EventEmitter {
         .sort((a, b) => b.frequency - a.frequency)
         .slice(0, 10);
 
-      this.logger.info('Hot cache keys', { 
-        hotKeys: hotKeys.map(k => ({ key: k.key, frequency: k.frequency }))
+      this.logger.info('Hot cache keys', {
+        hotKeys: hotKeys.map(k => ({ key: k.key, frequency: k.frequency })),
       });
     }
   }
@@ -553,12 +559,18 @@ export class AdvancedCacheService extends EventEmitter {
     this.circuitBreaker.failures++;
     this.circuitBreaker.lastFailure = Date.now();
 
-    if (this.circuitBreaker.failures / (this.stats.hits + this.stats.misses || 1) > this.config.circuitBreakerThreshold) {
+    if (
+      this.circuitBreaker.failures / (this.stats.hits + this.stats.misses || 1) >
+      this.config.circuitBreakerThreshold
+    ) {
       this.circuitBreaker.isOpen = true;
       this.logger.error('Cache circuit breaker opened', { failures: this.circuitBreaker.failures });
     }
 
-    this.logger.error(message, { error: error instanceof Error ? error.message : String(error), key });
+    this.logger.error(message, {
+      error: error instanceof Error ? error.message : String(error),
+      key,
+    });
     this.emit('error', { message, error, key });
   }
 
@@ -574,7 +586,7 @@ export class AdvancedCacheService extends EventEmitter {
       itemCount: 0,
       hitRatio: 0,
       averageAccessTime: 0,
-      memoryLevel: { hits: 0, misses: 0, size: 0, itemCount: 0 }
+      memoryLevel: { hits: 0, misses: 0, size: 0, itemCount: 0 },
     };
   }
 

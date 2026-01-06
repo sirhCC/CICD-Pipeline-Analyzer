@@ -1,6 +1,6 @@
 /**
  * Advanced Data Processing Service - High-Performance Analytics Engine
- * 
+ *
  * Features:
  * - Time-series data optimization and compression
  * - Advanced data aggregation with multiple strategies
@@ -9,7 +9,7 @@
  * - Multi-format data export (CSV, JSON, Parquet, Excel)
  * - Memory-efficient streaming processing
  * - Predictive caching based on usage patterns
- * 
+ *
  * @author sirhCC
  * @version 1.0.0
  */
@@ -20,7 +20,7 @@ import { PipelineRun } from '@/entities/pipeline-run.entity';
 import { PipelineMetrics } from '@/entities/pipeline-metrics.entity';
 import { repositoryFactory } from '@/repositories/factory.enhanced';
 import { databaseManager } from '@/core/database';
-import { Worker } from 'worker_threads';
+import type { Worker } from 'worker_threads';
 import * as fs from 'fs/promises';
 import * as path from 'path';
 
@@ -85,7 +85,7 @@ export enum AggregationLevel {
   HOUR = 'hour',
   DAY = 'day',
   WEEK = 'week',
-  MONTH = 'month'
+  MONTH = 'month',
 }
 
 export enum AggregationStrategy {
@@ -96,7 +96,7 @@ export enum AggregationStrategy {
   COUNT = 'count',
   MEDIAN = 'median',
   PERCENTILE_95 = 'p95',
-  PERCENTILE_99 = 'p99'
+  PERCENTILE_99 = 'p99',
 }
 
 export enum ProcessingJobType {
@@ -105,7 +105,7 @@ export enum ProcessingJobType {
   ANOMALY_DETECTION = 'anomaly_detection',
   TREND_ANALYSIS = 'trend_analysis',
   CORRELATION_ANALYSIS = 'correlation_analysis',
-  EXPORT = 'export'
+  EXPORT = 'export',
 }
 
 export enum JobStatus {
@@ -113,7 +113,7 @@ export enum JobStatus {
   RUNNING = 'running',
   COMPLETED = 'completed',
   FAILED = 'failed',
-  CANCELLED = 'cancelled'
+  CANCELLED = 'cancelled',
 }
 
 export enum ExportFormat {
@@ -121,7 +121,7 @@ export enum ExportFormat {
   JSON = 'json',
   PARQUET = 'parquet',
   EXCEL = 'xlsx',
-  XML = 'xml'
+  XML = 'xml',
 }
 
 export class AdvancedDataProcessingService {
@@ -143,9 +143,12 @@ export class AdvancedDataProcessingService {
    * Setup periodic cache cleanup
    */
   private setupCacheCleanup(): void {
-    this.cleanupTimer = setInterval(() => {
-      this.cleanupCache();
-    }, 5 * 60 * 1000); // Every 5 minutes
+    this.cleanupTimer = setInterval(
+      () => {
+        this.cleanupCache();
+      },
+      5 * 60 * 1000
+    ); // Every 5 minutes
   }
 
   /**
@@ -158,7 +161,7 @@ export class AdvancedDataProcessingService {
   ): Promise<TimeSeriesData> {
     const startTime = Date.now();
     const cacheKey = `compress_${JSON.stringify(data).slice(0, 100)}_${compressionRatio}`;
-    
+
     // Check cache first
     const cached = this.getFromCache(cacheKey);
     if (cached) {
@@ -168,12 +171,12 @@ export class AdvancedDataProcessingService {
     try {
       // Sort data by timestamp
       const sortedData = [...data].sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime());
-      
+
       // Calculate target size
       const targetSize = Math.max(1, Math.floor(sortedData.length * compressionRatio));
-      
+
       let compressedPoints: TimeSeriesPoint[] = [];
-      
+
       if (preserveAnomalies) {
         // Detect anomalies first using Z-score method
         const values = sortedData.map(p => p.value);
@@ -181,20 +184,18 @@ export class AdvancedDataProcessingService {
         const stdDev = Math.sqrt(
           values.reduce((sum, val) => sum + Math.pow(val - mean, 2), 0) / values.length
         );
-        
-        const anomalies = sortedData.filter(point => 
-          Math.abs(point.value - mean) > 2.5 * stdDev
-        );
-        
+
+        const anomalies = sortedData.filter(point => Math.abs(point.value - mean) > 2.5 * stdDev);
+
         // Always include anomalies
         compressedPoints = [...anomalies];
         const remainingSize = targetSize - anomalies.length;
-        
+
         // Add regular sampling for non-anomalous points
-        const nonAnomalies = sortedData.filter(point => 
-          !anomalies.some(a => a.timestamp.getTime() === point.timestamp.getTime())
+        const nonAnomalies = sortedData.filter(
+          point => !anomalies.some(a => a.timestamp.getTime() === point.timestamp.getTime())
         );
-        
+
         if (remainingSize > 0 && nonAnomalies.length > 0) {
           const step = Math.max(1, Math.floor(nonAnomalies.length / remainingSize));
           for (let i = 0; i < nonAnomalies.length; i += step) {
@@ -214,29 +215,29 @@ export class AdvancedDataProcessingService {
           }
         }
       }
-      
+
       // Sort final result by timestamp
       compressedPoints.sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime());
-      
+
       const result: TimeSeriesData = {
         metric: 'compressed',
         pipelineId: '',
         points: compressedPoints,
         aggregationLevel: AggregationLevel.RAW,
-        compressionRatio: compressedPoints.length / sortedData.length
+        compressionRatio: compressedPoints.length / sortedData.length,
       };
-      
+
       // Cache the result
       const computeTime = Date.now() - startTime;
       this.setCache(cacheKey, result, computeTime);
-      
+
       this.logger.info('Time-series compression completed', {
         originalSize: sortedData.length,
         compressedSize: compressedPoints.length,
         compressionRatio: result.compressionRatio,
-        computeTime
+        computeTime,
       });
-      
+
       return result;
     } catch (error) {
       this.logger.error('Time-series compression failed', { error });
@@ -253,7 +254,7 @@ export class AdvancedDataProcessingService {
   ): Promise<TimeSeriesPoint[]> {
     const startTime = Date.now();
     const cacheKey = `aggregate_${JSON.stringify(config)}_${data.length}`;
-    
+
     // Check cache first
     const cached = this.getFromCache(cacheKey);
     if (cached) {
@@ -263,17 +264,17 @@ export class AdvancedDataProcessingService {
     try {
       // Sort data by timestamp
       const sortedData = [...data].sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime());
-      
+
       if (sortedData.length === 0) {
         return [];
       }
-      
+
       // Calculate window size in milliseconds
       const windowMs = config.windowSize * 60 * 1000;
-      
+
       // Group data into windows
       const windows = new Map<number, TimeSeriesPoint[]>();
-      
+
       for (const point of sortedData) {
         const windowStart = Math.floor(point.timestamp.getTime() / windowMs) * windowMs;
         if (!windows.has(windowStart)) {
@@ -281,14 +282,14 @@ export class AdvancedDataProcessingService {
         }
         windows.get(windowStart)!.push(point);
       }
-      
+
       // Aggregate each window
       const aggregatedPoints: TimeSeriesPoint[] = [];
-      
+
       for (const [windowStart, windowPoints] of windows) {
         const values = windowPoints.map(p => p.value);
         let aggregatedValue: number;
-        
+
         switch (config.strategy) {
           case AggregationStrategy.AVERAGE:
             aggregatedValue = values.reduce((sum, val) => sum + val, 0) / values.length;
@@ -337,7 +338,7 @@ export class AdvancedDataProcessingService {
           default:
             aggregatedValue = values.reduce((sum, val) => sum + val, 0) / values.length;
         }
-        
+
         aggregatedPoints.push({
           timestamp: new Date(windowStart),
           value: aggregatedValue,
@@ -347,24 +348,24 @@ export class AdvancedDataProcessingService {
             pointCount: values.length,
             originalRange: {
               min: Math.min(...values),
-              max: Math.max(...values)
-            }
-          }
+              max: Math.max(...values),
+            },
+          },
         });
       }
-      
+
       // Cache the result
       const computeTime = Date.now() - startTime;
       this.setCache(cacheKey, aggregatedPoints, computeTime);
-      
+
       this.logger.info('Data aggregation completed', {
         originalPoints: sortedData.length,
         aggregatedPoints: aggregatedPoints.length,
         strategy: config.strategy,
         windowSize: config.windowSize,
-        computeTime
+        computeTime,
       });
-      
+
       return aggregatedPoints;
     } catch (error) {
       this.logger.error('Data aggregation failed', { error });
@@ -382,34 +383,32 @@ export class AdvancedDataProcessingService {
     maxWorkers: number = 4
   ): Promise<R[]> {
     const startTime = Date.now();
-    
+
     try {
       // Split data into chunks
       const chunks: T[][] = [];
       for (let i = 0; i < data.length; i += chunkSize) {
         chunks.push(data.slice(i, i + chunkSize));
       }
-      
+
       // Process chunks in batches based on maxWorkers
       const results: R[] = [];
       const actualWorkers = Math.min(maxWorkers, chunks.length);
-      
+
       for (let i = 0; i < chunks.length; i += actualWorkers) {
         const batch = chunks.slice(i, i + actualWorkers);
-        const batchResults = await Promise.all(
-          batch.map(chunk => processor(chunk))
-        );
+        const batchResults = await Promise.all(batch.map(chunk => processor(chunk)));
         results.push(...batchResults);
       }
-      
+
       const computeTime = Date.now() - startTime;
       this.logger.info('Parallel processing completed', {
         totalItems: data.length,
         chunks: chunks.length,
         workers: actualWorkers,
-        computeTime
+        computeTime,
       });
-      
+
       return results;
     } catch (error) {
       this.logger.error('Parallel processing failed', { error });
@@ -426,7 +425,7 @@ export class AdvancedDataProcessingService {
   ): Promise<{ filePath: string; size: number; recordCount: number }> {
     const startTime = Date.now();
     const jobId = `export_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-    
+
     try {
       // Create job
       const job: ProcessingJob = {
@@ -436,10 +435,10 @@ export class AdvancedDataProcessingService {
         input: { data: data.length, options },
         progress: 0,
         startTime: new Date(),
-        metadata: { format: options.format }
+        metadata: { format: options.format },
       };
       this.jobs.set(jobId, job);
-      
+
       // Apply filters if specified
       let filteredData = data;
       if (options.filters) {
@@ -449,7 +448,7 @@ export class AdvancedDataProcessingService {
           });
         });
       }
-      
+
       // Select columns if specified
       if (options.columns && filteredData.length > 0) {
         filteredData = filteredData.map(item => {
@@ -462,68 +461,68 @@ export class AdvancedDataProcessingService {
           return filtered;
         });
       }
-      
+
       // Update progress
       job.progress = 25;
-      
+
       // Generate filename
       const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
       const filename = `export_${timestamp}.${options.format}`;
       const filePath = path.join(process.cwd(), 'exports', filename);
-      
+
       // Ensure exports directory exists
       await fs.mkdir(path.dirname(filePath), { recursive: true });
-      
+
       // Update progress
       job.progress = 50;
-      
+
       // Export based on format
       let exportedData: string;
       switch (options.format) {
         case ExportFormat.JSON:
           exportedData = JSON.stringify(filteredData, null, 2);
           break;
-          
+
         case ExportFormat.CSV:
           exportedData = this.convertToCSV(filteredData);
           break;
-          
+
         case ExportFormat.XML:
           exportedData = this.convertToXML(filteredData);
           break;
-          
+
         default:
           throw new AppError(`Unsupported export format: ${options.format}`, 400);
       }
-      
+
       // Update progress
       job.progress = 75;
-      
+
       // Write to file
       await fs.writeFile(filePath, exportedData, 'utf8');
-      
+
       // Get file size
       const stats = await fs.stat(filePath);
-      
+
       // Complete job
       job.status = JobStatus.COMPLETED;
       job.progress = 100;
       job.endTime = new Date();
       job.output = { filePath, size: stats.size, recordCount: filteredData.length };
-      
+
       const computeTime = Date.now() - startTime;
       this.logger.info('Data export completed', {
         format: options.format,
         recordCount: filteredData.length,
         fileSize: stats.size,
         filePath,
-        computeTime
+        computeTime,
       });
-      
+
       return {
         filePath,
         size: stats.size,
-        recordCount: filteredData.length
+        recordCount: filteredData.length,
       };
     } catch (error) {
       // Update job with error
@@ -533,7 +532,7 @@ export class AdvancedDataProcessingService {
         job.error = error instanceof Error ? error.message : String(error);
         job.endTime = new Date();
       }
-      
+
       this.logger.error('Data export failed', { error, jobId });
       throw new AppError('Data export failed', 500);
     }
@@ -561,17 +560,17 @@ export class AdvancedDataProcessingService {
     if (!job || job.status !== JobStatus.RUNNING) {
       return false;
     }
-    
+
     job.status = JobStatus.CANCELLED;
     job.endTime = new Date();
-    
+
     // Cancel any associated workers
     const worker = this.workers.get(jobId);
     if (worker) {
       await worker.terminate();
       this.workers.delete(jobId);
     }
-    
+
     return true;
   }
 
@@ -580,23 +579,25 @@ export class AdvancedDataProcessingService {
    */
   private convertToCSV(data: unknown[]): string {
     if (data.length === 0) return '';
-    
+
     // Get headers from first object
     const headers = Object.keys(data[0] as object);
     const csvHeaders = headers.join(',');
-    
+
     // Convert rows
     const csvRows = data.map(item => {
-      return headers.map(header => {
-        const value = (item as any)[header];
-        if (value === null || value === undefined) return '';
-        if (typeof value === 'string' && value.includes(',')) {
-          return `"${value.replace(/"/g, '""')}"`;
-        }
-        return String(value);
-      }).join(',');
+      return headers
+        .map(header => {
+          const value = (item as any)[header];
+          if (value === null || value === undefined) return '';
+          if (typeof value === 'string' && value.includes(',')) {
+            return `"${value.replace(/"/g, '""')}"`;
+          }
+          return String(value);
+        })
+        .join(',');
     });
-    
+
     return [csvHeaders, ...csvRows].join('\n');
   }
 
@@ -605,7 +606,7 @@ export class AdvancedDataProcessingService {
    */
   private convertToXML(data: unknown[]): string {
     let xml = '<?xml version="1.0" encoding="UTF-8"?>\n<data>\n';
-    
+
     for (const item of data) {
       xml += '  <record>\n';
       for (const [key, value] of Object.entries(item as object)) {
@@ -619,7 +620,7 @@ export class AdvancedDataProcessingService {
       }
       xml += '  </record>\n';
     }
-    
+
     xml += '</data>';
     return xml;
   }
@@ -630,61 +631,61 @@ export class AdvancedDataProcessingService {
   private getFromCache(key: string): unknown | null {
     const entry = this.cache.get(key);
     if (!entry) return null;
-    
+
     // Check expiration
     if (entry.expiresAt && new Date() > entry.expiresAt) {
       this.cache.delete(key);
       this.currentMemoryUsage -= entry.size;
       return null;
     }
-    
+
     // Update access info
     entry.lastAccessed = new Date();
     entry.accessCount++;
-    
+
     return entry.value;
   }
 
   private setCache(key: string, value: unknown, computeTime: number): void {
     const size = JSON.stringify(value).length;
-    
+
     // Check memory limits
     if (this.currentMemoryUsage + size > this.maxMemoryUsage) {
       this.evictLRU();
     }
-    
+
     // Check cache size limits
     if (this.cache.size >= this.maxCacheSize) {
       this.evictLRU();
     }
-    
+
     const entry: CacheEntry = {
       key,
       value,
       lastAccessed: new Date(),
       accessCount: 1,
       computeTime,
-      size
+      size,
     };
-    
+
     this.cache.set(key, entry);
     this.currentMemoryUsage += size;
   }
 
   private evictLRU(): void {
     if (this.cache.size === 0) return;
-    
+
     // Find least recently used entry
     let lruKey = '';
     let lruTime = Date.now();
-    
+
     for (const [key, entry] of this.cache) {
       if (entry.lastAccessed.getTime() < lruTime) {
         lruTime = entry.lastAccessed.getTime();
         lruKey = key;
       }
     }
-    
+
     // Remove LRU entry
     const entry = this.cache.get(lruKey);
     if (entry) {
@@ -696,14 +697,14 @@ export class AdvancedDataProcessingService {
   private cleanupCache(): void {
     const now = new Date();
     const toDelete: string[] = [];
-    
+
     for (const [key, entry] of this.cache) {
       // Remove expired entries
       if (entry.expiresAt && now > entry.expiresAt) {
         toDelete.push(key);
       }
     }
-    
+
     for (const key of toDelete) {
       const entry = this.cache.get(key);
       if (entry) {
@@ -711,11 +712,11 @@ export class AdvancedDataProcessingService {
         this.currentMemoryUsage -= entry.size;
       }
     }
-    
+
     this.logger.debug('Cache cleanup completed', {
       entriesRemoved: toDelete.length,
       currentSize: this.cache.size,
-      memoryUsage: this.currentMemoryUsage
+      memoryUsage: this.currentMemoryUsage,
     });
   }
 
@@ -730,17 +731,17 @@ export class AdvancedDataProcessingService {
   } {
     let totalAccess = 0;
     let totalComputeTime = 0;
-    
+
     for (const entry of this.cache.values()) {
       totalAccess += entry.accessCount;
       totalComputeTime += entry.computeTime;
     }
-    
+
     return {
       size: this.cache.size,
       memoryUsage: this.currentMemoryUsage,
       hitRate: this.cache.size > 0 ? totalAccess / this.cache.size : 0,
-      averageComputeTime: this.cache.size > 0 ? totalComputeTime / this.cache.size : 0
+      averageComputeTime: this.cache.size > 0 ? totalComputeTime / this.cache.size : 0,
     };
   }
 

@@ -1,27 +1,28 @@
 /**
  * Advanced Data Processing API Routes
- * 
+ *
  * Endpoints for advanced analytics processing:
  * - Time-series compression and optimization
  * - Data aggregation with multiple strategies
  * - Processing job management
  * - Cache management and statistics
- * 
+ *
  * @author sirhCC
  * @version 1.0.0
  */
 
-import { Router, Request, Response } from 'express';
+import type { Request, Response } from 'express';
+import { Router } from 'express';
 import { authenticateJWT, requireRole, UserRole } from '@/middleware/auth';
 import { asyncHandler, AppError } from '@/middleware/error-handler';
 import { validateRequest } from '@/middleware/request-validation';
 import { ResponseBuilder } from '@/shared/api-response';
 import { Logger } from '@/shared/logger';
-import { 
+import {
   advancedDataProcessingService,
   AggregationLevel,
   AggregationStrategy,
-  ExportFormat
+  ExportFormat,
 } from '@/services/advanced-data-processing.service';
 import Joi from 'joi';
 
@@ -30,13 +31,17 @@ const logger = new Logger('AdvancedDataProcessingRoutes');
 
 // Request validation schemas
 const timeSeriesCompressionSchema = Joi.object({
-  data: Joi.array().items(Joi.object({
-    timestamp: Joi.date().required(),
-    value: Joi.number().required(),
-    metadata: Joi.object().optional()
-  })).required(),
+  data: Joi.array()
+    .items(
+      Joi.object({
+        timestamp: Joi.date().required(),
+        value: Joi.number().required(),
+        metadata: Joi.object().optional(),
+      })
+    )
+    .required(),
   compressionRatio: Joi.number().min(0.01).max(1).default(0.1),
-  preserveAnomalies: Joi.boolean().default(true)
+  preserveAnomalies: Joi.boolean().default(true),
 });
 
 /**
@@ -44,35 +49,38 @@ const timeSeriesCompressionSchema = Joi.object({
  * @desc Compress time-series data with anomaly preservation
  * @access Private
  */
-router.post('/compress-timeseries', 
+router.post(
+  '/compress-timeseries',
   authenticateJWT,
   requireRole(UserRole.ANALYST),
   validateRequest({ body: timeSeriesCompressionSchema }),
   asyncHandler(async (req: Request, res: Response) => {
     const { data, compressionRatio, preserveAnomalies } = req.body;
-    
+
     logger.info('Starting time-series compression', {
       dataPoints: data.length,
       compressionRatio,
-      preserveAnomalies
+      preserveAnomalies,
     });
-    
+
     const result = await advancedDataProcessingService.compressTimeSeries(
       data,
       compressionRatio,
       preserveAnomalies
     );
-    
+
     logger.info('Time-series compression completed', {
       originalSize: data.length,
       compressedSize: result.points.length,
-      actualRatio: result.compressionRatio
+      actualRatio: result.compressionRatio,
     });
-    
-    res.json(ResponseBuilder.success({
-      data: result,
-      message: 'Time-series data compressed successfully'
-    }));
+
+    res.json(
+      ResponseBuilder.success({
+        data: result,
+        message: 'Time-series data compressed successfully',
+      })
+    );
   })
 );
 
@@ -81,25 +89,31 @@ router.post('/compress-timeseries',
  * @desc Get all processing jobs
  * @access Private
  */
-router.get('/jobs', 
+router.get(
+  '/jobs',
   authenticateJWT,
   requireRole(UserRole.ANALYST),
   asyncHandler(async (req: Request, res: Response) => {
     const jobs = advancedDataProcessingService.getAllJobs();
-    
-    res.json(ResponseBuilder.success({
-      data: {
-        jobs,
-        summary: {
-          total: jobs.length,
-          byStatus: jobs.reduce((acc, job) => {
-            acc[job.status] = (acc[job.status] || 0) + 1;
-            return acc;
-          }, {} as Record<string, number>)
-        }
-      },
-      message: 'Processing jobs retrieved successfully'
-    }));
+
+    res.json(
+      ResponseBuilder.success({
+        data: {
+          jobs,
+          summary: {
+            total: jobs.length,
+            byStatus: jobs.reduce(
+              (acc, job) => {
+                acc[job.status] = (acc[job.status] || 0) + 1;
+                return acc;
+              },
+              {} as Record<string, number>
+            ),
+          },
+        },
+        message: 'Processing jobs retrieved successfully',
+      })
+    );
   })
 );
 
@@ -108,26 +122,29 @@ router.get('/jobs',
  * @desc Get specific job status
  * @access Private
  */
-router.get('/jobs/:jobId', 
+router.get(
+  '/jobs/:jobId',
   authenticateJWT,
   requireRole(UserRole.ANALYST),
   asyncHandler(async (req: Request, res: Response) => {
     const { jobId } = req.params;
-    
+
     if (!jobId) {
       throw new AppError('Job ID is required', 400);
     }
-    
+
     const job = advancedDataProcessingService.getJobStatus(jobId);
-    
+
     if (!job) {
       throw new AppError('Job not found', 404);
     }
-    
-    res.json(ResponseBuilder.success({
-      data: job,
-      message: 'Job status retrieved successfully'
-    }));
+
+    res.json(
+      ResponseBuilder.success({
+        data: job,
+        message: 'Job status retrieved successfully',
+      })
+    );
   })
 );
 
@@ -136,27 +153,30 @@ router.get('/jobs/:jobId',
  * @desc Cancel a running job
  * @access Private
  */
-router.delete('/jobs/:jobId', 
+router.delete(
+  '/jobs/:jobId',
   authenticateJWT,
   requireRole(UserRole.ANALYST),
   asyncHandler(async (req: Request, res: Response) => {
     const { jobId } = req.params;
-    
+
     if (!jobId) {
       throw new AppError('Job ID is required', 400);
     }
-    
+
     const cancelled = await advancedDataProcessingService.cancelJob(jobId);
-    
+
     if (!cancelled) {
       throw new AppError('Job not found or cannot be cancelled', 400);
     }
-    
+
     logger.info('Job cancelled', { jobId });
-    res.json(ResponseBuilder.success({
-      data: { jobId, cancelled: true },
-      message: 'Job cancelled successfully'
-    }));
+    res.json(
+      ResponseBuilder.success({
+        data: { jobId, cancelled: true },
+        message: 'Job cancelled successfully',
+      })
+    );
   })
 );
 
@@ -165,16 +185,19 @@ router.delete('/jobs/:jobId',
  * @desc Get cache statistics
  * @access Private
  */
-router.get('/cache/stats', 
+router.get(
+  '/cache/stats',
   authenticateJWT,
   requireRole(UserRole.ANALYST),
   asyncHandler(async (req: Request, res: Response) => {
     const stats = advancedDataProcessingService.getCacheStats();
-    
-    res.json(ResponseBuilder.success({
-      data: stats,
-      message: 'Cache statistics retrieved successfully'
-    }));
+
+    res.json(
+      ResponseBuilder.success({
+        data: stats,
+        message: 'Cache statistics retrieved successfully',
+      })
+    );
   })
 );
 
@@ -183,17 +206,20 @@ router.get('/cache/stats',
  * @desc Clear cache
  * @access Private
  */
-router.delete('/cache', 
+router.delete(
+  '/cache',
   authenticateJWT,
   requireRole(UserRole.ADMIN),
   asyncHandler(async (req: Request, res: Response) => {
     advancedDataProcessingService.clearCache();
-    
+
     logger.info('Cache cleared');
-    res.json(ResponseBuilder.success({
-      data: { cleared: true },
-      message: 'Cache cleared successfully'
-    }));
+    res.json(
+      ResponseBuilder.success({
+        data: { cleared: true },
+        message: 'Cache cleared successfully',
+      })
+    );
   })
 );
 
@@ -202,30 +228,33 @@ router.delete('/cache',
  * @desc Get available aggregation strategies
  * @access Private
  */
-router.get('/aggregation-strategies', 
+router.get(
+  '/aggregation-strategies',
   authenticateJWT,
   requireRole(UserRole.VIEWER),
   asyncHandler(async (req: Request, res: Response) => {
     const strategies = Object.values(AggregationStrategy).map(strategy => ({
       value: strategy,
       label: strategy.replace(/_/g, ' ').toUpperCase(),
-      description: getStrategyDescription(strategy)
+      description: getStrategyDescription(strategy),
     }));
-    
+
     const levels = Object.values(AggregationLevel).map(level => ({
       value: level,
       label: level.toUpperCase(),
-      description: getLevelDescription(level)
+      description: getLevelDescription(level),
     }));
-    
-    res.json(ResponseBuilder.success({
-      data: {
-        strategies,
-        levels,
-        exportFormats: Object.values(ExportFormat)
-      },
-      message: 'Aggregation options retrieved successfully'
-    }));
+
+    res.json(
+      ResponseBuilder.success({
+        data: {
+          strategies,
+          levels,
+          exportFormats: Object.values(ExportFormat),
+        },
+        message: 'Aggregation options retrieved successfully',
+      })
+    );
   })
 );
 
