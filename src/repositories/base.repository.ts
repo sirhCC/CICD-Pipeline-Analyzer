@@ -2,10 +2,17 @@
  * Base Repository - Generic repository with common CRUD operations
  */
 
-import { Repository, EntityTarget, FindOptionsWhere, FindManyOptions, FindOneOptions, DeepPartial } from 'typeorm';
+import type {
+  Repository,
+  EntityTarget,
+  FindOptionsWhere,
+  FindManyOptions,
+  FindOneOptions,
+  DeepPartial,
+} from 'typeorm';
 import { databaseManager } from '@/core/database';
 import { Logger } from '@/shared/logger';
-import { BaseEntity } from '@/entities/base.entity';
+import type { BaseEntity } from '@/entities/base.entity';
 
 export interface PaginationOptions {
   page?: number;
@@ -42,7 +49,7 @@ export abstract class BaseRepository<T extends BaseEntity> {
     try {
       const entity = this.repository.create(entityData);
       const savedEntity = await this.repository.save(entity);
-      
+
       this.logger.info(`Created ${this.entityName}`, { id: savedEntity.id });
       return savedEntity;
     } catch (error) {
@@ -58,13 +65,13 @@ export abstract class BaseRepository<T extends BaseEntity> {
     try {
       const entity = await this.repository.findOne({
         where: { id } as FindOptionsWhere<T>,
-        ...options
+        ...options,
       });
-      
+
       if (entity) {
         this.logger.debug(`Found ${this.entityName} by ID`, { id });
       }
-      
+
       return entity;
     } catch (error) {
       this.logger.error(`Failed to find ${this.entityName} by ID`, error, { id });
@@ -75,13 +82,16 @@ export abstract class BaseRepository<T extends BaseEntity> {
   /**
    * Find entity by criteria
    */
-  async findOne(where: FindOptionsWhere<T>, options?: Omit<FindOneOptions<T>, 'where'>): Promise<T | null> {
+  async findOne(
+    where: FindOptionsWhere<T>,
+    options?: Omit<FindOneOptions<T>, 'where'>
+  ): Promise<T | null> {
     try {
       const entity = await this.repository.findOne({
         where,
-        ...options
+        ...options,
       });
-      
+
       return entity;
     } catch (error) {
       this.logger.error(`Failed to find ${this.entityName}`, error, { where });
@@ -95,7 +105,7 @@ export abstract class BaseRepository<T extends BaseEntity> {
   async findMany(options?: FindManyOptions<T>): Promise<T[]> {
     try {
       const entities = await this.repository.find(options);
-      
+
       this.logger.debug(`Found ${entities.length} ${this.entityName} entities`);
       return entities;
     } catch (error) {
@@ -116,7 +126,7 @@ export abstract class BaseRepository<T extends BaseEntity> {
       const page = paginationOptions?.page || 1;
       const limit = Math.min(paginationOptions?.limit || 20, 100); // Max 100 items per page
       const skip = (page - 1) * limit;
-      
+
       const order: any = {};
       if (paginationOptions?.sortBy) {
         order[paginationOptions.sortBy] = paginationOptions.sortOrder || 'ASC';
@@ -128,9 +138,9 @@ export abstract class BaseRepository<T extends BaseEntity> {
         take: limit,
         skip,
         order,
-        ...findOptions
+        ...findOptions,
       };
-      
+
       if (where) {
         queryOptions.where = where;
       }
@@ -146,10 +156,13 @@ export abstract class BaseRepository<T extends BaseEntity> {
         limit,
         totalPages,
         hasNext: page < totalPages,
-        hasPrevious: page > 1
+        hasPrevious: page > 1,
       };
     } catch (error) {
-      this.logger.error(`Failed to find ${this.entityName} with pagination`, error, { where, paginationOptions });
+      this.logger.error(`Failed to find ${this.entityName} with pagination`, error, {
+        where,
+        paginationOptions,
+      });
       throw error;
     }
   }
@@ -161,11 +174,11 @@ export abstract class BaseRepository<T extends BaseEntity> {
     try {
       await this.repository.update(id, updateData as any);
       const updatedEntity = await this.findById(id);
-      
+
       if (updatedEntity) {
         this.logger.info(`Updated ${this.entityName}`, { id, updateData });
       }
-      
+
       return updatedEntity;
     } catch (error) {
       this.logger.error(`Failed to update ${this.entityName}`, error, { id, updateData });
@@ -180,11 +193,17 @@ export abstract class BaseRepository<T extends BaseEntity> {
     try {
       const result = await this.repository.update(where, updateData as any);
       const affectedRows = result.affected || 0;
-      
-      this.logger.info(`Updated ${affectedRows} ${this.entityName} entities`, { where, updateData });
+
+      this.logger.info(`Updated ${affectedRows} ${this.entityName} entities`, {
+        where,
+        updateData,
+      });
       return affectedRows;
     } catch (error) {
-      this.logger.error(`Failed to update ${this.entityName} entities`, error, { where, updateData });
+      this.logger.error(`Failed to update ${this.entityName} entities`, error, {
+        where,
+        updateData,
+      });
       throw error;
     }
   }
@@ -201,7 +220,7 @@ export abstract class BaseRepository<T extends BaseEntity> {
 
       entity.softDelete();
       await this.repository.save(entity);
-      
+
       this.logger.info(`Soft deleted ${this.entityName}`, { id });
       return true;
     } catch (error) {
@@ -217,11 +236,11 @@ export abstract class BaseRepository<T extends BaseEntity> {
     try {
       const result = await this.repository.delete(id);
       const deleted = (result.affected || 0) > 0;
-      
+
       if (deleted) {
         this.logger.info(`Hard deleted ${this.entityName}`, { id });
       }
-      
+
       return deleted;
     } catch (error) {
       this.logger.error(`Failed to hard delete ${this.entityName}`, error, { id });
@@ -299,20 +318,20 @@ export abstract class BaseRepository<T extends BaseEntity> {
       const total = await this.count();
       const active = await this.count({ isDeleted: false } as FindOptionsWhere<T>);
       const deleted = await this.count({ isDeleted: true } as FindOptionsWhere<T>);
-      
+
       // Recent items (last 24 hours)
       const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000);
       const [recentlyCreated, recentlyUpdated] = await Promise.all([
         this.repository.count({
           where: {
-            createdAt: { $gte: yesterday } as any
-          } as FindOptionsWhere<T>
+            createdAt: { $gte: yesterday } as any,
+          } as FindOptionsWhere<T>,
         }),
         this.repository.count({
           where: {
-            updatedAt: { $gte: yesterday } as any
-          } as FindOptionsWhere<T>
-        })
+            updatedAt: { $gte: yesterday } as any,
+          } as FindOptionsWhere<T>,
+        }),
       ]);
 
       return {
@@ -320,7 +339,7 @@ export abstract class BaseRepository<T extends BaseEntity> {
         active,
         deleted,
         recentlyCreated,
-        recentlyUpdated
+        recentlyUpdated,
       };
     } catch (error) {
       this.logger.error(`Failed to get ${this.entityName} stats`, error);
