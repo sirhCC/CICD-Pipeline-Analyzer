@@ -2,10 +2,10 @@
  * Base Entity with common fields for all database entities
  */
 
-import { 
-  PrimaryGeneratedColumn, 
-  CreateDateColumn, 
-  UpdateDateColumn, 
+import {
+  PrimaryGeneratedColumn,
+  CreateDateColumn,
+  UpdateDateColumn,
   VersionColumn,
   Column,
 } from 'typeorm';
