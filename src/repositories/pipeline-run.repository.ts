@@ -2,8 +2,10 @@
  * Pipeline Run Repository - Database operations for Pipeline Run entities
  */
 
-import { FindOptionsWhere, MoreThan, LessThan, Between } from 'typeorm';
-import { BaseRepository, PaginationOptions, PaginationResult } from './base.repository';
+import type { FindOptionsWhere } from 'typeorm';
+import { MoreThan, LessThan, Between } from 'typeorm';
+import type { PaginationOptions, PaginationResult } from './base.repository';
+import { BaseRepository } from './base.repository';
 import { PipelineRun, PipelineRunStage } from '@/entities/pipeline-run.entity';
 import { PipelineStatus } from '@/types';
 
@@ -42,27 +44,29 @@ export class PipelineRunRepository extends BaseRepository<PipelineRun> {
   /**
    * Find run by pipeline and run number
    */
-  async findByPipelineAndRunNumber(pipelineId: string, runNumber: number): Promise<PipelineRun | null> {
-    return this.findOne({
-      pipelineId,
-      runNumber
-    }, {
-      relations: ['pipeline', 'stages']
-    });
+  async findByPipelineAndRunNumber(
+    pipelineId: string,
+    runNumber: number
+  ): Promise<PipelineRun | null> {
+    return this.findOne(
+      {
+        pipelineId,
+        runNumber,
+      },
+      {
+        relations: ['pipeline', 'stages'],
+      }
+    );
   }
 
   /**
    * Find runs by pipeline
    */
   async findByPipeline(
-    pipelineId: string, 
+    pipelineId: string,
     pagination?: PaginationOptions
   ): Promise<PaginationResult<PipelineRun>> {
-    return this.findWithPagination(
-      { pipelineId },
-      pagination,
-      { relations: ['stages'] }
-    );
+    return this.findWithPagination({ pipelineId }, pagination, { relations: ['stages'] });
   }
 
   /**
@@ -101,7 +105,7 @@ export class PipelineRunRepository extends BaseRepository<PipelineRun> {
     }
 
     return this.findWithPagination(where, pagination, {
-      relations: ['pipeline', 'stages']
+      relations: ['pipeline', 'stages'],
     });
   }
 
@@ -147,7 +151,7 @@ export class PipelineRunRepository extends BaseRepository<PipelineRun> {
       averageQueueTime: parseFloat(metrics.average_queue_time || '0'),
       runsToday: parseInt(metrics.runs_today || '0', 10),
       runsThisWeek: parseInt(metrics.runs_this_week || '0', 10),
-      runsThisMonth: parseInt(metrics.runs_this_month || '0', 10)
+      runsThisMonth: parseInt(metrics.runs_this_month || '0', 10),
     };
   }
 
@@ -158,7 +162,7 @@ export class PipelineRunRepository extends BaseRepository<PipelineRun> {
     return this.findMany({
       order: { createdAt: 'DESC' },
       take: limit,
-      relations: ['pipeline']
+      relations: ['pipeline'],
     });
   }
 
@@ -168,21 +172,18 @@ export class PipelineRunRepository extends BaseRepository<PipelineRun> {
   async getRunningRuns(): Promise<PipelineRun[]> {
     return this.findMany({
       where: {
-        status: PipelineStatus.RUNNING
+        status: PipelineStatus.RUNNING,
       },
-      relations: ['pipeline', 'stages']
+      relations: ['pipeline', 'stages'],
     });
   }
 
   /**
    * Get failed runs for analysis
    */
-  async getFailedRuns(
-    since?: Date,
-    limit: number = 100
-  ): Promise<PipelineRun[]> {
+  async getFailedRuns(since?: Date, limit: number = 100): Promise<PipelineRun[]> {
     const where: FindOptionsWhere<PipelineRun> = {
-      status: PipelineStatus.FAILED
+      status: PipelineStatus.FAILED,
     };
 
     if (since) {
@@ -193,7 +194,7 @@ export class PipelineRunRepository extends BaseRepository<PipelineRun> {
       where,
       order: { completedAt: 'DESC' },
       take: limit,
-      relations: ['pipeline', 'stages']
+      relations: ['pipeline', 'stages'],
     });
   }
 
@@ -231,8 +232,8 @@ export class PipelineRunRepository extends BaseRepository<PipelineRun> {
    * Update run status and duration
    */
   async updateRunStatus(
-    runId: string, 
-    status: PipelineStatus, 
+    runId: string,
+    status: PipelineStatus,
     errorMessage?: string
   ): Promise<PipelineRun | null> {
     const run = await this.findById(runId);
@@ -241,10 +242,17 @@ export class PipelineRunRepository extends BaseRepository<PipelineRun> {
     }
 
     run.status = status;
-    
+
     if (status === PipelineStatus.RUNNING && !run.startedAt) {
       run.markStarted();
-    } else if ([PipelineStatus.SUCCESS, PipelineStatus.FAILED, PipelineStatus.CANCELLED, PipelineStatus.TIMEOUT].includes(status)) {
+    } else if (
+      [
+        PipelineStatus.SUCCESS,
+        PipelineStatus.FAILED,
+        PipelineStatus.CANCELLED,
+        PipelineStatus.TIMEOUT,
+      ].includes(status)
+    ) {
       run.markCompleted(status, status === PipelineStatus.SUCCESS ? 0 : 1, errorMessage);
     }
 
@@ -270,7 +278,7 @@ export class PipelineRunRepository extends BaseRepository<PipelineRun> {
 
     const results = await this.query(sql, [pipelineId]);
     const buildTimes: Record<string, number> = {};
-    
+
     results.forEach((row: any) => {
       buildTimes[row.branch] = parseFloat(row.average_duration);
     });
@@ -284,13 +292,15 @@ export class PipelineRunRepository extends BaseRepository<PipelineRun> {
   async getPerformanceTrends(
     pipelineId: string,
     days: number = 30
-  ): Promise<Array<{
-    date: string;
-    totalRuns: number;
-    successfulRuns: number;
-    averageDuration: number;
-    successRate: number;
-  }>> {
+  ): Promise<
+    Array<{
+      date: string;
+      totalRuns: number;
+      successfulRuns: number;
+      averageDuration: number;
+      successRate: number;
+    }>
+  > {
     const sql = `
       SELECT 
         DATE(created_at) as date,
@@ -306,13 +316,13 @@ export class PipelineRunRepository extends BaseRepository<PipelineRun> {
     `;
 
     const results = await this.query(sql, [pipelineId]);
-    
+
     return results.map((row: any) => ({
       date: row.date,
       totalRuns: parseInt(row.total_runs, 10),
       successfulRuns: parseInt(row.successful_runs, 10),
       averageDuration: parseFloat(row.average_duration),
-      successRate: row.total_runs > 0 ? (row.successful_runs / row.total_runs) * 100 : 0
+      successRate: row.total_runs > 0 ? (row.successful_runs / row.total_runs) * 100 : 0,
     }));
   }
 
@@ -321,7 +331,7 @@ export class PipelineRunRepository extends BaseRepository<PipelineRun> {
    */
   async getSlowestRuns(limit: number = 10, pipelineId?: string): Promise<PipelineRun[]> {
     const where: FindOptionsWhere<PipelineRun> = {
-      status: PipelineStatus.SUCCESS
+      status: PipelineStatus.SUCCESS,
     };
 
     if (pipelineId) {
@@ -332,7 +342,7 @@ export class PipelineRunRepository extends BaseRepository<PipelineRun> {
       where,
       order: { duration: 'DESC' },
       take: limit,
-      relations: ['pipeline']
+      relations: ['pipeline'],
     });
   }
 
@@ -341,16 +351,16 @@ export class PipelineRunRepository extends BaseRepository<PipelineRun> {
    */
   async deleteOldRuns(olderThanDays: number): Promise<number> {
     const cutoffDate = new Date(Date.now() - olderThanDays * 24 * 60 * 60 * 1000);
-    
+
     const result = await this.repository
       .createQueryBuilder()
       .delete()
       .where('created_at < :cutoffDate', { cutoffDate })
       .execute();
 
-    this.logger.info(`Deleted ${result.affected} old pipeline runs`, { 
-      olderThanDays, 
-      cutoffDate 
+    this.logger.info(`Deleted ${result.affected} old pipeline runs`, {
+      olderThanDays,
+      cutoffDate,
     });
 
     return result.affected || 0;
