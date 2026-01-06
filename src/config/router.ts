@@ -32,7 +32,7 @@ export interface VersionedRouterConfig {
 export function createVersionedRouter(config: VersionedRouterConfig): Router {
   const router = Router();
   const versionConfig = apiVersionManager.getVersionConfig(config.version);
-  
+
   if (!versionConfig) {
     throw new Error(`Unsupported API version: ${config.version}`);
   }
@@ -124,7 +124,11 @@ export function createVersionedRouter(config: VersionedRouterConfig): Router {
 /**
  * Create all supported API version routers
  */
-export function createAllVersionedRouters(): Array<{ version: string; prefix: string; router: Router }> {
+export function createAllVersionedRouters(): Array<{
+  version: string;
+  prefix: string;
+  router: Router;
+}> {
   const supportedVersions = apiVersionManager.getSupportedVersions();
   const routers: Array<{ version: string; prefix: string; router: Router }> = [];
 
@@ -137,16 +141,18 @@ export function createAllVersionedRouters(): Array<{ version: string; prefix: st
         routes: {
           auth: versionConfig.features.includes('authentication'),
           pipelines: versionConfig.features.includes('pipeline-management'),
-          analytics: versionConfig.features.includes('basic-analytics') || 
-                    versionConfig.features.includes('advanced-analytics'),
-          enhancedAnalytics: versionConfig.features.includes('advanced-analytics') ||
-                            versionConfig.features.includes('phase3-optimizations'),
+          analytics:
+            versionConfig.features.includes('basic-analytics') ||
+            versionConfig.features.includes('advanced-analytics'),
+          enhancedAnalytics:
+            versionConfig.features.includes('advanced-analytics') ||
+            versionConfig.features.includes('phase3-optimizations'),
           admin: versionConfig.features.includes('user-management'),
         },
       };
 
       const router = createVersionedRouter(config);
-      
+
       routers.push({
         version: versionConfig.version,
         prefix: versionConfig.prefix,
@@ -178,7 +184,7 @@ export function createVersionInfoRouter(): Router {
   router.get('/', (req, res) => {
     const supportedVersions = apiVersionManager.getSupportedVersions();
     const deprecatedVersions = apiVersionManager.getDeprecatedVersions();
-    
+
     res.json({
       success: true,
       data: {
@@ -203,7 +209,7 @@ export function createVersionInfoRouter(): Router {
   router.get('/:version', (req, res) => {
     const { version } = req.params;
     const versionConfig = apiVersionManager.getVersionConfig(version);
-    
+
     if (!versionConfig) {
       return res.status(404).json({
         success: false,
