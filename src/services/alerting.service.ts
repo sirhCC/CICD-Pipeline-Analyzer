@@ -1,6 +1,6 @@
 /**
  * Advanced Alerting System - Configurable Multi-Channel Notifications
- * 
+ *
  * Features:
  * - Configurable alert thresholds for anomalies, SLA violations, cost overruns
  * - Multi-channel notification support (email, Slack, webhooks, SMS)
@@ -8,14 +8,14 @@
  * - Alert history and management with acknowledgment system
  * - Advanced filtering and routing based on severity and context
  * - Rate limiting and deduplication to prevent alert fatigue
- * 
+ *
  * @author sirhCC
  * @version 1.0.0
  */
 
 import { Logger } from '@/shared/logger';
 import { AppError } from '@/middleware/error-handler';
-import { WebSocketService } from '@/services/websocket.service';
+import type { WebSocketService } from '@/services/websocket.service';
 import { repositoryFactory } from '@/repositories/factory.enhanced';
 import { databaseManager } from '@/core/database';
 
@@ -45,7 +45,7 @@ export interface AlertThresholds {
     minDataPoints: number;
     triggerCount: number; // Number of consecutive anomalies to trigger alert
   };
-  
+
   // SLA violation thresholds
   sla?: {
     violationPercent: number;
@@ -53,7 +53,7 @@ export interface AlertThresholds {
     frequency: number; // violations per time period
     timePeriodHours: number;
   };
-  
+
   // Cost analysis thresholds
   cost?: {
     absoluteThreshold: number;
@@ -61,7 +61,7 @@ export interface AlertThresholds {
     budgetExceeded: number;
     trendDetection: boolean;
   };
-  
+
   // Performance thresholds
   performance?: {
     durationMs: number;
@@ -69,7 +69,7 @@ export interface AlertThresholds {
     successRate: number;
     resourceUtilization: number;
   };
-  
+
   // Custom metric thresholds
   custom?: {
     metricName: string;
@@ -207,14 +207,14 @@ export enum AlertType {
   PERFORMANCE_DEGRADATION = 'performance_degradation',
   TREND_ANOMALY = 'trend_anomaly',
   SYSTEM_HEALTH = 'system_health',
-  CUSTOM_METRIC = 'custom_metric'
+  CUSTOM_METRIC = 'custom_metric',
 }
 
 export enum AlertSeverity {
   LOW = 'low',
   MEDIUM = 'medium',
   HIGH = 'high',
-  CRITICAL = 'critical'
+  CRITICAL = 'critical',
 }
 
 export enum AlertStatus {
@@ -222,7 +222,7 @@ export enum AlertStatus {
   ACKNOWLEDGED = 'acknowledged',
   RESOLVED = 'resolved',
   SUPPRESSED = 'suppressed',
-  ESCALATED = 'escalated'
+  ESCALATED = 'escalated',
 }
 
 export enum ChannelType {
@@ -233,7 +233,7 @@ export enum ChannelType {
   TEAMS = 'teams',
   DISCORD = 'discord',
   PAGERDUTY = 'pagerduty',
-  OPSGENIE = 'opsgenie'
+  OPSGENIE = 'opsgenie',
 }
 
 export enum NotificationStatus {
@@ -241,14 +241,14 @@ export enum NotificationStatus {
   SENT = 'sent',
   DELIVERED = 'delivered',
   FAILED = 'failed',
-  RETRYING = 'retrying'
+  RETRYING = 'retrying',
 }
 
 export enum ResolutionType {
   MANUAL = 'manual',
   AUTO = 'auto',
   TIMEOUT = 'timeout',
-  ESCALATION_RESOLVED = 'escalation_resolved'
+  ESCALATION_RESOLVED = 'escalation_resolved',
 }
 
 // Additional interfaces
@@ -261,7 +261,7 @@ export interface ChannelConfig {
     subject: string;
     template: string;
   };
-  
+
   // Slack configuration
   slack?: {
     webhookUrl: string;
@@ -270,7 +270,7 @@ export interface ChannelConfig {
     iconEmoji?: string;
     template: string;
   };
-  
+
   // Webhook configuration
   webhook?: {
     url: string;
@@ -279,7 +279,7 @@ export interface ChannelConfig {
     template: string;
     secretKey?: string;
   };
-  
+
   // SMS configuration
   sms?: {
     numbers: string[];
@@ -306,7 +306,7 @@ export interface RetryPolicy {
 
 export interface TimeWindow {
   start: string; // HH:mm format
-  end: string;   // HH:mm format
+  end: string; // HH:mm format
   timezone: string;
   daysOfWeek: number[]; // 0-6, Sunday=0
 }
@@ -345,10 +345,10 @@ export class AlertingService {
     try {
       // Load alert configurations from database
       await this.loadAlertConfigurations();
-      
+
       // Initialize background processes
       this.startBackgroundProcesses();
-      
+
       this.isInitialized = true;
       this.logger.info('Alerting service initialized successfully');
     } catch (error) {
@@ -372,12 +372,12 @@ export class AlertingService {
     config: Omit<AlertConfiguration, 'id' | 'createdAt' | 'updatedAt'>
   ): Promise<string> {
     const configId = `alert-config-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-    
+
     const alertConfig: AlertConfiguration = {
       ...config,
       id: configId,
       createdAt: new Date(),
-      updatedAt: new Date()
+      updatedAt: new Date(),
     };
 
     // Validate configuration
@@ -390,7 +390,7 @@ export class AlertingService {
     this.logger.info('Alert configuration created', {
       configId,
       type: config.type,
-      severity: config.severity
+      severity: config.severity,
     });
 
     return configId;
@@ -407,7 +407,7 @@ export class AlertingService {
     try {
       // Find matching alert configurations
       const matchingConfigs = this.findMatchingConfigurations(type, details, context);
-      
+
       if (matchingConfigs.length === 0) {
         this.logger.debug('No matching alert configurations found', { type, details });
         return null;
@@ -427,10 +427,10 @@ export class AlertingService {
 
       // Create alert
       const alertId = await this.createAlert(config, details, context);
-      
+
       // Send notifications
       await this.sendNotifications(alertId);
-      
+
       // Start escalation timer if configured
       if (config.escalation.enabled) {
         this.scheduleEscalation(alertId);
@@ -440,11 +440,10 @@ export class AlertingService {
         alertId,
         configId: config.id,
         type,
-        severity: config.severity
+        severity: config.severity,
       });
 
       return alertId;
-
     } catch (error) {
       this.logger.error('Failed to trigger alert', error, { type, details });
       throw new AppError('Alert triggering failed', 500);
@@ -474,7 +473,7 @@ export class AlertingService {
       acknowledgedBy,
       acknowledgedAt: new Date(),
       autoAcknowledged: false,
-      ...(comment && { comment })
+      ...(comment && { comment }),
     };
     alert.updatedAt = new Date();
 
@@ -490,7 +489,7 @@ export class AlertingService {
     this.logger.info('Alert acknowledged', {
       alertId,
       acknowledgedBy,
-      comment
+      comment,
     });
   }
 
@@ -524,7 +523,7 @@ export class AlertingService {
       autoResolved: resolutionType !== ResolutionType.MANUAL,
       actionsTaken,
       ...(comment && { comment }),
-      ...(rootCause && { rootCause })
+      ...(rootCause && { rootCause }),
     };
     alert.updatedAt = new Date();
 
@@ -545,7 +544,7 @@ export class AlertingService {
       alertId,
       resolvedBy,
       resolutionType,
-      rootCause
+      rootCause,
     });
   }
 
@@ -634,8 +633,8 @@ export class AlertingService {
     const alertsBySeverity = {} as Record<AlertSeverity, number>;
 
     // Initialize counters
-    Object.values(AlertType).forEach(type => alertsByType[type] = 0);
-    Object.values(AlertSeverity).forEach(severity => alertsBySeverity[severity] = 0);
+    Object.values(AlertType).forEach(type => (alertsByType[type] = 0));
+    Object.values(AlertSeverity).forEach(severity => (alertsBySeverity[severity] = 0));
 
     // Count alerts
     allAlerts.forEach(alert => {
@@ -645,12 +644,15 @@ export class AlertingService {
 
     // Calculate resolution time
     const resolvedAlerts = this.alertHistory.filter(alert => alert.resolvedAt);
-    const averageResolutionTime = resolvedAlerts.length > 0 
-      ? resolvedAlerts.reduce((sum, alert) => {
-          const resolutionTime = alert.resolvedAt!.getTime() - alert.createdAt.getTime();
-          return sum + resolutionTime;
-        }, 0) / resolvedAlerts.length / 60000 // Convert to minutes
-      : 0;
+    const averageResolutionTime =
+      resolvedAlerts.length > 0
+        ? resolvedAlerts.reduce((sum, alert) => {
+            const resolutionTime = alert.resolvedAt!.getTime() - alert.createdAt.getTime();
+            return sum + resolutionTime;
+          }, 0) /
+          resolvedAlerts.length /
+          60000 // Convert to minutes
+        : 0;
 
     // Calculate rates
     const escalatedAlerts = allAlerts.filter(alert => alert.escalations.length > 0);
@@ -663,7 +665,8 @@ export class AlertingService {
       alertsBySeverity,
       averageResolutionTime,
       escalationRate: allAlerts.length > 0 ? (escalatedAlerts.length / allAlerts.length) * 100 : 0,
-      acknowledgedRate: allAlerts.length > 0 ? (acknowledgedAlerts.length / allAlerts.length) * 100 : 0
+      acknowledgedRate:
+        allAlerts.length > 0 ? (acknowledgedAlerts.length / allAlerts.length) * 100 : 0,
     };
   }
 
@@ -688,8 +691,8 @@ export class AlertingService {
           zScoreThreshold: 3.0,
           percentileThreshold: 99,
           minDataPoints: 10,
-          triggerCount: 2
-        }
+          triggerCount: 2,
+        },
       },
       channels: [
         {
@@ -701,21 +704,22 @@ export class AlertingService {
               url: 'http://localhost:3000/alerts/webhook',
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
-              template: '{"alert": "{{title}}", "message": "{{message}}", "severity": "{{severity}}"}'
-            }
+              template:
+                '{"alert": "{{title}}", "message": "{{message}}", "severity": "{{severity}}"}',
+            },
           },
           filters: {
             severities: [AlertSeverity.HIGH, AlertSeverity.CRITICAL],
-            types: [AlertType.ANOMALY_DETECTION]
+            types: [AlertType.ANOMALY_DETECTION],
           },
           retryPolicy: {
             enabled: true,
             maxRetries: 3,
             retryDelayMs: 5000,
             exponentialBackoff: true,
-            maxRetryDelayMs: 30000
-          }
-        }
+            maxRetryDelayMs: 30000,
+          },
+        },
       ],
       escalation: {
         enabled: true,
@@ -726,27 +730,27 @@ export class AlertingService {
             channels: ['default-webhook'],
             requiresAcknowledgment: true,
             notifyRoles: ['admin'],
-            notifyUsers: []
-          }
+            notifyUsers: [],
+          },
         ],
         maxEscalations: 2,
         escalationTimeoutMinutes: 60,
         autoResolve: true,
-        autoResolveTimeoutMinutes: 240
+        autoResolveTimeoutMinutes: 240,
       },
       filters: {
         environments: ['production'],
-        timeWindows: []
+        timeWindows: [],
       },
       rateLimit: {
         enabled: true,
         maxAlertsPerHour: 5,
         maxAlertsPerDay: 20,
         cooldownMinutes: 10,
-        deduplicationWindow: 30
+        deduplicationWindow: 30,
       },
       metadata: {},
-      createdBy: 'system'
+      createdBy: 'system',
     });
 
     this.logger.info('Default alert configurations created');
@@ -783,13 +787,18 @@ export class AlertingService {
       }
 
       // Check filters
-      if (config.filters.pipelineIds && details.pipelineId && 
-          !config.filters.pipelineIds.includes(details.pipelineId)) {
+      if (
+        config.filters.pipelineIds &&
+        details.pipelineId &&
+        !config.filters.pipelineIds.includes(details.pipelineId)
+      ) {
         return false;
       }
 
-      if (config.filters.environments && 
-          !config.filters.environments.includes(context.environment)) {
+      if (
+        config.filters.environments &&
+        !config.filters.environments.includes(context.environment)
+      ) {
         return false;
       }
 
@@ -809,23 +818,23 @@ export class AlertingService {
           return details.triggerValue >= thresholds.anomaly.zScoreThreshold;
         }
         break;
-      
+
       case AlertType.SLA_VIOLATION:
         if (thresholds.sla) {
           return details.triggerValue >= thresholds.sla.violationPercent;
         }
         break;
-      
+
       case AlertType.COST_THRESHOLD:
         if (thresholds.cost) {
           return details.triggerValue >= thresholds.cost.absoluteThreshold;
         }
         break;
-      
+
       default:
         return true;
     }
-    
+
     return false;
   }
 
@@ -843,9 +852,10 @@ export class AlertingService {
     const deduplicationWindow = config.rateLimit.deduplicationWindow * 60 * 1000; // Convert to ms
     const cutoffTime = new Date(Date.now() - deduplicationWindow);
 
-    const recentSimilarAlerts = this.alertHistory.filter(alert => 
-      alert.createdAt >= cutoffTime && 
-      this.generateDeduplicationKey(alert.type, alert.details, alert.context) === deduplicationKey
+    const recentSimilarAlerts = this.alertHistory.filter(
+      alert =>
+        alert.createdAt >= cutoffTime &&
+        this.generateDeduplicationKey(alert.type, alert.details, alert.context) === deduplicationKey
     );
 
     return recentSimilarAlerts.length > 0;
@@ -865,7 +875,7 @@ export class AlertingService {
     context: AlertContext
   ): Promise<string> {
     const alertId = `alert-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-    
+
     const alert: Alert = {
       id: alertId,
       configurationId: config.id,
@@ -879,7 +889,7 @@ export class AlertingService {
       notifications: [],
       escalations: [],
       createdAt: new Date(),
-      updatedAt: new Date()
+      updatedAt: new Date(),
     };
 
     this.activeAlerts.set(alertId, alert);
@@ -896,8 +906,8 @@ export class AlertingService {
           severity: alert.severity,
           title: alert.title,
           message: alert.message,
-          createdAt: alert.createdAt
-        }
+          createdAt: alert.createdAt,
+        },
       });
     }
 
@@ -923,20 +933,26 @@ export class AlertingService {
     context: AlertContext
   ): string {
     const pipelineInfo = details.pipelineId ? ` for pipeline ${details.pipelineId}` : '';
-    
+
     switch (type) {
       case AlertType.ANOMALY_DETECTION:
-        return `Anomaly detected in ${details.metric}${pipelineInfo}. ` +
-               `Value: ${details.triggerValue}, Threshold: ${details.threshold}`;
-      
+        return (
+          `Anomaly detected in ${details.metric}${pipelineInfo}. ` +
+          `Value: ${details.triggerValue}, Threshold: ${details.threshold}`
+        );
+
       case AlertType.SLA_VIOLATION:
-        return `SLA violation for ${details.metric}${pipelineInfo}. ` +
-               `Current: ${details.triggerValue}%, Target: ${details.threshold}%`;
-      
+        return (
+          `SLA violation for ${details.metric}${pipelineInfo}. ` +
+          `Current: ${details.triggerValue}%, Target: ${details.threshold}%`
+        );
+
       case AlertType.COST_THRESHOLD:
-        return `Cost threshold exceeded for ${details.metric}${pipelineInfo}. ` +
-               `Current: $${details.triggerValue}, Threshold: $${details.threshold}`;
-      
+        return (
+          `Cost threshold exceeded for ${details.metric}${pipelineInfo}. ` +
+          `Current: $${details.triggerValue}, Threshold: $${details.threshold}`
+        );
+
       default:
         return `Alert triggered for ${details.metric}${pipelineInfo}`;
     }
@@ -958,7 +974,7 @@ export class AlertingService {
         this.logger.error('Failed to send notification', error, {
           alertId,
           channelId: channel.id,
-          channelType: channel.type
+          channelType: channel.type,
         });
       }
     }
@@ -969,7 +985,7 @@ export class AlertingService {
     channel: NotificationChannel
   ): Promise<void> {
     const notificationId = `notification-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-    
+
     const notification: NotificationRecord = {
       id: notificationId,
       channelId: channel.id,
@@ -977,7 +993,7 @@ export class AlertingService {
       status: NotificationStatus.PENDING,
       sentAt: new Date(),
       retryCount: 0,
-      metadata: {}
+      metadata: {},
     };
 
     try {
@@ -998,7 +1014,6 @@ export class AlertingService {
 
       notification.status = NotificationStatus.SENT;
       notification.deliveredAt = new Date();
-      
     } catch (error) {
       notification.status = NotificationStatus.FAILED;
       notification.failedAt = new Date();
@@ -1009,27 +1024,21 @@ export class AlertingService {
     await this.persistAlert(alert);
   }
 
-  private async sendWebhookNotification(
-    alert: Alert,
-    channel: NotificationChannel
-  ): Promise<void> {
+  private async sendWebhookNotification(alert: Alert, channel: NotificationChannel): Promise<void> {
     const webhookConfig = channel.config.webhook;
     if (!webhookConfig) throw new Error('Webhook configuration missing');
 
     const payload = this.renderTemplate(webhookConfig.template, alert);
-    
+
     // In a real implementation, this would make an HTTP request
     this.logger.info('Webhook notification sent', {
       url: webhookConfig.url,
       payload,
-      alertId: alert.id
+      alertId: alert.id,
     });
   }
 
-  private async sendEmailNotification(
-    alert: Alert,
-    channel: NotificationChannel
-  ): Promise<void> {
+  private async sendEmailNotification(alert: Alert, channel: NotificationChannel): Promise<void> {
     const emailConfig = channel.config.email;
     if (!emailConfig) throw new Error('Email configuration missing');
 
@@ -1037,14 +1046,11 @@ export class AlertingService {
     this.logger.info('Email notification sent', {
       to: emailConfig.to,
       subject: emailConfig.subject,
-      alertId: alert.id
+      alertId: alert.id,
     });
   }
 
-  private async sendSlackNotification(
-    alert: Alert,
-    channel: NotificationChannel
-  ): Promise<void> {
+  private async sendSlackNotification(alert: Alert, channel: NotificationChannel): Promise<void> {
     const slackConfig = channel.config.slack;
     if (!slackConfig) throw new Error('Slack configuration missing');
 
@@ -1052,7 +1058,7 @@ export class AlertingService {
     this.logger.info('Slack notification sent', {
       channel: slackConfig.channel,
       webhook: slackConfig.webhookUrl,
-      alertId: alert.id
+      alertId: alert.id,
     });
   }
 
@@ -1096,14 +1102,20 @@ export class AlertingService {
 
   private startBackgroundProcesses(): void {
     // Start cleanup process for old alerts
-    setInterval(() => {
-      this.cleanupOldAlerts();
-    }, 60 * 60 * 1000); // Run every hour
+    setInterval(
+      () => {
+        this.cleanupOldAlerts();
+      },
+      60 * 60 * 1000
+    ); // Run every hour
 
     // Start escalation check process
-    setInterval(() => {
-      this.checkEscalations();
-    }, 5 * 60 * 1000); // Run every 5 minutes
+    setInterval(
+      () => {
+        this.checkEscalations();
+      },
+      5 * 60 * 1000
+    ); // Run every 5 minutes
 
     this.logger.info('Background processes started');
   }
@@ -1111,9 +1123,9 @@ export class AlertingService {
   private cleanupOldAlerts(): void {
     const cutoffTime = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000); // 30 days
     const initialCount = this.alertHistory.length;
-    
+
     this.alertHistory = this.alertHistory.filter(alert => alert.createdAt >= cutoffTime);
-    
+
     const removedCount = initialCount - this.alertHistory.length;
     if (removedCount > 0) {
       this.logger.info('Cleaned up old alerts', { removedCount });
@@ -1123,16 +1135,16 @@ export class AlertingService {
   private checkEscalations(): void {
     // Check for alerts that need escalation
     const now = new Date();
-    
+
     for (const alert of this.activeAlerts.values()) {
       const config = this.alertConfigurations.get(alert.configurationId);
-      if (!config || !config.escalation.enabled) continue;
+      if (!config?.escalation.enabled) continue;
 
       // Check if alert needs escalation
       const timeSinceCreation = now.getTime() - alert.createdAt.getTime();
       const firstStage = config.escalation.stages[0];
       if (!firstStage) continue;
-      
+
       const escalationDelay = firstStage.delayMinutes * 60 * 1000;
 
       if (timeSinceCreation >= escalationDelay && alert.escalations.length === 0) {
@@ -1146,13 +1158,13 @@ export class AlertingService {
     if (!alert) return;
 
     alert.status = AlertStatus.ESCALATED;
-    
+
     const escalation: EscalationRecord = {
       id: `escalation-${Date.now()}`,
       stage: 1,
       triggeredAt: new Date(),
       notifiedChannels: [],
-      acknowledged: false
+      acknowledged: false,
     };
 
     alert.escalations.push(escalation);
