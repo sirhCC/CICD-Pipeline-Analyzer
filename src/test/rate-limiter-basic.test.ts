@@ -1,7 +1,7 @@
 import {
   MemoryRateLimitStore,
   RateLimitStrategy,
-  RateLimiterService
+  RateLimiterService,
 } from '../middleware/rate-limiter';
 
 describe('Rate Limiter Core Tests', () => {
@@ -9,7 +9,7 @@ describe('Rate Limiter Core Tests', () => {
     const store = new MemoryRateLimitStore({
       max: 3,
       windowMs: 60000,
-      strategy: RateLimitStrategy.FIXED_WINDOW
+      strategy: RateLimitStrategy.FIXED_WINDOW,
     });
 
     const result1 = await store.incr('test-key');
