@@ -21,11 +21,11 @@ export class PipelineRunStage extends BaseEntity {
   @Column({ type: 'text', nullable: true })
   description?: string;
 
-  @Column({ 
-    type: 'enum', 
+  @Column({
+    type: 'enum',
     enum: PipelineStatus,
     enumName: 'pipeline_status_enum',
-    default: PipelineStatus.PENDING
+    default: PipelineStatus.PENDING,
   })
   status!: PipelineStatus;
 
@@ -85,11 +85,9 @@ export class PipelineRunStage extends BaseEntity {
    * Check if stage failed
    */
   isFailed(): boolean {
-    return [
-      PipelineStatus.FAILED,
-      PipelineStatus.CANCELLED,
-      PipelineStatus.TIMEOUT
-    ].includes(this.status);
+    return [PipelineStatus.FAILED, PipelineStatus.CANCELLED, PipelineStatus.TIMEOUT].includes(
+      this.status
+    );
   }
 }
 
@@ -121,11 +119,11 @@ export class PipelineRun extends BaseEntity {
   @Column({ type: 'varchar', length: 255, nullable: true })
   commitAuthor?: string;
 
-  @Column({ 
-    type: 'enum', 
+  @Column({
+    type: 'enum',
     enum: PipelineStatus,
     enumName: 'pipeline_status_enum',
-    default: PipelineStatus.PENDING
+    default: PipelineStatus.PENDING,
   })
   status!: PipelineStatus;
 
@@ -236,21 +234,16 @@ export class PipelineRun extends BaseEntity {
    * Check if run failed
    */
   isFailed(): boolean {
-    return [
-      PipelineStatus.FAILED,
-      PipelineStatus.CANCELLED,
-      PipelineStatus.TIMEOUT
-    ].includes(this.status);
+    return [PipelineStatus.FAILED, PipelineStatus.CANCELLED, PipelineStatus.TIMEOUT].includes(
+      this.status
+    );
   }
 
   /**
    * Check if run is in progress
    */
   isInProgress(): boolean {
-    return [
-      PipelineStatus.PENDING,
-      PipelineStatus.RUNNING
-    ].includes(this.status);
+    return [PipelineStatus.PENDING, PipelineStatus.RUNNING].includes(this.status);
   }
 
   /**
@@ -300,12 +293,12 @@ export class PipelineRun extends BaseEntity {
     const newStage = new PipelineRunStage();
     Object.assign(newStage, stage);
     newStage.runId = this.id;
-    
+
     if (!this.stages) {
       this.stages = [];
     }
     this.stages.push(newStage);
-    
+
     return newStage;
   }
 }

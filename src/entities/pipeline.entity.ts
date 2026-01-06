@@ -18,10 +18,10 @@ export class Pipeline extends BaseEntity {
   @Column({ type: 'text', nullable: true })
   description?: string;
 
-  @Column({ 
-    type: 'enum', 
+  @Column({
+    type: 'enum',
     enum: PipelineProvider,
-    enumName: 'pipeline_provider_enum'
+    enumName: 'pipeline_provider_enum',
   })
   provider!: PipelineProvider;
 
@@ -34,19 +34,19 @@ export class Pipeline extends BaseEntity {
   @Column({ type: 'varchar', length: 255 })
   branch!: string;
 
-  @Column({ 
-    type: 'enum', 
+  @Column({
+    type: 'enum',
     enum: PipelineStatus,
     enumName: 'pipeline_status_enum',
-    default: PipelineStatus.UNKNOWN
+    default: PipelineStatus.UNKNOWN,
   })
   status!: PipelineStatus;
 
-  @Column({ 
-    type: 'enum', 
+  @Column({
+    type: 'enum',
     enum: PipelineVisibility,
     enumName: 'pipeline_visibility_enum',
-    default: PipelineVisibility.PRIVATE
+    default: PipelineVisibility.PRIVATE,
   })
   visibility!: PipelineVisibility;
 
@@ -149,10 +149,10 @@ export class Pipeline extends BaseEntity {
         this.averageDuration = duration;
       } else {
         // Exponential moving average
-        this.averageDuration = (this.averageDuration * 0.8) + (duration * 0.2);
+        this.averageDuration = this.averageDuration * 0.8 + duration * 0.2;
       }
     }
-    
+
     this.updateSuccessRate();
   }
 }
