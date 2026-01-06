@@ -58,17 +58,17 @@ export class RepositoryFactory {
 export const pipelineRepository = new Proxy({} as PipelineRepository, {
   get(target, prop) {
     return RepositoryFactory.getPipelineRepository()[prop as keyof PipelineRepository];
-  }
+  },
 });
 
 export const pipelineRunRepository = new Proxy({} as PipelineRunRepository, {
   get(target, prop) {
     return RepositoryFactory.getPipelineRunRepository()[prop as keyof PipelineRunRepository];
-  }
+  },
 });
 
 export const userRepository = new Proxy({} as UserRepository, {
   get(target, prop) {
     return RepositoryFactory.getUserRepository()[prop as keyof UserRepository];
-  }
+  },
 });
