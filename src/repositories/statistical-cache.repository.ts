@@ -3,7 +3,8 @@
  * Handles cache operations for statistical computations
  */
 
-import { Repository, DataSource, LessThan } from 'typeorm';
+import type { Repository, DataSource } from 'typeorm';
+import { LessThan } from 'typeorm';
 import { StatisticalCache, CacheType } from '@/entities/statistical-cache.entity';
 import { Logger } from '@/shared/logger';
 
@@ -20,7 +21,7 @@ export class StatisticalCacheRepository {
    */
   async get(cacheKey: string): Promise<StatisticalCache | null> {
     const cache = await this.repository.findOne({ where: { cacheKey } });
-    
+
     if (!cache) {
       return null;
     }
@@ -54,7 +55,7 @@ export class StatisticalCacheRepository {
 
     // Check if cache entry already exists
     const existing = await this.repository.findOne({ where: { cacheKey } });
-    
+
     if (existing) {
       // Update existing entry
       existing.data = data;
@@ -72,7 +73,7 @@ export class StatisticalCacheRepository {
         data,
         size,
         expiresAt,
-        hitCount: 0
+        hitCount: 0,
       };
 
       if (pipelineId) {
@@ -102,12 +103,12 @@ export class StatisticalCacheRepository {
    */
   async cleanupExpired(): Promise<number> {
     const result = await this.repository.delete({
-      expiresAt: LessThan(new Date())
+      expiresAt: LessThan(new Date()),
     });
 
     const deletedCount = result.affected || 0;
     this.logger.info('Cleaned up expired cache entries', { deletedCount });
-    
+
     return deletedCount;
   }
 
@@ -122,13 +123,13 @@ export class StatisticalCacheRepository {
     averageHits: number;
   }> {
     const entries = await this.repository.find();
-    
+
     const stats = {
       totalEntries: entries.length,
       totalSize: entries.reduce((sum, entry) => sum + entry.size, 0),
       totalHits: entries.reduce((sum, entry) => sum + entry.hitCount, 0),
       byType: {} as Record<CacheType, number>,
-      averageHits: 0
+      averageHits: 0,
     };
 
     // Initialize type counters
@@ -160,7 +161,7 @@ export class StatisticalCacheRepository {
   async clearByType(cacheType: CacheType): Promise<number> {
     const result = await this.repository.delete({ cacheType });
     const deletedCount = result.affected || 0;
-    
+
     this.logger.info('Cache entries cleared by type', { cacheType, deletedCount });
     return deletedCount;
   }

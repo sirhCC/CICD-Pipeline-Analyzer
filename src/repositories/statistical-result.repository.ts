@@ -3,8 +3,13 @@
  * Handles CRUD operations for statistical analysis results
  */
 
-import { Repository, DataSource, FindManyOptions, Between, In } from 'typeorm';
-import { StatisticalResult, AnalysisType, ResultStatus } from '@/entities/statistical-result.entity';
+import type { Repository, DataSource, FindManyOptions } from 'typeorm';
+import { Between, In } from 'typeorm';
+import {
+  StatisticalResult,
+  AnalysisType,
+  ResultStatus,
+} from '@/entities/statistical-result.entity';
 import { Logger } from '@/shared/logger';
 
 export interface StatisticalResultFilter {
@@ -87,7 +92,8 @@ export class StatisticalResultRepository {
       orderDirection?: 'ASC' | 'DESC';
     } = {}
   ): Promise<{ results: StatisticalResult[]; total: number }> {
-    const queryBuilder = this.repository.createQueryBuilder('sr')
+    const queryBuilder = this.repository
+      .createQueryBuilder('sr')
       .leftJoinAndSelect('sr.pipeline', 'pipeline');
 
     // Apply filters
@@ -96,15 +102,21 @@ export class StatisticalResultRepository {
     }
 
     if (filters.pipelineIds?.length) {
-      queryBuilder.andWhere('sr.pipelineId IN (:...pipelineIds)', { pipelineIds: filters.pipelineIds });
+      queryBuilder.andWhere('sr.pipelineId IN (:...pipelineIds)', {
+        pipelineIds: filters.pipelineIds,
+      });
     }
 
     if (filters.analysisType) {
-      queryBuilder.andWhere('sr.analysisType = :analysisType', { analysisType: filters.analysisType });
+      queryBuilder.andWhere('sr.analysisType = :analysisType', {
+        analysisType: filters.analysisType,
+      });
     }
 
     if (filters.analysisTypes?.length) {
-      queryBuilder.andWhere('sr.analysisType IN (:...analysisTypes)', { analysisTypes: filters.analysisTypes });
+      queryBuilder.andWhere('sr.analysisType IN (:...analysisTypes)', {
+        analysisTypes: filters.analysisTypes,
+      });
     }
 
     if (filters.status) {
@@ -134,7 +146,7 @@ export class StatisticalResultRepository {
     if (filters.startDate && filters.endDate) {
       queryBuilder.andWhere('sr.timestamp BETWEEN :startDate AND :endDate', {
         startDate: filters.startDate,
-        endDate: filters.endDate
+        endDate: filters.endDate,
       });
     } else if (filters.startDate) {
       queryBuilder.andWhere('sr.timestamp >= :startDate', { startDate: filters.startDate });
@@ -151,7 +163,9 @@ export class StatisticalResultRepository {
     }
 
     if (filters.jobExecutionId) {
-      queryBuilder.andWhere('sr.jobExecutionId = :jobExecutionId', { jobExecutionId: filters.jobExecutionId });
+      queryBuilder.andWhere('sr.jobExecutionId = :jobExecutionId', {
+        jobExecutionId: filters.jobExecutionId,
+      });
     }
 
     // Apply ordering
@@ -175,7 +189,7 @@ export class StatisticalResultRepository {
     this.logger.info('Statistical results queried', {
       filtersApplied: Object.keys(filters).length,
       totalFound: total,
-      returned: results.length
+      returned: results.length,
     });
 
     return { results, total };
@@ -192,12 +206,14 @@ export class StatisticalResultRepository {
       queryBuilder.andWhere('sr.pipelineId = :pipelineId', { pipelineId: filters.pipelineId });
     }
     if (filters?.analysisType) {
-      queryBuilder.andWhere('sr.analysisType = :analysisType', { analysisType: filters.analysisType });
+      queryBuilder.andWhere('sr.analysisType = :analysisType', {
+        analysisType: filters.analysisType,
+      });
     }
     if (filters?.startDate && filters?.endDate) {
       queryBuilder.andWhere('sr.timestamp BETWEEN :startDate AND :endDate', {
         startDate: filters.startDate,
-        endDate: filters.endDate
+        endDate: filters.endDate,
       });
     }
 
@@ -213,8 +229,8 @@ export class StatisticalResultRepository {
       avgExecutionTime: 0,
       dateRange: {
         earliest: new Date(),
-        latest: new Date()
-      }
+        latest: new Date(),
+      },
     };
 
     if (results.length === 0) {
@@ -289,7 +305,7 @@ export class StatisticalResultRepository {
       where: { pipelineId },
       order: { timestamp: 'DESC' },
       take: limit,
-      relations: ['pipeline']
+      relations: ['pipeline'],
     };
 
     if (analysisType) {
@@ -315,7 +331,7 @@ export class StatisticalResultRepository {
     this.logger.info('Cleaned up old statistical results', {
       deletedCount: result.affected,
       cutoffDate,
-      retentionDays
+      retentionDays,
     });
 
     return result.affected || 0;
