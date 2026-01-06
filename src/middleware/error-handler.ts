@@ -3,7 +3,7 @@
  * Enterprise-grade error handling with comprehensive logging and response formatting
  */
 
-import { Request, Response, NextFunction } from 'express';
+import type { Request, Response, NextFunction } from 'express';
 import { Logger } from '../shared/logger';
 import { configManager } from '../config';
 
@@ -24,7 +24,7 @@ export class AppError extends Error {
     details?: Record<string, unknown>
   ) {
     super(message);
-    
+
     this.statusCode = statusCode;
     this.isOperational = isOperational;
     if (code !== undefined) this.code = code;
@@ -106,9 +106,15 @@ export class DatabaseError extends AppError {
  */
 export class ExternalServiceError extends AppError {
   constructor(service: string, message: string, statusCode: number = 502) {
-    super(`External service error (${service}): ${message}`, statusCode, true, 'EXTERNAL_SERVICE_ERROR', {
-      service,
-    });
+    super(
+      `External service error (${service}): ${message}`,
+      statusCode,
+      true,
+      'EXTERNAL_SERVICE_ERROR',
+      {
+        service,
+      }
+    );
     Object.setPrototypeOf(this, ExternalServiceError.prototype);
   }
 }
@@ -139,7 +145,7 @@ export const errorHandler = (
 ): void => {
   const logger = new Logger('ErrorHandler');
   const isDevelopment = configManager.isDevelopment();
-  const requestId = req.headers['x-request-id'] as string || 'unknown';
+  const requestId = (req.headers['x-request-id'] as string) || 'unknown';
 
   // Log the error with context
   const errorContext = {
@@ -169,10 +175,10 @@ export const errorHandler = (
     if (error.statusCode >= 500) {
       logger.error('Application error (5xx)', error, errorContext);
     } else if (error.statusCode >= 400) {
-      logger.warn('Client error (4xx)', { 
-        message: error.message, 
+      logger.warn('Client error (4xx)', {
+        message: error.message,
         code: error.code,
-        ...errorContext 
+        ...errorContext,
       });
     }
   } else if (error.name === 'ValidationError') {
@@ -181,64 +187,64 @@ export const errorHandler = (
     message = 'Validation failed';
     code = 'VALIDATION_ERROR';
     details = { validationDetails: error.message };
-    
-    logger.warn('Validation error', { 
+
+    logger.warn('Validation error', {
       validationError: error.message,
-      ...errorContext 
+      ...errorContext,
     });
   } else if (error.name === 'CastError') {
     // Database casting errors (invalid ObjectId, etc.)
     statusCode = 400;
     message = 'Invalid data format';
     code = 'INVALID_DATA_FORMAT';
-    
-    logger.warn('Data format error', { 
+
+    logger.warn('Data format error', {
       originalError: error.message,
-      ...errorContext 
+      ...errorContext,
     });
   } else if (error.name === 'MongoError' || error.name === 'QueryFailedError') {
     // Database errors
     statusCode = 500;
     message = 'Database operation failed';
     code = 'DATABASE_ERROR';
-    
+
     logger.error('Database error', error, errorContext);
   } else if (error.name === 'JsonWebTokenError') {
     // JWT errors
     statusCode = 401;
     message = 'Invalid authentication token';
     code = 'INVALID_TOKEN';
-    
-    logger.warn('JWT error', { 
+
+    logger.warn('JWT error', {
       jwtError: error.message,
-      ...errorContext 
+      ...errorContext,
     });
   } else if (error.name === 'TokenExpiredError') {
     // JWT expiration
     statusCode = 401;
     message = 'Authentication token has expired';
     code = 'TOKEN_EXPIRED';
-    
-    logger.warn('Token expired', { 
+
+    logger.warn('Token expired', {
       tokenError: error.message,
-      ...errorContext 
+      ...errorContext,
     });
   } else if (error.name === 'SyntaxError' && 'body' in error) {
     // JSON parsing errors
     statusCode = 400;
     message = 'Invalid JSON format';
     code = 'INVALID_JSON';
-    
-    logger.warn('JSON syntax error', { 
+
+    logger.warn('JSON syntax error', {
       syntaxError: error.message,
-      ...errorContext 
+      ...errorContext,
     });
   } else {
     // Unhandled errors
     statusCode = 500;
     message = isDevelopment ? error.message : 'Internal server error';
     code = 'INTERNAL_ERROR';
-    
+
     logger.error('Unhandled error', error, errorContext);
   }
 
@@ -304,7 +310,7 @@ export const handleUnhandledRejection = (reason: any, promise: Promise<any>): vo
     stack: reason instanceof Error ? reason.stack : undefined,
     promise: promise.toString(),
   });
-  
+
   // In production, we might want to gracefully shutdown
   if (configManager.isProduction()) {
     logger.error('Shutting down due to unhandled promise rejection');
@@ -318,7 +324,7 @@ export const handleUnhandledRejection = (reason: any, promise: Promise<any>): vo
 export const handleUncaughtException = (error: Error): void => {
   const logger = new Logger('UncaughtException');
   logger.error('Uncaught exception', error);
-  
+
   // Always exit on uncaught exceptions
   logger.error('Shutting down due to uncaught exception');
   process.exit(1);
