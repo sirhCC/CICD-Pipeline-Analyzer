@@ -2,10 +2,11 @@
  * Pipeline Repository - Database operations for Pipeline entities
  */
 
-import { FindOptionsWhere } from 'typeorm';
-import { BaseRepository, PaginationOptions, PaginationResult } from './base.repository';
+import type { FindOptionsWhere } from 'typeorm';
+import type { PaginationOptions, PaginationResult } from './base.repository';
+import { BaseRepository } from './base.repository';
 import { Pipeline } from '@/entities/pipeline.entity';
-import { PipelineProvider, PipelineStatus } from '@/types';
+import type { PipelineProvider, PipelineStatus } from '@/types';
 
 export interface PipelineSearchOptions {
   provider?: PipelineProvider;
@@ -36,10 +37,13 @@ export class PipelineRepository extends BaseRepository<Pipeline> {
   /**
    * Find pipeline by provider and external ID
    */
-  async findByProviderAndExternalId(provider: PipelineProvider, externalId: string): Promise<Pipeline | null> {
+  async findByProviderAndExternalId(
+    provider: PipelineProvider,
+    externalId: string
+  ): Promise<Pipeline | null> {
     return this.findOne({
       provider,
-      externalId
+      externalId,
     });
   }
 
@@ -51,7 +55,7 @@ export class PipelineRepository extends BaseRepository<Pipeline> {
     if (branch) {
       where.branch = branch;
     }
-    
+
     return this.findMany({ where });
   }
 
@@ -90,7 +94,7 @@ export class PipelineRepository extends BaseRepository<Pipeline> {
     }
 
     return this.findWithPagination(where, pagination, {
-      relations: ['runs']
+      relations: ['runs'],
     });
   }
 
@@ -126,11 +130,11 @@ export class PipelineRepository extends BaseRepository<Pipeline> {
     const [generalStats, providerStats, statusStats] = await Promise.all([
       this.query(sql),
       this.query(byProviderSql),
-      this.query(byStatusSql)
+      this.query(byStatusSql),
     ]);
 
     const general = generalStats[0] || {};
-    
+
     const byProvider: Record<string, number> = {};
     providerStats.forEach((row: any) => {
       byProvider[row.provider] = parseInt(row.count, 10);
@@ -148,17 +152,20 @@ export class PipelineRepository extends BaseRepository<Pipeline> {
       totalRuns: parseInt(general.total_runs || '0', 10),
       averageSuccessRate: parseFloat(general.average_success_rate || '0'),
       activePipelines: parseInt(general.active_pipelines || '0', 10),
-      monitoredPipelines: parseInt(general.monitored_pipelines || '0', 10)
+      monitoredPipelines: parseInt(general.monitored_pipelines || '0', 10),
     };
   }
 
   /**
    * Update pipeline statistics
    */
-  async updatePipelineStats(pipelineId: string, runData: {
-    isSuccess: boolean;
-    duration?: number;
-  }): Promise<void> {
+  async updatePipelineStats(
+    pipelineId: string,
+    runData: {
+      isSuccess: boolean;
+      duration?: number;
+    }
+  ): Promise<void> {
     const pipeline = await this.findById(pipelineId);
     if (!pipeline) {
       throw new Error(`Pipeline not found: ${pipelineId}`);
@@ -194,7 +201,7 @@ export class PipelineRepository extends BaseRepository<Pipeline> {
     return this.findMany({
       where: { isActive: true },
       order: { totalRuns: 'DESC' },
-      take: limit
+      take: limit,
     });
   }
 
@@ -217,21 +224,21 @@ export class PipelineRepository extends BaseRepository<Pipeline> {
   /**
    * Get pipelines by owner
    */
-  async findByOwner(owner: string, pagination?: PaginationOptions): Promise<PaginationResult<Pipeline>> {
-    return this.findWithPagination(
-      { owner, isActive: true },
-      pagination
-    );
+  async findByOwner(
+    owner: string,
+    pagination?: PaginationOptions
+  ): Promise<PaginationResult<Pipeline>> {
+    return this.findWithPagination({ owner, isActive: true }, pagination);
   }
 
   /**
    * Get pipelines by organization
    */
-  async findByOrganization(organization: string, pagination?: PaginationOptions): Promise<PaginationResult<Pipeline>> {
-    return this.findWithPagination(
-      { organization, isActive: true },
-      pagination
-    );
+  async findByOrganization(
+    organization: string,
+    pagination?: PaginationOptions
+  ): Promise<PaginationResult<Pipeline>> {
+    return this.findWithPagination({ organization, isActive: true }, pagination);
   }
 
   /**
@@ -239,14 +246,14 @@ export class PipelineRepository extends BaseRepository<Pipeline> {
    */
   async getRecentlyUpdated(hours: number = 24, limit: number = 50): Promise<Pipeline[]> {
     const since = new Date(Date.now() - hours * 60 * 60 * 1000);
-    
+
     return this.findMany({
       where: {
         lastRunAt: { $gte: since } as any,
-        isActive: true
+        isActive: true,
       },
       order: { lastRunAt: 'DESC' },
-      take: limit
+      take: limit,
     });
   }
 
