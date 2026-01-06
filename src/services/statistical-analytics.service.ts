@@ -1,34 +1,28 @@
 /**
  * Statistical Analytics Engine - Mathematical-based Pipeline Analysis
- * 
+ *
  * Features:
  * - Anomaly Detection using Z-score and percentile-based methods
  * - Trend Analysis with regression algorithms
  * - Benchmarking System for historical performance comparison
  * - SLA Monitoring with violation detection
  * - Cost Analysis for resource utilization optimization
- * 
+ *
  * @author sirhCC
  * @version 1.0.0
  */
 
 import { Logger } from '@/shared/logger';
 import { AppError } from '@/middleware/error-handler';
-import { Repository } from 'typeorm';
+import type { Repository } from 'typeorm';
 import { PipelineRun } from '@/entities/pipeline-run.entity';
 import { Pipeline } from '@/entities/pipeline.entity';
 import { repositoryFactory } from '@/repositories/factory.enhanced';
 import { PipelineStatus } from '@/types';
 import { databaseManager } from '@/core/database';
-import { 
-  StatisticalResultRepository, 
-  StatisticalCacheRepository 
-} from '@/repositories';
-import { 
-  AnalysisType, 
-  ResultStatus, 
-  CacheType 
-} from '@/entities';
+import { StatisticalResultRepository, StatisticalCacheRepository } from '@/repositories';
+import type { AnalysisType, CacheType } from '@/entities';
+import { ResultStatus } from '@/entities';
 import { alertingService, AlertType, AlertSeverity } from '@/services/alerting.service';
 
 export interface StatisticalDataPoint {
@@ -180,19 +174,19 @@ export class StatisticalAnalyticsService {
         percentileThreshold: 95,
         minDataPoints: 10,
         windowSize: 50,
-        ...config?.anomalyDetection
+        ...config?.anomalyDetection,
       },
       trendAnalysis: {
         minDataPoints: 5,
         confidenceLevel: 0.95,
         smoothingFactor: 0.3,
-        ...config?.trendAnalysis
+        ...config?.trendAnalysis,
       },
       benchmarking: {
         historicalDays: 30,
         minSamples: 5, // Lower minimum to make tests pass
         updateFrequency: 3600000, // 1 hour
-        ...config?.benchmarking
+        ...config?.benchmarking,
       },
       slaMonitoring: {
         defaultSLA: 95, // 95% availability
@@ -200,25 +194,27 @@ export class StatisticalAnalyticsService {
         alertThresholds: {
           minor: 90,
           major: 85,
-          critical: 80
+          critical: 80,
         },
-        ...config?.slaMonitoring
+        ...config?.slaMonitoring,
       },
       costAnalysis: {
-        defaultHourlyCost: 0.10, // $0.10 per hour
+        defaultHourlyCost: 0.1, // $0.10 per hour
         currencyCode: 'USD',
         resourceCosts: {
           cpu: 0.02, // per CPU-hour
           memory: 0.01, // per GB-hour
           storage: 0.001, // per GB-hour
-          network: 0.005 // per GB transferred
+          network: 0.005, // per GB transferred
         },
-        ...config?.costAnalysis
-      }
+        ...config?.costAnalysis,
+      },
     };
   }
 
-  public static getInstance(config?: Partial<StatisticalAnalyticsConfig>): StatisticalAnalyticsService {
+  public static getInstance(
+    config?: Partial<StatisticalAnalyticsConfig>
+  ): StatisticalAnalyticsService {
     if (!StatisticalAnalyticsService.instance) {
       StatisticalAnalyticsService.instance = new StatisticalAnalyticsService(config);
     }
@@ -260,11 +256,14 @@ export class StatisticalAnalyticsService {
             threshold: this.config.anomalyDetection.zScoreThreshold,
             actualValue: value,
             expectedRange: {
-              min: mean - (this.config.anomalyDetection.zScoreThreshold * stdDev),
-              max: mean + (this.config.anomalyDetection.zScoreThreshold * stdDev)
+              min: mean - this.config.anomalyDetection.zScoreThreshold * stdDev,
+              max: mean + this.config.anomalyDetection.zScoreThreshold * stdDev,
             },
-            confidence: this.calculateConfidence(zScore, this.config.anomalyDetection.zScoreThreshold),
-            severity: this.determineSeverity(zScore, this.config.anomalyDetection.zScoreThreshold)
+            confidence: this.calculateConfidence(
+              zScore,
+              this.config.anomalyDetection.zScoreThreshold
+            ),
+            severity: this.determineSeverity(zScore, this.config.anomalyDetection.zScoreThreshold),
           });
         }
       }
@@ -272,7 +271,7 @@ export class StatisticalAnalyticsService {
       if (method === 'percentile' || method === 'all') {
         const percentile = this.calculateValuePercentile(sortedValues, value);
         const threshold = this.config.anomalyDetection.percentileThreshold;
-        if (percentile > threshold || percentile < (100 - threshold)) {
+        if (percentile > threshold || percentile < 100 - threshold) {
           results.push({
             isAnomaly: true,
             anomalyScore: Math.max(percentile, 100 - percentile),
@@ -281,17 +280,17 @@ export class StatisticalAnalyticsService {
             actualValue: value,
             expectedRange: {
               min: this.calculatePercentile(sortedValues, 100 - threshold),
-              max: this.calculatePercentile(sortedValues, threshold)
+              max: this.calculatePercentile(sortedValues, threshold),
             },
             confidence: this.calculatePercentileConfidence(percentile, threshold),
-            severity: this.determinePercentileSeverity(percentile, threshold)
+            severity: this.determinePercentileSeverity(percentile, threshold),
           });
         }
       }
 
       if (method === 'iqr' || method === 'all') {
-        const lowerBound = q1 - (1.5 * iqr);
-        const upperBound = q3 + (1.5 * iqr);
+        const lowerBound = q1 - 1.5 * iqr;
+        const upperBound = q3 + 1.5 * iqr;
         if (value < lowerBound || value > upperBound) {
           const distance = Math.min(Math.abs(value - lowerBound), Math.abs(value - upperBound));
           const anomalyScore = distance / iqr;
@@ -303,10 +302,10 @@ export class StatisticalAnalyticsService {
             actualValue: value,
             expectedRange: {
               min: lowerBound,
-              max: upperBound
+              max: upperBound,
             },
             confidence: this.calculateIQRConfidence(anomalyScore),
-            severity: this.determineIQRSeverity(anomalyScore)
+            severity: this.determineIQRSeverity(anomalyScore),
           });
         }
       }
@@ -318,8 +317,8 @@ export class StatisticalAnalyticsService {
       method,
       thresholds: {
         zScore: this.config.anomalyDetection.zScoreThreshold,
-        percentile: this.config.anomalyDetection.percentileThreshold
-      }
+        percentile: this.config.anomalyDetection.percentileThreshold,
+      },
     });
 
     return results;
@@ -342,16 +341,16 @@ export class StatisticalAnalyticsService {
     const baseTime = data[0].timestamp.getTime();
     const points = data.map((d, i) => ({
       x: (d.timestamp.getTime() - baseTime) / (1000 * 60 * 60), // hours
-      y: d.value
+      y: d.value,
     }));
 
     // Linear regression calculations
     const n = points.length;
     const sumX = points.reduce((sum, p) => sum + p.x, 0);
     const sumY = points.reduce((sum, p) => sum + p.y, 0);
-    const sumXY = points.reduce((sum, p) => sum + (p.x * p.y), 0);
-    const sumXX = points.reduce((sum, p) => sum + (p.x * p.x), 0);
-    const sumYY = points.reduce((sum, p) => sum + (p.y * p.y), 0);
+    const sumXY = points.reduce((sum, p) => sum + p.x * p.y, 0);
+    const sumXX = points.reduce((sum, p) => sum + p.x * p.x, 0);
+    const sumYY = points.reduce((sum, p) => sum + p.y * p.y, 0);
 
     const slope = (n * sumXY - sumX * sumY) / (n * sumXX - sumX * sumX);
     const intercept = (sumY - slope * sumX) / n;
@@ -406,15 +405,15 @@ export class StatisticalAnalyticsService {
       rSquared,
       confidenceInterval: {
         lower: slope - marginOfError,
-        upper: slope + marginOfError
+        upper: slope + marginOfError,
       },
       prediction: {
         next24h: prediction24h,
         next7d: prediction7d,
-        next30d: prediction30d
+        next30d: prediction30d,
       },
       changeRate,
-      volatility
+      volatility,
     };
 
     this.logger.info('Trend analysis completed', {
@@ -422,7 +421,7 @@ export class StatisticalAnalyticsService {
       trend: result.trend,
       slope: result.slope,
       correlation: result.correlation,
-      rSquared: result.rSquared
+      rSquared: result.rSquared,
     });
 
     return result;
@@ -451,7 +450,7 @@ export class StatisticalAnalyticsService {
       best: Math.min(...values),
       worst: Math.max(...values),
       average: benchmark,
-      median: this.calculateMedian(sortedValues)
+      median: this.calculateMedian(sortedValues),
     };
 
     const betterThan = (percentile / 100) * 100;
@@ -466,8 +465,8 @@ export class StatisticalAnalyticsService {
       historicalContext,
       comparison: {
         betterThan,
-        category
-      }
+        category,
+      },
     };
 
     this.logger.info('Benchmark analysis completed', {
@@ -475,7 +474,7 @@ export class StatisticalAnalyticsService {
       benchmark,
       percentile,
       performance,
-      category
+      category,
     });
 
     return result;
@@ -495,7 +494,7 @@ export class StatisticalAnalyticsService {
 
     // Calculate violation frequency from historical data
     const recentData = historicalData.filter(
-      d => d.timestamp.getTime() > Date.now() - (24 * 60 * 60 * 1000) // last 24 hours
+      d => d.timestamp.getTime() > Date.now() - 24 * 60 * 60 * 1000 // last 24 hours
     );
     const violations = recentData.filter(d => d.value < slaTarget);
     const frequencyOfViolation = violations.length;
@@ -516,7 +515,7 @@ export class StatisticalAnalyticsService {
       severity,
       timeInViolation,
       frequencyOfViolation,
-      remediation
+      remediation,
     };
 
     this.logger.info('SLA monitoring completed', {
@@ -525,7 +524,7 @@ export class StatisticalAnalyticsService {
       actualValue: currentValue,
       violationType,
       severity,
-      frequencyOfViolation
+      frequencyOfViolation,
     });
 
     return result;
@@ -548,12 +547,11 @@ export class StatisticalAnalyticsService {
     const executionHours = executionTimeMinutes / 60;
 
     // Calculate total cost
-    const totalCost = (
-      (resourceUsage.cpu * costs.cpu * executionHours) +
-      (resourceUsage.memory * costs.memory * executionHours) +
-      (resourceUsage.storage * costs.storage * executionHours) +
-      (resourceUsage.network * costs.network)
-    );
+    const totalCost =
+      resourceUsage.cpu * costs.cpu * executionHours +
+      resourceUsage.memory * costs.memory * executionHours +
+      resourceUsage.storage * costs.storage * executionHours +
+      resourceUsage.network * costs.network;
 
     const costPerMinute = totalCost / executionTimeMinutes;
 
@@ -579,7 +577,7 @@ export class StatisticalAnalyticsService {
       costTrend: costTrend!,
       optimizationOpportunities,
       resourceUtilization: resourceUsage,
-      efficiency
+      efficiency,
     };
 
     this.logger.info('Cost analysis completed', {
@@ -587,7 +585,7 @@ export class StatisticalAnalyticsService {
       costPerMinute,
       executionTimeMinutes,
       optimizationOpportunities: optimizationOpportunities.length,
-      efficiencyScore: efficiency.score
+      efficiencyScore: efficiency.score,
     });
 
     return result;
@@ -609,9 +607,9 @@ export class StatisticalAnalyticsService {
     if (sortedValues.length === 0) {
       throw new AppError('Cannot calculate median of empty array', 400);
     }
-    
+
     const mid = Math.floor(sortedValues.length / 2);
-    
+
     if (sortedValues.length % 2 === 0) {
       const left = sortedValues[mid - 1];
       const right = sortedValues[mid];
@@ -632,7 +630,7 @@ export class StatisticalAnalyticsService {
     if (sortedValues.length === 0) {
       throw new AppError('Cannot calculate percentile of empty array', 400);
     }
-    
+
     const index = (percentile / 100) * (sortedValues.length - 1);
     const lower = Math.floor(index);
     const upper = Math.ceil(index);
@@ -640,7 +638,7 @@ export class StatisticalAnalyticsService {
 
     const lowerValue = sortedValues[lower];
     const upperValue = sortedValues[upper];
-    
+
     if (lowerValue === undefined || upperValue === undefined) {
       throw new AppError('Invalid data in percentile calculation', 400);
     }
@@ -669,15 +667,21 @@ export class StatisticalAnalyticsService {
     return Math.min(100, anomalyScore * 50);
   }
 
-  private determineSeverity(score: number, threshold: number): 'low' | 'medium' | 'high' | 'critical' {
+  private determineSeverity(
+    score: number,
+    threshold: number
+  ): 'low' | 'medium' | 'high' | 'critical' {
     const ratio = score / threshold;
-    if (ratio >= 5) return 'critical';  // Adjust for our test data
+    if (ratio >= 5) return 'critical'; // Adjust for our test data
     if (ratio >= 3) return 'high';
     if (ratio >= 2) return 'medium';
     return 'low';
   }
 
-  private determinePercentileSeverity(percentile: number, threshold: number): 'low' | 'medium' | 'high' | 'critical' {
+  private determinePercentileSeverity(
+    percentile: number,
+    threshold: number
+  ): 'low' | 'medium' | 'high' | 'critical' {
     const extremeness = Math.max(percentile, 100 - percentile);
     if (extremeness >= 99) return 'critical';
     if (extremeness >= 97) return 'high';
@@ -692,9 +696,12 @@ export class StatisticalAnalyticsService {
     return 'low';
   }
 
-  private determineTrend(slope: number, standardError: number): 'increasing' | 'decreasing' | 'stable' | 'volatile' {
+  private determineTrend(
+    slope: number,
+    standardError: number
+  ): 'increasing' | 'decreasing' | 'stable' | 'volatile' {
     const significance = Math.abs(slope) / Math.max(standardError, 0.0001); // Avoid division by zero
-    
+
     // Lower threshold for trend detection
     if (significance < 0.5) return 'stable';
     if (standardError > Math.abs(slope) * 3) return 'volatile';
@@ -702,7 +709,9 @@ export class StatisticalAnalyticsService {
     return 'decreasing';
   }
 
-  private determinePerformance(percentile: number): 'excellent' | 'good' | 'average' | 'below-average' | 'poor' {
+  private determinePerformance(
+    percentile: number
+  ): 'excellent' | 'good' | 'average' | 'below-average' | 'poor' {
     if (percentile >= 90) return 'excellent';
     if (percentile >= 75) return 'good';
     if (percentile >= 50) return 'average';
@@ -720,7 +729,7 @@ export class StatisticalAnalyticsService {
     violationType: string,
     violationPercent: number,
     severity: string
-  ): { immediateActions: string[]; longTermActions: string[]; estimatedImpact: string; } {
+  ): { immediateActions: string[]; longTermActions: string[]; estimatedImpact: string } {
     const immediateActions: string[] = [];
     const longTermActions: string[] = [];
     let estimatedImpact = '';
@@ -750,7 +759,7 @@ export class StatisticalAnalyticsService {
   }
 
   private generateCostOptimizations(
-    resourceUsage: { cpu: number; memory: number; storage: number; network: number; },
+    resourceUsage: { cpu: number; memory: number; storage: number; network: number },
     executionTimeMinutes: number,
     totalCost: number
   ) {
@@ -764,7 +773,7 @@ export class StatisticalAnalyticsService {
         potentialSavings: totalCost * 0.3,
         implementation: 'Reduce CPU allocation by 30-50%',
         effort: 'low' as const,
-        priority: 'medium' as const
+        priority: 'medium' as const,
       });
     }
 
@@ -776,7 +785,7 @@ export class StatisticalAnalyticsService {
         potentialSavings: totalCost * 0.2,
         implementation: 'Reduce memory allocation by 20-40%',
         effort: 'low' as const,
-        priority: 'medium' as const
+        priority: 'medium' as const,
       });
     }
 
@@ -788,7 +797,7 @@ export class StatisticalAnalyticsService {
         potentialSavings: totalCost * 0.4,
         implementation: 'Implement build optimization and caching',
         effort: 'medium' as const,
-        priority: 'high' as const
+        priority: 'high' as const,
       });
     }
 
@@ -796,9 +805,9 @@ export class StatisticalAnalyticsService {
   }
 
   private calculateEfficiencyScore(
-    resourceUsage: { cpu: number; memory: number; storage: number; network: number; },
+    resourceUsage: { cpu: number; memory: number; storage: number; network: number },
     executionTimeMinutes: number
-  ): { score: number; recommendations: string[]; } {
+  ): { score: number; recommendations: string[] } {
     let score = 100;
     const recommendations: string[] = [];
 
@@ -827,7 +836,7 @@ export class StatisticalAnalyticsService {
 
     return {
       score: Math.max(0, Math.min(100, score)),
-      recommendations
+      recommendations,
     };
   }
 
@@ -836,7 +845,7 @@ export class StatisticalAnalyticsService {
     // In production, use a proper statistical library
     if (confidenceLevel >= 0.99) return 2.576;
     if (confidenceLevel >= 0.95) return 1.96;
-    if (confidenceLevel >= 0.90) return 1.645;
+    if (confidenceLevel >= 0.9) return 1.645;
     return 1.96; // Default to 95%
   }
 
@@ -857,7 +866,9 @@ export class StatisticalAnalyticsService {
       }
     } catch (error) {
       // Gracefully handle database not being initialized
-      this.logger.warn('Database not available for pipeline integration', { error: error instanceof Error ? error.message : String(error) });
+      this.logger.warn('Database not available for pipeline integration', {
+        error: error instanceof Error ? error.message : String(error),
+      });
       throw new AppError('Database not available for pipeline operations', 503);
     }
   }
@@ -885,18 +896,18 @@ export class StatisticalAnalyticsService {
     startDate.setDate(startDate.getDate() - periodDays);
 
     const runs = await this.pipelineRunRepo.find({
-      where: { 
+      where: {
         pipelineId,
-        startedAt: { $gte: startDate } as any
+        startedAt: { $gte: startDate } as any,
       },
-      order: { startedAt: 'ASC' }
+      order: { startedAt: 'ASC' },
     });
 
     this.logger.info('Extracted pipeline runs for analysis', {
       pipelineId,
       runsCount: runs.length,
       metric,
-      periodDays
+      periodDays,
     });
 
     return this.convertRunsToDataPoints(runs, metric);
@@ -906,14 +917,14 @@ export class StatisticalAnalyticsService {
    * Convert pipeline runs to statistical data points based on metric type
    */
   private convertRunsToDataPoints(
-    runs: PipelineRun[], 
+    runs: PipelineRun[],
     metric: 'duration' | 'cpu' | 'memory' | 'success_rate' | 'test_coverage'
   ): StatisticalDataPoint[] {
     const dataPoints: StatisticalDataPoint[] = [];
 
     for (const run of runs) {
       let value: number | null = null;
-      
+
       switch (metric) {
         case 'duration':
           value = run.duration ?? null;
@@ -942,8 +953,8 @@ export class StatisticalAnalyticsService {
             runId: run.id,
             metric,
             branch: run.branch,
-            triggeredBy: run.triggeredBy
-          }
+            triggeredBy: run.triggeredBy,
+          },
         });
       }
     }
@@ -961,7 +972,7 @@ export class StatisticalAnalyticsService {
     periodDays: number = 30
   ): Promise<AnomalyDetectionResult[]> {
     const dataPoints = await this.extractPipelineDataPoints(pipelineId, metric, periodDays);
-    
+
     if (dataPoints.length < this.config.anomalyDetection.minDataPoints) {
       throw new AppError(
         `Insufficient pipeline data points for anomaly detection. Found ${dataPoints.length}, need at least ${this.config.anomalyDetection.minDataPoints}`,
@@ -981,7 +992,7 @@ export class StatisticalAnalyticsService {
     periodDays: number = 30
   ): Promise<TrendAnalysisResult> {
     const dataPoints = await this.extractPipelineDataPoints(pipelineId, metric, periodDays);
-    
+
     if (dataPoints.length < this.config.trendAnalysis.minDataPoints) {
       throw new AppError(
         `Insufficient pipeline data points for trend analysis. Found ${dataPoints.length}, need at least ${this.config.trendAnalysis.minDataPoints}`,
@@ -1001,7 +1012,7 @@ export class StatisticalAnalyticsService {
     periodDays: number = 30
   ): Promise<BenchmarkResult> {
     const dataPoints = await this.extractPipelineDataPoints(pipelineId, metric, periodDays);
-    
+
     if (dataPoints.length < this.config.benchmarking.minSamples) {
       throw new AppError(
         `Insufficient pipeline data points for benchmarking. Found ${dataPoints.length}, need at least ${this.config.benchmarking.minSamples}`,
@@ -1024,7 +1035,7 @@ export class StatisticalAnalyticsService {
     periodDays: number = 30
   ): Promise<SLAMonitoringResult> {
     const dataPoints = await this.extractPipelineDataPoints(pipelineId, metric, periodDays);
-    
+
     if (dataPoints.length === 0) {
       throw new AppError('No pipeline data available for SLA monitoring', 400);
     }
@@ -1042,24 +1053,24 @@ export class StatisticalAnalyticsService {
     periodDays: number = 30
   ): Promise<CostAnalysisResult> {
     const dataPoints = await this.extractPipelineDataPoints(pipelineId, 'duration', periodDays);
-    
+
     if (dataPoints.length === 0) {
       throw new AppError('No pipeline data available for cost analysis', 400);
     }
 
     // Get the most recent run for resource usage analysis
     this.initializePipelineRepositories();
-    
+
     if (!this.pipelineRunRepo) {
       throw new AppError('Failed to initialize pipeline repositories', 500);
     }
-    
+
     const recentRun = await this.pipelineRunRepo.findOne({
       where: { pipelineId },
-      order: { startedAt: 'DESC' }
+      order: { startedAt: 'DESC' },
     });
 
-    if (!recentRun || !recentRun.duration) {
+    if (!recentRun?.duration) {
       throw new AppError('No recent pipeline run data available for cost analysis', 400);
     }
 
@@ -1067,7 +1078,7 @@ export class StatisticalAnalyticsService {
       cpu: recentRun.resources?.maxCpu || 50,
       memory: recentRun.resources?.maxMemory || 50,
       storage: 25, // Default storage usage
-      network: 10  // Default network usage
+      network: 10, // Default network usage
     };
 
     return this.analyzeCosts(recentRun.duration / 60, resourceUsage, dataPoints);
@@ -1081,8 +1092,8 @@ export class StatisticalAnalyticsService {
       try {
         this.resultRepository = new StatisticalResultRepository(databaseManager.getDataSource());
       } catch (error) {
-        this.logger.warn('Database not available for statistical result persistence', { 
-          error: error instanceof Error ? error.message : String(error) 
+        this.logger.warn('Database not available for statistical result persistence', {
+          error: error instanceof Error ? error.message : String(error),
         });
         throw new AppError('Statistical result persistence not available', 503);
       }
@@ -1095,8 +1106,8 @@ export class StatisticalAnalyticsService {
       try {
         this.cacheRepository = new StatisticalCacheRepository(databaseManager.getDataSource());
       } catch (error) {
-        this.logger.warn('Database not available for statistical cache', { 
-          error: error instanceof Error ? error.message : String(error) 
+        this.logger.warn('Database not available for statistical cache', {
+          error: error instanceof Error ? error.message : String(error),
         });
         throw new AppError('Statistical cache not available', 503);
       }
@@ -1128,13 +1139,13 @@ export class StatisticalAnalyticsService {
   ): Promise<void> {
     try {
       const status = this.determineResultStatus(result, metadata?.severity);
-      
+
       const resultData: any = {
         analysisType,
         status,
         result,
         metadata: { ...metadata },
-        timestamp: new Date()
+        timestamp: new Date(),
       };
 
       // Only add pipelineId if it exists
@@ -1147,23 +1158,24 @@ export class StatisticalAnalyticsService {
       if (metadata?.method) resultData.method = metadata.method;
       if (metadata?.score !== undefined) resultData.score = metadata.score;
       if (metadata?.severity) resultData.severity = metadata.severity;
-      if (metadata?.dataPointCount !== undefined) resultData.dataPointCount = metadata.dataPointCount;
+      if (metadata?.dataPointCount !== undefined)
+        resultData.dataPointCount = metadata.dataPointCount;
       if (metadata?.periodDays !== undefined) resultData.periodDays = metadata.periodDays;
       if (metadata?.executionTime !== undefined) resultData.executionTime = metadata.executionTime;
       if (metadata?.jobExecutionId) resultData.jobExecutionId = metadata.jobExecutionId;
-      
+
       await this.getResultRepository().create(resultData);
 
       this.logger.info('Statistical analysis result saved', {
         analysisType,
         pipelineId,
         status,
-        metric: metadata?.metric
+        metric: metadata?.metric,
       });
     } catch (error) {
       this.logger.error('Failed to save analysis result', error, {
         analysisType,
-        pipelineId
+        pipelineId,
       });
       // Don't throw - analysis should continue even if persistence fails
     }
@@ -1172,16 +1184,13 @@ export class StatisticalAnalyticsService {
   /**
    * Get cached analysis result
    */
-  async getCachedResult(
-    cacheKey: string,
-    cacheType: CacheType
-  ): Promise<any | null> {
+  async getCachedResult(cacheKey: string, cacheType: CacheType): Promise<any | null> {
     try {
       if (!this.cacheRepository) {
         this.logger.warn('Cache repository not initialized');
         return null;
       }
-      
+
       const cached = await this.cacheRepository.get(cacheKey);
       if (cached) {
         this.logger.debug('Cache hit', { cacheKey, cacheType });
@@ -1210,25 +1219,17 @@ export class StatisticalAnalyticsService {
         this.logger.warn('Cache repository not initialized');
         return;
       }
-      
-      await this.cacheRepository.set(
+
+      await this.cacheRepository.set(cacheKey, cacheType, data, expirationMs, pipelineId, metric, {
+        generatedAt: new Date().toISOString(),
+        dataSize: JSON.stringify(data).length,
+      });
+
+      this.logger.debug('Result cached', {
         cacheKey,
         cacheType,
-        data,
         expirationMs,
         pipelineId,
-        metric,
-        {
-          generatedAt: new Date().toISOString(),
-          dataSize: JSON.stringify(data).length
-        }
-      );
-
-      this.logger.debug('Result cached', { 
-        cacheKey, 
-        cacheType, 
-        expirationMs,
-        pipelineId 
       });
     } catch (error) {
       this.logger.error('Cache storage failed', error, { cacheKey });
@@ -1246,7 +1247,7 @@ export class StatisticalAnalyticsService {
     if (severity === 'critical') return ResultStatus.CRITICAL;
     if (severity === 'high') return ResultStatus.ERROR;
     if (severity === 'medium') return ResultStatus.WARNING;
-    
+
     // Check for anomalies in result
     if (Array.isArray(result)) {
       const hasAnomalies = result.some((r: any) => r.isAnomaly === true);
@@ -1269,9 +1270,7 @@ export class StatisticalAnalyticsService {
   ): Promise<AnomalyDetectionResult[]> {
     try {
       // Extract data points for analysis
-      const dataPoints = pipelineId 
-        ? await this.extractPipelineDataPoints(pipelineId, metric)
-        : [];
+      const dataPoints = pipelineId ? await this.extractPipelineDataPoints(pipelineId, metric) : [];
 
       if (dataPoints.length === 0) {
         this.logger.warn('No data points available for anomaly detection', { pipelineId, metric });
@@ -1282,9 +1281,9 @@ export class StatisticalAnalyticsService {
       const anomalies = this.detectAnomalies(dataPoints, method);
 
       // Filter critical anomalies that exceed the alert threshold
-      const criticalAnomalies = anomalies.filter(anomaly => 
-        anomaly.anomalyScore >= alertThreshold && 
-        ['high', 'critical'].includes(anomaly.severity)
+      const criticalAnomalies = anomalies.filter(
+        anomaly =>
+          anomaly.anomalyScore >= alertThreshold && ['high', 'critical'].includes(anomaly.severity)
       );
 
       // Trigger alerts for critical anomalies
@@ -1297,11 +1296,10 @@ export class StatisticalAnalyticsService {
         metric,
         totalAnomalies: anomalies.length,
         criticalAnomalies: criticalAnomalies.length,
-        alertsTriggered: criticalAnomalies.length
+        alertsTriggered: criticalAnomalies.length,
       });
 
       return anomalies;
-
     } catch (error) {
       this.logger.error('Enhanced anomaly detection failed', error, { pipelineId, metric });
       throw new AppError('Enhanced anomaly detection failed', 500);
@@ -1326,43 +1324,38 @@ export class StatisticalAnalyticsService {
           anomaly,
           method: anomaly.method,
           confidence: anomaly.confidence,
-          expectedRange: anomaly.expectedRange
-        }
+          expectedRange: anomaly.expectedRange,
+        },
       };
-      
+
       if (pipelineId) {
         alertDetails.pipelineId = pipelineId;
       }
-      
-      await alertingService.triggerAlert(
-        AlertType.ANOMALY_DETECTION,
-        alertDetails,
-        {
-          environment: 'production',
-          tags: ['anomaly-detection', metric, anomaly.severity],
-          metadata: {
-            anomalyMethod: anomaly.method,
-            severity: anomaly.severity,
-            confidence: anomaly.confidence,
-            actualValue: anomaly.actualValue,
-            expectedRange: anomaly.expectedRange
-          },
-          relatedAlerts: []
-        }
-      );
+
+      await alertingService.triggerAlert(AlertType.ANOMALY_DETECTION, alertDetails, {
+        environment: 'production',
+        tags: ['anomaly-detection', metric, anomaly.severity],
+        metadata: {
+          anomalyMethod: anomaly.method,
+          severity: anomaly.severity,
+          confidence: anomaly.confidence,
+          actualValue: anomaly.actualValue,
+          expectedRange: anomaly.expectedRange,
+        },
+        relatedAlerts: [],
+      });
 
       this.logger.info('Anomaly alert triggered', {
         pipelineId,
         metric,
         anomalyScore: anomaly.anomalyScore,
-        severity: anomaly.severity
+        severity: anomaly.severity,
       });
-
     } catch (error) {
       this.logger.error('Failed to trigger anomaly alert', error, {
         pipelineId,
         metric,
-        anomalyScore: anomaly.anomalyScore
+        anomalyScore: anomaly.anomalyScore,
       });
       // Don't throw - we don't want alert failures to break the analysis
     }
@@ -1381,7 +1374,7 @@ export class StatisticalAnalyticsService {
   ): Promise<SLAMonitoringResult> {
     try {
       // Get pipeline performance data
-      const dataPoints = pipelineId 
+      const dataPoints = pipelineId
         ? await this.extractPipelineDataPoints(pipelineId, 'duration')
         : [];
 
@@ -1398,16 +1391,17 @@ export class StatisticalAnalyticsService {
           remediation: {
             immediateActions: ['Monitor pipeline health'],
             longTermActions: ['Establish baseline metrics'],
-            estimatedImpact: 'Low'
-          }
+            estimatedImpact: 'Low',
+          },
         };
       }
 
       // Calculate SLA metrics
       const recentDataPoints = dataPoints.slice(-50); // Last 50 runs
-      const averageDuration = recentDataPoints.reduce((sum, dp) => sum + dp.value, 0) / recentDataPoints.length;
+      const averageDuration =
+        recentDataPoints.reduce((sum, dp) => sum + dp.value, 0) / recentDataPoints.length;
       const slaTarget = slaConfig.duration || 300000; // 5 minutes default
-      
+
       const violation = averageDuration > slaTarget;
       const violationPercent = violation ? ((averageDuration - slaTarget) / slaTarget) * 100 : 0;
 
@@ -1417,23 +1411,18 @@ export class StatisticalAnalyticsService {
         actualValue: averageDuration,
         violationPercent,
         violationType: 'performance',
-        severity: violationPercent > 50 ? 'critical' : 
-                  violationPercent > 25 ? 'major' : 'minor',
+        severity: violationPercent > 50 ? 'critical' : violationPercent > 25 ? 'major' : 'minor',
         timeInViolation: violation ? 30 : 0, // Simplified calculation
         frequencyOfViolation: 0, // Would need historical data
         remediation: {
-          immediateActions: violation ? [
-            'Check pipeline configuration',
-            'Review recent changes',
-            'Monitor resource usage'
-          ] : [],
-          longTermActions: violation ? [
-            'Optimize pipeline steps',
-            'Consider parallel execution',
-            'Review SLA targets'
-          ] : [],
-          estimatedImpact: violation ? 'High' : 'Low'
-        }
+          immediateActions: violation
+            ? ['Check pipeline configuration', 'Review recent changes', 'Monitor resource usage']
+            : [],
+          longTermActions: violation
+            ? ['Optimize pipeline steps', 'Consider parallel execution', 'Review SLA targets']
+            : [],
+          estimatedImpact: violation ? 'High' : 'Low',
+        },
       };
 
       // Trigger alert if SLA is violated
@@ -1445,11 +1434,10 @@ export class StatisticalAnalyticsService {
         pipelineId,
         violated: violation,
         violationPercent,
-        severity: slaResult.severity
+        severity: slaResult.severity,
       });
 
       return slaResult;
-
     } catch (error) {
       this.logger.error('SLA monitoring with alerting failed', error, { pipelineId });
       throw new AppError('SLA monitoring with alerting failed', 500);
@@ -1473,41 +1461,36 @@ export class StatisticalAnalyticsService {
           slaResult,
           actualValue: slaResult.actualValue,
           target: slaResult.slaTarget,
-          violationType: slaResult.violationType
-        }
+          violationType: slaResult.violationType,
+        },
       };
-      
+
       if (pipelineId) {
         alertDetails.pipelineId = pipelineId;
       }
-      
-      await alertingService.triggerAlert(
-        AlertType.SLA_VIOLATION,
-        alertDetails,
-        {
-          environment: 'production',
-          tags: ['sla-violation', slaResult.violationType, slaResult.severity],
-          metadata: {
-            violationType: slaResult.violationType,
-            severity: slaResult.severity,
-            timeInViolation: slaResult.timeInViolation,
-            frequency: slaResult.frequencyOfViolation,
-            remediation: slaResult.remediation
-          },
-          relatedAlerts: []
-        }
-      );
+
+      await alertingService.triggerAlert(AlertType.SLA_VIOLATION, alertDetails, {
+        environment: 'production',
+        tags: ['sla-violation', slaResult.violationType, slaResult.severity],
+        metadata: {
+          violationType: slaResult.violationType,
+          severity: slaResult.severity,
+          timeInViolation: slaResult.timeInViolation,
+          frequency: slaResult.frequencyOfViolation,
+          remediation: slaResult.remediation,
+        },
+        relatedAlerts: [],
+      });
 
       this.logger.info('SLA violation alert triggered', {
         pipelineId,
         violationPercent: slaResult.violationPercent,
-        severity: slaResult.severity
+        severity: slaResult.severity,
       });
-
     } catch (error) {
       this.logger.error('Failed to trigger SLA alert', error, {
         pipelineId,
-        violationPercent: slaResult.violationPercent
+        violationPercent: slaResult.violationPercent,
       });
     }
   }
@@ -1523,6 +1506,6 @@ export const getStatisticalAnalyticsService = (): StatisticalAnalyticsService =>
   return _instance;
 };
 
-// Export singleton instance for production use  
+// Export singleton instance for production use
 // Create instance without triggering database initialization
 export const statisticalAnalyticsService = StatisticalAnalyticsService.getInstance();
