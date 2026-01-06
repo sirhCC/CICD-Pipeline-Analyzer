@@ -15,13 +15,13 @@ const environmentConfig: EnvironmentConfig = {
     required: true,
     description: 'Application environment (development, production, test)',
     validator: (value: string) => ['development', 'production', 'test'].includes(value),
-    defaultValue: 'development'
+    defaultValue: 'development',
   },
   LOG_LEVEL: {
     required: false,
     description: 'Logging level (error, warn, info, debug)',
     validator: (value: string) => ['error', 'warn', 'info', 'debug'].includes(value),
-    defaultValue: 'info'
+    defaultValue: 'info',
   },
 
   // Server Configuration
@@ -29,79 +29,79 @@ const environmentConfig: EnvironmentConfig = {
     required: false,
     description: 'Server port number',
     validator: (value: string) => !isNaN(parseInt(value)) && parseInt(value) > 0,
-    defaultValue: '3000'
+    defaultValue: '3000',
   },
   HOST: {
     required: false,
     description: 'Server host address',
-    defaultValue: 'localhost'
+    defaultValue: 'localhost',
   },
 
   // Security - REQUIRED in production
   JWT_SECRET: {
     required: true,
     description: 'JWT signing secret (minimum 32 characters)',
-    validator: (value: string) => value.length >= 32
+    validator: (value: string) => value.length >= 32,
   },
   JWT_REFRESH_SECRET: {
     required: true,
     description: 'JWT refresh token secret (minimum 32 characters)',
-    validator: (value: string) => value.length >= 32
+    validator: (value: string) => value.length >= 32,
   },
   API_KEY_SECRET: {
     required: true,
     description: 'API key signing secret (minimum 32 characters)',
-    validator: (value: string) => value.length >= 32
+    validator: (value: string) => value.length >= 32,
   },
   SESSION_SECRET: {
     required: false,
     description: 'Session secret (minimum 32 characters)',
-    validator: (value: string) => value.length >= 32
+    validator: (value: string) => value.length >= 32,
   },
 
   // Database Configuration
   DATABASE_HOST: {
     required: true,
     description: 'PostgreSQL database host',
-    defaultValue: 'localhost'
+    defaultValue: 'localhost',
   },
   DATABASE_PORT: {
     required: false,
     description: 'PostgreSQL database port',
     validator: (value: string) => !isNaN(parseInt(value)) && parseInt(value) > 0,
-    defaultValue: '5432'
+    defaultValue: '5432',
   },
   DATABASE_NAME: {
     required: true,
-    description: 'PostgreSQL database name'
+    description: 'PostgreSQL database name',
   },
   DATABASE_USERNAME: {
     required: true,
-    description: 'PostgreSQL database username'
+    description: 'PostgreSQL database username',
   },
   DATABASE_PASSWORD: {
     required: true,
-    description: 'PostgreSQL database password'
+    description: 'PostgreSQL database password',
   },
 
   // Redis Configuration
   REDIS_HOST: {
     required: false,
     description: 'Redis host address',
-    defaultValue: 'localhost'
+    defaultValue: 'localhost',
   },
   REDIS_PORT: {
     required: false,
     description: 'Redis port number',
     validator: (value: string) => !isNaN(parseInt(value)) && parseInt(value) > 0,
-    defaultValue: '6379'
+    defaultValue: '6379',
   },
   REDIS_DB: {
     required: false,
     description: 'Redis database number',
     validator: (value: string) => !isNaN(parseInt(value)) && parseInt(value) >= 0,
-    defaultValue: '0'
-  }
+    defaultValue: '0',
+  },
 };
 
 export class EnvironmentValidator {
@@ -139,18 +139,21 @@ export class EnvironmentValidator {
     if (!env.DATABASE_PASSWORD && env.DB_PASSWORD) env.DATABASE_PASSWORD = env.DB_PASSWORD;
     if (!env.DATABASE_SSL && env.DB_SSL) env.DATABASE_SSL = env.DB_SSL;
     // Server aliases
-    if (!env.HOST && (env.SERVER_HOST || env.SERVERNAME)) env.HOST = env.SERVER_HOST || env.SERVERNAME;
+    if (!env.HOST && (env.SERVER_HOST || env.SERVERNAME))
+      env.HOST = env.SERVER_HOST || env.SERVERNAME;
     if (!env.PORT && env.SERVER_PORT) env.PORT = env.SERVER_PORT;
 
     // Validate each environment variable
     for (const [key, config] of Object.entries(environmentConfig)) {
       const value = process.env[key];
-      
+
       if (!value) {
         // If DB init is skipped, don't require DATABASE_* keys
         if (skipDb && key.startsWith('DATABASE_')) {
           if (!this.warnedDbSkip) {
-            this.validationWarnings.push('Database initialization is skipped (SKIP_DB_INIT=true); DATABASE_* variables are not required.');
+            this.validationWarnings.push(
+              'Database initialization is skipped (SKIP_DB_INIT=true); DATABASE_* variables are not required.'
+            );
             this.warnedDbSkip = true;
           }
           continue;
@@ -172,9 +175,7 @@ export class EnvironmentValidator {
 
       // Validate value format if validator is provided
       if (config.validator && !config.validator(value)) {
-        this.validationErrors.push(
-          `Invalid value for ${key}: "${value}" - ${config.description}`
-        );
+        this.validationErrors.push(`Invalid value for ${key}: "${value}" - ${config.description}`);
       }
 
       // Check for weak secrets in production
@@ -195,7 +196,7 @@ export class EnvironmentValidator {
     return {
       isValid: this.validationErrors.length === 0,
       errors: this.validationErrors,
-      warnings: this.validationWarnings
+      warnings: this.validationWarnings,
     };
   }
 
@@ -205,11 +206,11 @@ export class EnvironmentValidator {
   private isSecurityCritical(key: string): boolean {
     const securityKeys = [
       'JWT_SECRET',
-      'JWT_REFRESH_SECRET', 
+      'JWT_REFRESH_SECRET',
       'API_KEY_SECRET',
       'SESSION_SECRET',
       'DATABASE_PASSWORD',
-      'REDIS_PASSWORD'
+      'REDIS_PASSWORD',
     ];
     return securityKeys.includes(key);
   }
@@ -224,13 +225,15 @@ export class EnvironmentValidator {
       /^(123|abc|admin|user)/i,
       /change.*production/i,
       /your.*secret/i,
-      /super.*secret/i
+      /super.*secret/i,
     ];
 
-    return weakPatterns.some(pattern => pattern.test(value)) || 
-           value.length < 16 ||
-           value === value.toLowerCase() ||
-           value === value.toUpperCase();
+    return (
+      weakPatterns.some(pattern => pattern.test(value)) ||
+      value.length < 16 ||
+      value === value.toLowerCase() ||
+      value === value.toUpperCase()
+    );
   }
 
   /**
@@ -241,34 +244,32 @@ export class EnvironmentValidator {
     // Ensure HTTPS in production
     const corsOrigin = process.env.CORS_ORIGIN;
     if (corsOrigin && !corsOrigin.startsWith('https://')) {
-      this.validationWarnings.push(
-        'CORS_ORIGIN should use HTTPS in production environment'
-      );
+      this.validationWarnings.push('CORS_ORIGIN should use HTTPS in production environment');
     }
 
     // Ensure database SSL in production
     if (!skipDb) {
       const databaseSsl = process.env.DATABASE_SSL;
       if (!databaseSsl || databaseSsl.toLowerCase() !== 'true') {
-        this.validationWarnings.push(
-          'DATABASE_SSL should be enabled in production environment'
-        );
+        this.validationWarnings.push('DATABASE_SSL should be enabled in production environment');
       }
     }
 
     // Ensure proper log level in production
     const logLevel = process.env.LOG_LEVEL;
     if (logLevel === 'debug') {
-      this.validationWarnings.push(
-        'LOG_LEVEL should not be "debug" in production environment'
-      );
+      this.validationWarnings.push('LOG_LEVEL should not be "debug" in production environment');
     }
   }
 
   /**
    * Print validation results
    */
-  public printValidationResults(results: { isValid: boolean; errors: string[]; warnings: string[] }): void {
+  public printValidationResults(results: {
+    isValid: boolean;
+    errors: string[];
+    warnings: string[];
+  }): void {
     if (results.errors.length > 0) {
       log.error('❌ Environment validation failed:');
       results.errors.forEach(error => log.error(`  • ${error}`));
@@ -294,7 +295,7 @@ export class EnvironmentValidator {
       '# ===============================================',
       '# Copy this file to .env and configure your values',
       '# Never commit .env to version control!',
-      ''
+      '',
     ];
 
     let currentSection = '';
@@ -305,7 +306,9 @@ export class EnvironmentValidator {
         currentSection = section;
       }
 
-      const defaultValue = config.defaultValue || (config.required ? `your-${key.toLowerCase().replace(/_/g, '-')}` : '');
+      const defaultValue =
+        config.defaultValue ||
+        (config.required ? `your-${key.toLowerCase().replace(/_/g, '-')}` : '');
       lines.push(`${key}=${defaultValue}`);
       lines.push(`# ${config.description}`);
       lines.push('');
@@ -319,11 +322,14 @@ export class EnvironmentValidator {
    */
   private getEnvironmentSection(key: string): string {
     if (key.startsWith('NODE_') || key.startsWith('LOG_')) return 'Application Configuration';
-    if (key.startsWith('PORT') || key.startsWith('HOST') || key.startsWith('SERVER_')) return 'Server Configuration';
-    if (key.includes('SECRET') || key.includes('JWT') || key.includes('API_KEY')) return 'Security Configuration';
+    if (key.startsWith('PORT') || key.startsWith('HOST') || key.startsWith('SERVER_'))
+      return 'Server Configuration';
+    if (key.includes('SECRET') || key.includes('JWT') || key.includes('API_KEY'))
+      return 'Security Configuration';
     if (key.startsWith('DATABASE_')) return 'Database Configuration';
     if (key.startsWith('REDIS_')) return 'Redis Configuration';
-    if (key.startsWith('GITHUB_') || key.startsWith('GITLAB_')) return 'CI/CD Provider Configuration';
+    if (key.startsWith('GITHUB_') || key.startsWith('GITLAB_'))
+      return 'CI/CD Provider Configuration';
     return 'Other Configuration';
   }
 }
