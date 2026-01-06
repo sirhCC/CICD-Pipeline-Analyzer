@@ -1,6 +1,6 @@
 /**
  * Enterprise-grade Request Logger Middleware
- * 
+ *
  * Features:
  * - Structured request/response logging with correlation IDs
  * - Performance monitoring and metrics collection
@@ -12,12 +12,12 @@
  * - Integration with external monitoring systems
  * - Request tracing and distributed logging support
  * - Compliance and audit logging (GDPR, SOC2, etc.)
- * 
+ *
  * @author sirhCC
  * @version 1.0.0
  */
 
-import { Request, Response, NextFunction } from 'express';
+import type { Request, Response, NextFunction } from 'express';
 import client from 'prom-client';
 import { v4 as uuidv4 } from 'uuid';
 import { Logger } from '@/shared/logger';
@@ -51,38 +51,38 @@ export interface RequestLoggerOptions {
   enabled?: boolean;
   skipPaths?: string[];
   skipMethods?: string[];
-  
+
   // Request/Response logging
   logRequestBody?: boolean;
   logResponseBody?: boolean;
   logHeaders?: boolean;
   logQuery?: boolean;
-  
+
   // Payload limits
   maxBodySize?: number;
   maxHeaderSize?: number;
   maxMaskDepth?: number; // Limit deep object traversal when masking
   maxObjectKeys?: number; // Max keys processed per object
   maxArrayLength?: number; // Max items processed per array
-  
+
   // Performance monitoring
   slowRequestThreshold?: number;
   enableMetrics?: boolean;
-  
+
   // Security and compliance
   enableSecurityLogging?: boolean;
   enableAuditTrail?: boolean;
   maskSensitiveData?: boolean;
   sensitiveFields?: string[];
-  
+
   // Filtering and sampling
   logLevel?: 'debug' | 'info' | 'warn' | 'error';
   samplingRate?: number;
-  
+
   // Integration
   enableTracing?: boolean;
   enableCorrelation?: boolean;
-  
+
   // Custom handlers
   onRequest?: (context: RequestLogContext) => void;
   onResponse?: (context: RequestLogContext) => void;
@@ -123,7 +123,7 @@ const defaultOptions: RequestLoggerOptions = {
   logLevel: 'info',
   samplingRate: 1.0, // Log 100% by default
   enableTracing: true,
-  enableCorrelation: true
+  enableCorrelation: true,
 };
 
 /**
@@ -152,7 +152,7 @@ export class RequestLoggerService {
     if (configManager.getMonitoring().prometheus) {
       client.collectDefaultMetrics({ register: this.promRegistry, prefix: 'cicd_' });
     }
-    
+
     this.metrics = {
       totalRequests: 0,
       requestsByMethod: {},
@@ -161,7 +161,7 @@ export class RequestLoggerService {
       slowRequests: 0,
       errorRate: 0,
       requestsPerSecond: 0,
-      lastResetTime: Date.now()
+      lastResetTime: Date.now(),
     };
 
     // Prometheus instruments
@@ -169,19 +169,19 @@ export class RequestLoggerService {
       name: 'http_requests_total',
       help: 'Total number of HTTP requests',
       labelNames: ['method', 'route', 'status'],
-      registers: [this.promRegistry]
+      registers: [this.promRegistry],
     });
     this.promHttpRequestDuration = new client.Histogram({
       name: 'http_request_duration_seconds',
       help: 'HTTP request duration in seconds',
       labelNames: ['method', 'route', 'status'],
       registers: [this.promRegistry],
-      buckets: [0.05, 0.1, 0.3, 0.5, 1, 2, 5]
+      buckets: [0.05, 0.1, 0.3, 0.5, 1, 2, 5],
     });
     this.promHttpRequestsInFlight = new client.Gauge({
       name: 'http_requests_in_flight',
       help: 'Current number of in-flight HTTP requests',
-      registers: [this.promRegistry]
+      registers: [this.promRegistry],
     });
   }
 
@@ -192,8 +192,10 @@ export class RequestLoggerService {
     if (!this.isEnabled) return false;
 
     // Check skip paths
-  const reqPath = (req as any).path || req.originalUrl || req.url || '';
-  if (this.options.skipPaths?.some(path => typeof reqPath === 'string' && reqPath.startsWith(path))) {
+    const reqPath = (req as any).path || req.originalUrl || req.url || '';
+    if (
+      this.options.skipPaths?.some(path => typeof reqPath === 'string' && reqPath.startsWith(path))
+    ) {
       return false;
     }
 
@@ -221,16 +223,17 @@ export class RequestLoggerService {
     if (seen.has(data as object)) return '[CIRCULAR]';
     seen.add(data as object);
 
-  const maxDepth = this.options.maxMaskDepth ?? 2;
-  // Allow masking at maxDepth but do not recurse beyond
-  if (depth > maxDepth) return '[REDACTED]';
+    const maxDepth = this.options.maxMaskDepth ?? 2;
+    // Allow masking at maxDepth but do not recurse beyond
+    if (depth > maxDepth) return '[REDACTED]';
 
     const sensitiveFields = this.options.sensitiveFields || [];
-    const maskField = (k: string) => sensitiveFields.some(f => k.toLowerCase().includes(f.toLowerCase()));
+    const maskField = (k: string) =>
+      sensitiveFields.some(f => k.toLowerCase().includes(f.toLowerCase()));
 
     if (Array.isArray(data)) {
       const limit = this.options.maxArrayLength ?? 100;
-      const arr = data.slice(0, limit).map((v) => this.maskSensitiveData(v, depth + 1, seen));
+      const arr = data.slice(0, limit).map(v => this.maskSensitiveData(v, depth + 1, seen));
       if (data.length > limit) arr.push('[TRUNCATED_ARRAY]');
       return arr;
     }
@@ -265,7 +268,7 @@ export class RequestLoggerService {
       return {
         _truncated: true,
         _originalSize: s.length,
-        _preview: s.slice(0, maxSize)
+        _preview: s.slice(0, maxSize),
       };
     } catch {
       return '[UNSERIALIZABLE]';
@@ -276,7 +279,7 @@ export class RequestLoggerService {
    * Extract request context
    */
   public extractRequestContext(req: Request): RequestLogContext {
-    const requestId = req.headers['x-request-id'] as string || uuidv4();
+    const requestId = (req.headers['x-request-id'] as string) || uuidv4();
     const correlationId = req.headers['x-correlation-id'] as string;
     const traceId = req.headers['x-trace-id'] as string;
 
@@ -293,7 +296,7 @@ export class RequestLoggerService {
       ip: req.ip || req.connection.remoteAddress || 'unknown',
       method: req.method,
       url: req.originalUrl || req.url,
-      startTime: Date.now()
+      startTime: Date.now(),
     };
 
     // Add headers if enabled
@@ -326,14 +329,14 @@ export class RequestLoggerService {
     if (!this.options.enableMetrics) return;
 
     this.metrics.totalRequests++;
-    
+
     // Update method stats
-    this.metrics.requestsByMethod[context.method] = 
+    this.metrics.requestsByMethod[context.method] =
       (this.metrics.requestsByMethod[context.method] || 0) + 1;
-    
+
     // Update status stats
     if (context.statusCode) {
-      this.metrics.requestsByStatus[context.statusCode] = 
+      this.metrics.requestsByStatus[context.statusCode] =
         (this.metrics.requestsByStatus[context.statusCode] || 0) + 1;
     }
 
@@ -341,8 +344,7 @@ export class RequestLoggerService {
     if (context.duration) {
       const currentAvg = this.metrics.averageResponseTime;
       const total = this.metrics.totalRequests;
-      this.metrics.averageResponseTime = 
-        (currentAvg * (total - 1) + context.duration) / total;
+      this.metrics.averageResponseTime = (currentAvg * (total - 1) + context.duration) / total;
 
       // Check for slow requests
       if (context.duration > this.options.slowRequestThreshold!) {
@@ -354,7 +356,7 @@ export class RequestLoggerService {
     const errorRequests = Object.entries(this.metrics.requestsByStatus)
       .filter(([status]) => parseInt(status) >= 400)
       .reduce((sum, [, count]) => sum + count, 0);
-    
+
     this.metrics.errorRate = (errorRequests / this.metrics.totalRequests) * 100;
 
     // Calculate requests per second
@@ -371,9 +373,9 @@ export class RequestLoggerService {
       this.promHttpRequestsInFlight.inc();
     }
     const logContext: any = {
-      requestId: context.requestId
+      requestId: context.requestId,
     };
-    
+
     // Only add defined values
     if (context.correlationId) logContext.correlationId = context.correlationId;
     if (context.traceId) logContext.traceId = context.traceId;
@@ -389,7 +391,7 @@ export class RequestLoggerService {
       query: context.query,
       body: context.body,
       timestamp: new Date(context.startTime).toISOString(),
-      type: 'request_start'
+      type: 'request_start',
     });
 
     // Custom handler
@@ -409,7 +411,11 @@ export class RequestLoggerService {
     // Prometheus: record metrics
     if (configManager.getMonitoring().prometheus) {
       const route = (res.req as any)?.route?.path || context.url.split('?')[0] || 'unknown';
-      const labels = { method: context.method, route, status: String(context.statusCode || 0) } as any;
+      const labels = {
+        method: context.method,
+        route,
+        status: String(context.statusCode || 0),
+      } as any;
       this.promHttpRequestsTotal.inc(labels, 1);
       if (context.duration) this.promHttpRequestDuration.observe(labels, context.duration / 1000);
       this.promHttpRequestsInFlight.dec();
@@ -420,9 +426,9 @@ export class RequestLoggerService {
     context.responseSize = parseInt(res.get('Content-Length') || '0', 10);
 
     const logContext: any = {
-      requestId: context.requestId
+      requestId: context.requestId,
     };
-    
+
     // Only add defined values
     if (context.correlationId) logContext.correlationId = context.correlationId;
     if (context.traceId) logContext.traceId = context.traceId;
@@ -441,7 +447,7 @@ export class RequestLoggerService {
       ip: context.ip,
       userAgent: context.userAgent,
       timestamp: new Date(context.endTime).toISOString(),
-      type: 'request_end'
+      type: 'request_end',
     };
 
     // Add response body if enabled
@@ -485,9 +491,9 @@ export class RequestLoggerService {
     context.error = error;
 
     const logContext: any = {
-      requestId: context.requestId
+      requestId: context.requestId,
     };
-    
+
     // Only add defined values
     if (context.correlationId) logContext.correlationId = context.correlationId;
     if (context.traceId) logContext.traceId = context.traceId;
@@ -503,10 +509,10 @@ export class RequestLoggerService {
       error: {
         name: error.name,
         message: error.message,
-        stack: error.stack
+        stack: error.stack,
       },
       timestamp: new Date(context.endTime).toISOString(),
-      type: 'request_error'
+      type: 'request_error',
     });
 
     // Security logging for errors
@@ -529,61 +535,49 @@ export class RequestLoggerService {
    */
   private logSecurityEvents(context: RequestLogContext, error?: any): void {
     const suspiciousPatterns = [
-      /\.\.\//,  // Path traversal
-      /script|javascript|vbscript/i,  // XSS
-      /union|select|insert|update|delete|drop/i,  // SQL injection
-      /%00/i,  // Encoded null byte
+      /\.\.\//, // Path traversal
+      /script|javascript|vbscript/i, // XSS
+      /union|select|insert|update|delete|drop/i, // SQL injection
+      /%00/i, // Encoded null byte
     ];
 
     const url = context.url || '';
     const body = JSON.stringify(context.body || {});
-    
+
     for (const pattern of suspiciousPatterns) {
       if (pattern.test(url) || pattern.test(body)) {
-        this.logger.logSecurityEvent(
-          'Suspicious request pattern detected',
-          'medium',
-          {
-            requestId: context.requestId,
-            pattern: pattern.toString(),
-            url: context.url,
-            ip: context.ip,
-            userAgent: context.userAgent,
-            type: 'security_alert'
-          }
-        );
+        this.logger.logSecurityEvent('Suspicious request pattern detected', 'medium', {
+          requestId: context.requestId,
+          pattern: pattern.toString(),
+          url: context.url,
+          ip: context.ip,
+          userAgent: context.userAgent,
+          type: 'security_alert',
+        });
         break;
       }
     }
 
     // Log failed authentication attempts
     if (context.statusCode === 401 || error?.name === 'AuthenticationError') {
-      this.logger.logSecurityEvent(
-        'Authentication failure',
-        'medium',
-        {
-          requestId: context.requestId,
-          url: context.url,
-          ip: context.ip,
-          userAgent: context.userAgent,
-          type: 'auth_failure'
-        }
-      );
+      this.logger.logSecurityEvent('Authentication failure', 'medium', {
+        requestId: context.requestId,
+        url: context.url,
+        ip: context.ip,
+        userAgent: context.userAgent,
+        type: 'auth_failure',
+      });
     }
 
     // Log access denied events
     if (context.statusCode === 403 || error?.name === 'AuthorizationError') {
-      this.logger.logSecurityEvent(
-        'Access denied',
-        'medium',
-        {
-          requestId: context.requestId,
-          url: context.url,
-          ip: context.ip,
-          userId: context.userId,
-          type: 'access_denied'
-        }
-      );
+      this.logger.logSecurityEvent('Access denied', 'medium', {
+        requestId: context.requestId,
+        url: context.url,
+        ip: context.ip,
+        userId: context.userId,
+        type: 'access_denied',
+      });
     }
   }
 
@@ -600,7 +594,7 @@ export class RequestLoggerService {
         action: 'read',
         ip: context.ip,
         timestamp: new Date().toISOString(),
-        type: 'audit_trail'
+        type: 'audit_trail',
       });
     }
 
@@ -613,7 +607,7 @@ export class RequestLoggerService {
         action: context.method.toLowerCase(),
         ip: context.ip,
         timestamp: new Date().toISOString(),
-        type: 'audit_trail'
+        type: 'audit_trail',
       });
     }
   }
@@ -637,7 +631,7 @@ export class RequestLoggerService {
       slowRequests: 0,
       errorRate: 0,
       requestsPerSecond: 0,
-      lastResetTime: Date.now()
+      lastResetTime: Date.now(),
     };
   }
 
@@ -695,9 +689,9 @@ export function createRequestLogger(options: RequestLoggerOptions = {}) {
     (req as any).logContext = context;
 
     // Capture response body if enabled
-  if (mergedOptions.logResponseBody) {
+    if (mergedOptions.logResponseBody) {
       const originalSend = res.send;
-      res.send = function(body: any) {
+      res.send = function (body: any) {
         res.locals.body = body;
         return originalSend.call(this, body);
       };
@@ -742,15 +736,15 @@ export function createHealthCheckEndpoint() {
         rss: `${Math.round(memoryUsage.rss / 1024 / 1024)}MB`,
         heapTotal: `${Math.round(memoryUsage.heapTotal / 1024 / 1024)}MB`,
         heapUsed: `${Math.round(memoryUsage.heapUsed / 1024 / 1024)}MB`,
-        external: `${Math.round(memoryUsage.external / 1024 / 1024)}MB`
+        external: `${Math.round(memoryUsage.external / 1024 / 1024)}MB`,
       },
       requests: {
         total: metrics.totalRequests,
         requestsPerSecond: Math.round(metrics.requestsPerSecond * 100) / 100,
         averageResponseTime: Math.round(metrics.averageResponseTime * 100) / 100,
         errorRate: Math.round(metrics.errorRate * 100) / 100,
-        slowRequests: metrics.slowRequests
-      }
+        slowRequests: metrics.slowRequests,
+      },
     };
 
     res.json(healthData);
@@ -767,7 +761,10 @@ export function createMetricsEndpoint() {
     const wantsProm = req.headers['accept']?.includes('text/plain') || req.query.format === 'prom';
     if (wantsProm && configManager.getMonitoring().prometheus) {
       res.set('Content-Type', requestLoggerService.getPrometheusRegistry().contentType);
-  requestLoggerService.getPrometheusRegistry().metrics().then((text: string) => res.send(text));
+      requestLoggerService
+        .getPrometheusRegistry()
+        .metrics()
+        .then((text: string) => res.send(text));
       return;
     }
     res.json(metrics);
@@ -791,7 +788,7 @@ export const requestLoggers = {
     enableMetrics: true,
     enableSecurityLogging: true,
     enableAuditTrail: true,
-    slowRequestThreshold: 500
+    slowRequestThreshold: 500,
   }),
 
   // Development logger with verbose output
@@ -802,7 +799,7 @@ export const requestLoggers = {
     enableMetrics: true,
     enableSecurityLogging: true,
     enableAuditTrail: false,
-    logLevel: 'debug'
+    logLevel: 'debug',
   }),
 
   // Minimal logger for high-traffic scenarios
@@ -813,7 +810,7 @@ export const requestLoggers = {
     enableMetrics: true,
     enableSecurityLogging: false,
     enableAuditTrail: false,
-    samplingRate: 0.1 // Only log 10% of requests
+    samplingRate: 0.1, // Only log 10% of requests
   }),
 
   // Security-focused logger
@@ -824,10 +821,18 @@ export const requestLoggers = {
     enableAuditTrail: true,
     maskSensitiveData: true,
     sensitiveFields: [
-      'password', 'token', 'authorization', 'cookie', 'x-api-key',
-      'secret', 'private', 'credentials', 'auth', 'session'
-    ]
-  })
+      'password',
+      'token',
+      'authorization',
+      'cookie',
+      'x-api-key',
+      'secret',
+      'private',
+      'credentials',
+      'auth',
+      'session',
+    ],
+  }),
 };
 
 // Export service and utilities

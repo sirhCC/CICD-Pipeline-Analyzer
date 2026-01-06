@@ -1,22 +1,22 @@
 /**
  * Request Validation Middleware Tests
  * Comprehensive test suite for enterprise-grade validation
- * 
+ *
  * @author sirhCC
  * @version 1.0.0
  */
 
 import { Request, Response, NextFunction } from 'express';
 import Joi from 'joi';
-import { 
-  validateRequest, 
-  validationService, 
-  commonSchemas, 
+import {
+  validateRequest,
+  validationService,
+  commonSchemas,
   pipelineSchemas,
   apiSchemas,
   validation,
   ValidationSchema,
-  ValidationOptions
+  ValidationOptions,
 } from '../middleware/request-validation';
 import { ValidationError } from '../middleware/error-handler';
 
@@ -26,8 +26,8 @@ jest.mock('../shared/logger', () => ({
     debug: jest.fn(),
     info: jest.fn(),
     warn: jest.fn(),
-    error: jest.fn()
-  }))
+    error: jest.fn(),
+  })),
 }));
 
 describe('Request Validation Middleware', () => {
@@ -44,11 +44,11 @@ describe('Request Validation Middleware', () => {
       method: 'POST',
       url: '/test',
       ip: '127.0.0.1',
-      get: jest.fn().mockReturnValue('test-agent')
+      get: jest.fn().mockReturnValue('test-agent'),
     };
     mockResponse = {};
     nextFunction = jest.fn();
-    
+
     // Clear validation service cache
     validationService.clearCache();
   });
@@ -59,15 +59,15 @@ describe('Request Validation Middleware', () => {
         const schema: ValidationSchema = {
           body: Joi.object({
             name: Joi.string().required(),
-            email: Joi.string().email().required()
-          })
+            email: Joi.string().email().required(),
+          }),
         };
 
         const data = {
           body: {
             name: 'John Doe',
-            email: 'john@example.com'
-          }
+            email: 'john@example.com',
+          },
         };
 
         const result = await validationService.validateRequest(data, schema);
@@ -81,15 +81,15 @@ describe('Request Validation Middleware', () => {
         const schema: ValidationSchema = {
           body: Joi.object({
             name: Joi.string().required(),
-            email: Joi.string().email().required()
-          })
+            email: Joi.string().email().required(),
+          }),
         };
 
         const data = {
           body: {
             name: '', // Invalid: empty string
-            email: 'invalid-email' // Invalid: not an email
-          }
+            email: 'invalid-email', // Invalid: not an email
+          },
         };
 
         const result = await validationService.validateRequest(data, schema);
@@ -102,14 +102,14 @@ describe('Request Validation Middleware', () => {
       it('should sanitize data when sanitization is enabled', async () => {
         const schema: ValidationSchema = {
           body: Joi.object({
-            message: Joi.string().required()
-          })
+            message: Joi.string().required(),
+          }),
         };
 
         const data = {
           body: {
-            message: '  <script>alert("xss")</script>  '
-          }
+            message: '  <script>alert("xss")</script>  ',
+          },
         };
 
         const result = await validationService.validateRequest(data, schema, { sanitize: true });
@@ -122,18 +122,20 @@ describe('Request Validation Middleware', () => {
       it('should strip unknown fields when stripUnknown is true', async () => {
         const schema: ValidationSchema = {
           body: Joi.object({
-            name: Joi.string().required()
-          })
+            name: Joi.string().required(),
+          }),
         };
 
         const data = {
           body: {
             name: 'John',
-            unknownField: 'should be removed'
-          }
+            unknownField: 'should be removed',
+          },
         };
 
-        const result = await validationService.validateRequest(data, schema, { stripUnknown: true });
+        const result = await validationService.validateRequest(data, schema, {
+          stripUnknown: true,
+        });
 
         expect(result.isValid).toBe(true);
         expect(result.data?.body.unknownField).toBeUndefined();
@@ -145,32 +147,34 @@ describe('Request Validation Middleware', () => {
       it('should escape HTML characters', async () => {
         const schema: ValidationSchema = {
           body: Joi.object({
-            content: Joi.string().required()
-          })
+            content: Joi.string().required(),
+          }),
         };
 
         const data = {
           body: {
-            content: '<div>Test & "quotes" \'single\'</div>'
-          }
+            content: '<div>Test & "quotes" \'single\'</div>',
+          },
         };
 
         const result = await validationService.validateRequest(data, schema, { sanitize: true });
 
-        expect(result.sanitized?.body.content).toBe('&lt;div&gt;Test &amp; &quot;quotes&quot; &#039;single&#039;&lt;/div&gt;');
+        expect(result.sanitized?.body.content).toBe(
+          '&lt;div&gt;Test &amp; &quot;quotes&quot; &#039;single&#039;&lt;/div&gt;'
+        );
       });
 
       it('should normalize email addresses', async () => {
         const schema: ValidationSchema = {
           body: Joi.object({
-            email: Joi.string().required()
-          })
+            email: Joi.string().required(),
+          }),
         };
 
         const data = {
           body: {
-            email: '  JOHN@EXAMPLE.COM  '
-          }
+            email: '  JOHN@EXAMPLE.COM  ',
+          },
         };
 
         const result = await validationService.validateRequest(data, schema, { sanitize: true });
@@ -181,14 +185,14 @@ describe('Request Validation Middleware', () => {
       it('should remove null bytes', async () => {
         const schema: ValidationSchema = {
           body: Joi.object({
-            text: Joi.string().required()
-          })
+            text: Joi.string().required(),
+          }),
         };
 
         const data = {
           body: {
-            text: 'text\0with\0nulls'
-          }
+            text: 'text\0with\0nulls',
+          },
         };
 
         const result = await validationService.validateRequest(data, schema, { sanitize: true });
@@ -201,26 +205,26 @@ describe('Request Validation Middleware', () => {
       it('should cache and retrieve validation schemas', () => {
         const schema: ValidationSchema = {
           body: Joi.object({
-            name: Joi.string().required()
-          })
+            name: Joi.string().required(),
+          }),
         };
 
         const key = 'test-schema';
-        
+
         // Cache schema
         validationService.cacheSchema(key, schema);
-        
+
         // Retrieve cached schema
         const cached = validationService.getCachedSchema(key);
-        
+
         expect(cached).toEqual(schema);
       });
 
       it('should clear cache when requested', () => {
         const schema: ValidationSchema = {
           body: Joi.object({
-            name: Joi.string().required()
-          })
+            name: Joi.string().required(),
+          }),
         };
 
         validationService.cacheSchema('test', schema);
@@ -236,8 +240,8 @@ describe('Request Validation Middleware', () => {
     it('should pass validation with valid data', async () => {
       const schema: ValidationSchema = {
         body: Joi.object({
-          name: Joi.string().required()
-        })
+          name: Joi.string().required(),
+        }),
       };
 
       mockRequest.body = { name: 'John Doe' };
@@ -252,8 +256,8 @@ describe('Request Validation Middleware', () => {
     it('should call next with ValidationError for invalid data', async () => {
       const schema: ValidationSchema = {
         body: Joi.object({
-          name: Joi.string().required()
-        })
+          name: Joi.string().required(),
+        }),
       };
 
       mockRequest.body = {}; // Missing required field
@@ -267,8 +271,8 @@ describe('Request Validation Middleware', () => {
     it('should replace request data with sanitized data', async () => {
       const schema: ValidationSchema = {
         body: Joi.object({
-          message: Joi.string().required()
-        })
+          message: Joi.string().required(),
+        }),
       };
 
       mockRequest.body = { message: '  test message  ' };
@@ -283,8 +287,8 @@ describe('Request Validation Middleware', () => {
     it('should validate request parameters', async () => {
       const schema: ValidationSchema = {
         params: Joi.object({
-          id: Joi.string().uuid().required()
-        })
+          id: Joi.string().uuid().required(),
+        }),
       };
 
       mockRequest.params = { id: '123e4567-e89b-12d3-a456-426614174000' };
@@ -299,8 +303,8 @@ describe('Request Validation Middleware', () => {
       const schema: ValidationSchema = {
         query: Joi.object({
           page: Joi.number().integer().min(1).required(),
-          limit: Joi.number().integer().min(1).max(100).required()
-        })
+          limit: Joi.number().integer().min(1).max(100).required(),
+        }),
       };
 
       mockRequest.query = { page: '1', limit: '20' };
@@ -363,7 +367,7 @@ describe('Request Validation Middleware', () => {
       const validData = {
         name: 'Test Pipeline',
         provider: 'github',
-        branch: 'main'
+        branch: 'main',
       };
 
       const { error } = pipelineSchemas.createPipeline.body!.validate(validData);
@@ -374,7 +378,7 @@ describe('Request Validation Middleware', () => {
       const invalidData = {
         name: 'Test Pipeline',
         provider: 'invalid-provider',
-        repositoryId: '123e4567-e89b-12d3-a456-426614174000'
+        repositoryId: '123e4567-e89b-12d3-a456-426614174000',
       };
 
       const { error } = pipelineSchemas.createPipeline.body!.validate(invalidData);
@@ -386,7 +390,7 @@ describe('Request Validation Middleware', () => {
         page: 1,
         limit: 20,
         provider: 'github',
-        status: 'success'
+        status: 'success',
       };
 
       const { error } = pipelineSchemas.listPipelines.query!.validate(validQuery);
@@ -398,7 +402,7 @@ describe('Request Validation Middleware', () => {
     it('should validate login request', async () => {
       const validLogin = {
         email: 'user@example.com',
-        password: 'validpassword123'
+        password: 'validpassword123',
       };
 
       const { error } = apiSchemas.login.body!.validate(validLogin);
@@ -410,7 +414,7 @@ describe('Request Validation Middleware', () => {
         email: 'user@example.com',
         password: 'MyStr0ng!Password123',
         firstName: 'John',
-        lastName: 'Doe'
+        lastName: 'Doe',
       };
 
       const { error } = apiSchemas.register.body!.validate(validRegistration);
@@ -422,7 +426,7 @@ describe('Request Validation Middleware', () => {
         email: 'user@example.com',
         password: 'weak',
         firstName: 'John',
-        lastName: 'Doe'
+        lastName: 'Doe',
       };
 
       const { error } = apiSchemas.register.body!.validate(invalidRegistration);
@@ -451,8 +455,8 @@ describe('Request Validation Middleware', () => {
     it('should handle malformed request data gracefully', async () => {
       const schema: ValidationSchema = {
         body: Joi.object({
-          data: Joi.object().required()
-        })
+          data: Joi.object().required(),
+        }),
       };
 
       // Simulate circular reference that can't be serialized
@@ -470,8 +474,8 @@ describe('Request Validation Middleware', () => {
     it('should handle Joi validation errors properly', async () => {
       const schema: ValidationSchema = {
         body: Joi.object({
-          requiredField: Joi.string().required()
-        })
+          requiredField: Joi.string().required(),
+        }),
       };
 
       mockRequest.body = {}; // Missing required field
@@ -480,7 +484,7 @@ describe('Request Validation Middleware', () => {
       await middleware(mockRequest as Request, mockResponse as Response, nextFunction);
 
       expect(nextFunction).toHaveBeenCalledWith(expect.any(ValidationError));
-      
+
       const error = (nextFunction as jest.Mock).mock.calls[0][0] as ValidationError;
       expect(error.message).toContain('validation failed');
     });
@@ -493,18 +497,20 @@ describe('Request Validation Middleware', () => {
         body: Joi.object({
           field1: Joi.string().required(),
           field2: Joi.number().required(),
-          field3: Joi.array().items(Joi.object({
-            subField1: Joi.string(),
-            subField2: Joi.number(),
-            subField3: Joi.boolean()
-          })),
+          field3: Joi.array().items(
+            Joi.object({
+              subField1: Joi.string(),
+              subField2: Joi.number(),
+              subField3: Joi.boolean(),
+            })
+          ),
           field4: Joi.object({
             nested1: Joi.string(),
             nested2: Joi.object({
-              deepNested: Joi.string()
-            })
-          })
-        })
+              deepNested: Joi.string(),
+            }),
+          }),
+        }),
       };
 
       const validData = {
@@ -513,15 +519,15 @@ describe('Request Validation Middleware', () => {
           field2: 123,
           field3: [
             { subField1: 'sub1', subField2: 456, subField3: true },
-            { subField1: 'sub2', subField2: 789, subField3: false }
+            { subField1: 'sub2', subField2: 789, subField3: false },
           ],
           field4: {
             nested1: 'nested',
             nested2: {
-              deepNested: 'deep'
-            }
-          }
-        }
+              deepNested: 'deep',
+            },
+          },
+        },
       };
 
       const startTime = Date.now();
@@ -537,17 +543,19 @@ describe('Request Validation Middleware', () => {
     it('should prevent XSS attacks through sanitization', async () => {
       const schema: ValidationSchema = {
         body: Joi.object({
-          userInput: Joi.string().required()
-        })
+          userInput: Joi.string().required(),
+        }),
       };
 
       const maliciousData = {
         body: {
-          userInput: '<script>alert("XSS")</script><img src="x" onerror="alert(\'XSS\')">'
-        }
+          userInput: '<script>alert("XSS")</script><img src="x" onerror="alert(\'XSS\')">',
+        },
       };
 
-      const result = await validationService.validateRequest(maliciousData, schema, { sanitize: true });
+      const result = await validationService.validateRequest(maliciousData, schema, {
+        sanitize: true,
+      });
 
       expect(result.isValid).toBe(true);
       expect(result.sanitized?.body.userInput).not.toContain('<script>');
@@ -558,14 +566,14 @@ describe('Request Validation Middleware', () => {
     it('should enforce maximum string lengths', async () => {
       const schema: ValidationSchema = {
         body: Joi.object({
-          longString: Joi.string().max(10).required()
-        })
+          longString: Joi.string().max(10).required(),
+        }),
       };
 
       const data = {
         body: {
-          longString: 'this string is definitely longer than 10 characters'
-        }
+          longString: 'this string is definitely longer than 10 characters',
+        },
       };
 
       const result = await validationService.validateRequest(data, schema);

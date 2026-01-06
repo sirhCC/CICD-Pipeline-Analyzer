@@ -1,6 +1,6 @@
 /**
  * Enterprise-grade Request Validation Middleware
- * 
+ *
  * Features:
  * - Comprehensive input validation for body, params, query, headers
  * - Schema-based validation using Joi with custom rules
@@ -12,12 +12,12 @@
  * - Performance-optimized with caching
  * - IP and rate limiting integration
  * - Audit logging for security compliance
- * 
+ *
  * @author sirhCC
  * @version 1.0.0
  */
 
-import { Request, Response, NextFunction } from 'express';
+import type { Request, Response, NextFunction } from 'express';
 import Joi from 'joi';
 import { Logger } from '@/shared/logger';
 import { ValidationError } from './error-handler';
@@ -84,7 +84,7 @@ const defaultOptions: ValidationOptions = {
   skipOnError: false,
   sanitize: true,
   maxFileSize: 10 * 1024 * 1024, // 10MB
-  allowedFileTypes: ['image/jpeg', 'image/png', 'image/gif', 'application/pdf', 'text/plain']
+  allowedFileTypes: ['image/jpeg', 'image/png', 'image/gif', 'application/pdf', 'text/plain'],
 };
 
 // Default sanitization rules
@@ -94,7 +94,7 @@ const defaultSanitizationRules: SanitizationRules = {
   escapeHtml: true,
   removeNullBytes: true,
   maxStringLength: 10000,
-  allowedTags: []
+  allowedTags: [],
 };
 
 /**
@@ -131,7 +131,7 @@ export class RequestValidationService {
     const joiOptions: Joi.AsyncValidationOptions = {
       stripUnknown: validationOptions.stripUnknown ?? true,
       allowUnknown: validationOptions.allowUnknown ?? false,
-      abortEarly: validationOptions.abortEarly ?? false
+      abortEarly: validationOptions.abortEarly ?? false,
     };
 
     try {
@@ -149,17 +149,16 @@ export class RequestValidationService {
             result[key] = validated;
           } catch (error: any) {
             if (error.isJoi) {
-              errors.push(new ValidationError(
-                `Validation failed for ${key}`,
-                { 
-                  field: key, 
+              errors.push(
+                new ValidationError(`Validation failed for ${key}`, {
+                  field: key,
                   details: error.details.map((d: any) => ({
                     message: d.message,
                     path: d.path,
-                    value: d.context?.value
-                  }))
-                }
-              ));
+                    value: d.context?.value,
+                  })),
+                })
+              );
             } else {
               throw error;
             }
@@ -245,9 +244,9 @@ export class RequestValidationService {
       '<': '&lt;',
       '>': '&gt;',
       '"': '&quot;',
-      "'": '&#039;'
+      "'": '&#039;',
     };
-    return text.replace(/[&<>"']/g, (m) => map[m] || m);
+    return text.replace(/[&<>"']/g, m => map[m] || m);
   }
 
   /**
@@ -293,34 +292,28 @@ export const validationService = new RequestValidationService();
 /**
  * Create validation middleware for Express routes
  */
-export function validateRequest(
-  schema: ValidationSchema,
-  options: ValidationOptions = {}
-) {
+export function validateRequest(schema: ValidationSchema, options: ValidationOptions = {}) {
   return async (req: Request, res: Response, next: NextFunction) => {
     const startTime = Date.now();
-    
+
     try {
       // Extract request data
       const requestData = {
         body: req.body,
         params: req.params,
         query: req.query,
-        headers: req.headers
+        headers: req.headers,
       };
 
       // Validate request
-      const result = await validationService.validateRequest(
-        requestData,
-        schema,
-        options
-      );
+      const result = await validationService.validateRequest(requestData, schema, options);
 
       if (!result.isValid) {
-        const validationErrors = result.errors?.map(err => ({
-          message: err.message,
-          details: err.details
-        })) || [];
+        const validationErrors =
+          result.errors?.map(err => ({
+            message: err.message,
+            details: err.details,
+          })) || [];
 
         // Log validation failure
         validationService['logger'].warn('Request validation failed', {
@@ -329,19 +322,16 @@ export function validateRequest(
           errors: validationErrors,
           userAgent: req.get('User-Agent'),
           ip: req.ip,
-          duration: Date.now() - startTime
+          duration: Date.now() - startTime,
         });
 
-        throw new ValidationError(
-          'Request validation failed',
-          { validationErrors }
-        );
+        throw new ValidationError('Request validation failed', { validationErrors });
       }
 
       // Replace request data with validated/sanitized data
       if (result.sanitized || result.data) {
         const cleanData = result.sanitized || result.data;
-        
+
         if (cleanData.body) req.body = cleanData.body;
         if (cleanData.params) req.params = cleanData.params;
         if (cleanData.query) req.query = cleanData.query;
@@ -352,7 +342,7 @@ export function validateRequest(
       validationService['logger'].debug('Request validation successful', {
         method: req.method,
         url: req.url,
-        duration: Date.now() - startTime
+        duration: Date.now() - startTime,
       });
 
       next();
@@ -364,7 +354,7 @@ export function validateRequest(
           error: error.message,
           method: req.method,
           url: req.url,
-          duration: Date.now() - startTime
+          duration: Date.now() - startTime,
         });
         next(new ValidationError('Internal validation error'));
       }
@@ -378,13 +368,13 @@ export function validateRequest(
 export const commonSchemas = {
   // UUID validation
   uuid: Joi.string().uuid({ version: 'uuidv4' }).required(),
-  
+
   // UUID optional
   uuidOptional: Joi.string().uuid({ version: 'uuidv4' }).optional(),
-  
+
   // Email validation
   email: Joi.string().email().trim().lowercase().max(255).required(),
-  
+
   // Password validation (enterprise-grade requirements)
   password: Joi.string()
     .min(12)
@@ -392,35 +382,42 @@ export const commonSchemas = {
     .pattern(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]/)
     .required()
     .messages({
-      'string.pattern.base': 'Password must contain at least one lowercase letter, one uppercase letter, one number, and one special character'
+      'string.pattern.base':
+        'Password must contain at least one lowercase letter, one uppercase letter, one number, and one special character',
     }),
-  
+
   // Pagination
   pagination: Joi.object({
     page: Joi.number().integer().min(1).default(1),
     limit: Joi.number().integer().min(1).max(100).default(20),
     sortBy: Joi.string().max(50).optional(),
-    sortOrder: Joi.string().valid('asc', 'desc').default('asc')
+    sortOrder: Joi.string().valid('asc', 'desc').default('asc'),
   }),
-  
+
   // Date ranges
   dateRange: Joi.object({
     startDate: Joi.date().iso().required(),
-    endDate: Joi.date().iso().min(Joi.ref('startDate')).required()
+    endDate: Joi.date().iso().min(Joi.ref('startDate')).required(),
   }),
-  
+
   // Text content with XSS protection
-  safeText: Joi.string().trim().max(1000).pattern(/^[^<>]*$/).optional(),
-  
+  safeText: Joi.string()
+    .trim()
+    .max(1000)
+    .pattern(/^[^<>]*$/)
+    .optional(),
+
   // API version
   apiVersion: Joi.string().valid('v1', 'v2').default('v1'),
-  
+
   // File upload
   file: Joi.object({
     filename: Joi.string().max(255).required(),
-    mimetype: Joi.string().valid(...defaultOptions.allowedFileTypes!).required(),
-    size: Joi.number().max(defaultOptions.maxFileSize!).required()
-  })
+    mimetype: Joi.string()
+      .valid(...defaultOptions.allowedFileTypes!)
+      .required(),
+    size: Joi.number().max(defaultOptions.maxFileSize!).required(),
+  }),
 };
 
 /**
@@ -435,30 +432,30 @@ export const pipelineSchemas = {
       repositoryId: commonSchemas.uuidOptional,
       branch: Joi.string().trim().min(1).max(100).default('main'),
       configuration: Joi.object().optional(),
-      metadata: Joi.object().optional()
-    })
+      metadata: Joi.object().optional(),
+    }),
   },
-  
+
   // Update pipeline
   updatePipeline: {
     params: Joi.object({
-      pipelineId: commonSchemas.uuid
+      pipelineId: commonSchemas.uuid,
     }),
     body: Joi.object({
       name: Joi.string().trim().min(1).max(100).optional(),
       branch: Joi.string().trim().min(1).max(100).optional(),
       configuration: Joi.object().optional(),
-      metadata: Joi.object().optional()
-    })
+      metadata: Joi.object().optional(),
+    }),
   },
-  
+
   // Get pipeline
   getPipeline: {
     params: Joi.object({
-      pipelineId: commonSchemas.uuid
-    })
+      pipelineId: commonSchemas.uuid,
+    }),
   },
-  
+
   // List pipelines
   listPipelines: {
     query: commonSchemas.pagination.keys({
@@ -466,9 +463,9 @@ export const pipelineSchemas = {
       status: Joi.string().valid('pending', 'running', 'success', 'failed', 'cancelled').optional(),
       repositoryId: commonSchemas.uuidOptional,
       startDate: Joi.date().iso().optional(),
-      endDate: Joi.date().iso().min(Joi.ref('startDate')).optional()
-    })
-  }
+      endDate: Joi.date().iso().min(Joi.ref('startDate')).optional(),
+    }),
+  },
 };
 
 /**
@@ -478,20 +475,23 @@ export const apiSchemas = {
   // Health check
   healthCheck: {
     query: Joi.object({
-      detailed: Joi.boolean().default(false)
-    })
+      detailed: Joi.boolean().default(false),
+    }),
   },
-  
+
   // Authentication
   login: {
     body: Joi.object({
       email: commonSchemas.email,
       password: Joi.string().min(1).max(128).required(),
-      mfaCode: Joi.string().length(6).pattern(/^\d{6}$/).optional(),
-      rememberMe: Joi.boolean().default(false)
-    })
+      mfaCode: Joi.string()
+        .length(6)
+        .pattern(/^\d{6}$/)
+        .optional(),
+      rememberMe: Joi.boolean().default(false),
+    }),
   },
-  
+
   // Registration
   register: {
     body: Joi.object({
@@ -499,23 +499,25 @@ export const apiSchemas = {
       password: commonSchemas.password,
       firstName: Joi.string().trim().min(1).max(50).required(),
       lastName: Joi.string().trim().min(1).max(50).required(),
-      organization: Joi.string().trim().min(1).max(100).optional()
-    })
-  }
+      organization: Joi.string().trim().min(1).max(100).optional(),
+    }),
+  },
 };
 
 /**
  * File upload validation middleware
  */
-export function validateFileUpload(options: {
-  maxSize?: number;
-  allowedTypes?: string[];
-  maxFiles?: number;
-} = {}) {
+export function validateFileUpload(
+  options: {
+    maxSize?: number;
+    allowedTypes?: string[];
+    maxFiles?: number;
+  } = {}
+) {
   const opts = {
     maxSize: options.maxSize || defaultOptions.maxFileSize!,
     allowedTypes: options.allowedTypes || defaultOptions.allowedFileTypes!,
-    maxFiles: options.maxFiles || 1
+    maxFiles: options.maxFiles || 1,
   };
 
   return (req: RequestWithFiles, res: Response, next: NextFunction) => {
@@ -524,9 +526,11 @@ export function validateFileUpload(options: {
         return next();
       }
 
-      const files = req.files ? 
-        (Array.isArray(req.files) ? req.files : Object.values(req.files).flat()) :
-        [req.file!];
+      const files = req.files
+        ? Array.isArray(req.files)
+          ? req.files
+          : Object.values(req.files).flat()
+        : [req.file!];
 
       if (files.length > opts.maxFiles) {
         throw new ValidationError(`Too many files. Maximum allowed: ${opts.maxFiles}`);
@@ -575,19 +579,19 @@ export const validation = {
   updatePipeline: validateRequest(pipelineSchemas.updatePipeline),
   getPipeline: validateRequest(pipelineSchemas.getPipeline),
   listPipelines: validateRequest(pipelineSchemas.listPipelines),
-  
+
   // API operations
   healthCheck: validateRequest(apiSchemas.healthCheck),
   login: validateRequest(apiSchemas.login),
   register: validateRequest(apiSchemas.register),
-  
+
   // File uploads
   uploadFile: validateFileUpload(),
   uploadMultipleFiles: validateFileUpload({ maxFiles: 10 }),
   uploadImage: validateFileUpload({
     allowedTypes: ['image/jpeg', 'image/png', 'image/gif'],
-    maxSize: 5 * 1024 * 1024 // 5MB
-  })
+    maxSize: 5 * 1024 * 1024, // 5MB
+  }),
 };
 
 // Export service and utilities
