@@ -2,10 +2,11 @@
  * User Repository - Database operations for User entities
  */
 
-import { FindOptionsWhere } from 'typeorm';
-import { BaseRepository, PaginationOptions, PaginationResult } from './base.repository';
+import type { FindOptionsWhere } from 'typeorm';
+import type { PaginationOptions, PaginationResult } from './base.repository';
+import { BaseRepository } from './base.repository';
 import { User, UserSession, ApiKey } from '@/entities/user.entity';
-import { UserRole } from '@/types';
+import type { UserRole } from '@/types';
 
 export interface UserSearchOptions {
   role?: UserRole;
@@ -52,11 +53,11 @@ export class UserRepository extends BaseRepository<User> {
    */
   async findByEmailOrUsername(identifier: string): Promise<User | null> {
     const normalizedIdentifier = identifier.toLowerCase();
-    
+
     const user = await this.repository
       .createQueryBuilder('user')
       .where('user.email = :identifier OR user.username = :identifier', {
-        identifier: normalizedIdentifier
+        identifier: normalizedIdentifier,
       })
       .getOne();
 
@@ -94,15 +95,15 @@ export class UserRepository extends BaseRepository<User> {
     // For partial matches on names, we'll use query builder
     if (filters.firstName || filters.lastName) {
       const queryBuilder = this.repository.createQueryBuilder('user');
-      
+
       if (filters.firstName) {
-        queryBuilder.andWhere('user.firstName ILIKE :firstName', { 
-          firstName: `%${filters.firstName}%` 
+        queryBuilder.andWhere('user.firstName ILIKE :firstName', {
+          firstName: `%${filters.firstName}%`,
         });
       }
       if (filters.lastName) {
-        queryBuilder.andWhere('user.lastName ILIKE :lastName', { 
-          lastName: `%${filters.lastName}%` 
+        queryBuilder.andWhere('user.lastName ILIKE :lastName', {
+          lastName: `%${filters.lastName}%`,
         });
       }
 
@@ -133,7 +134,7 @@ export class UserRepository extends BaseRepository<User> {
         limit,
         totalPages,
         hasNext: page < totalPages,
-        hasPrevious: page > 1
+        hasPrevious: page > 1,
       };
     }
 
@@ -163,13 +164,10 @@ export class UserRepository extends BaseRepository<User> {
       GROUP BY role
     `;
 
-    const [generalStats, roleStats] = await Promise.all([
-      this.query(sql),
-      this.query(byRoleSql)
-    ]);
+    const [generalStats, roleStats] = await Promise.all([this.query(sql), this.query(byRoleSql)]);
 
     const general = generalStats[0] || {};
-    
+
     const byRole: Record<string, number> = {};
     roleStats.forEach((row: any) => {
       byRole[row.role] = parseInt(row.count, 10);
@@ -182,7 +180,7 @@ export class UserRepository extends BaseRepository<User> {
       emailVerified: parseInt(general.email_verified || '0', 10),
       mfaEnabled: parseInt(general.mfa_enabled || '0', 10),
       lockedAccounts: parseInt(general.locked_accounts || '0', 10),
-      recentLogins: parseInt(general.recent_logins || '0', 10)
+      recentLogins: parseInt(general.recent_logins || '0', 10),
     };
   }
 
@@ -250,7 +248,7 @@ export class UserRepository extends BaseRepository<User> {
    */
   async resetPassword(token: string, newPassword: string): Promise<boolean> {
     const user = await this.findOne({ passwordResetToken: token });
-    if (!user || !user.verifyPasswordResetToken(token)) {
+    if (!user?.verifyPasswordResetToken(token)) {
       return false;
     }
 
@@ -321,7 +319,7 @@ export class UserRepository extends BaseRepository<User> {
    */
   async findByRole(role: UserRole): Promise<User[]> {
     return this.findMany({
-      where: { role, isActive: true }
+      where: { role, isActive: true },
     });
   }
 
@@ -330,14 +328,14 @@ export class UserRepository extends BaseRepository<User> {
    */
   async getRecentlyActive(hours: number = 24, limit: number = 50): Promise<User[]> {
     const since = new Date(Date.now() - hours * 60 * 60 * 1000);
-    
+
     return this.findMany({
       where: {
         lastLoginAt: { $gte: since } as any,
-        isActive: true
+        isActive: true,
       },
       order: { lastLoginAt: 'DESC' },
-      take: limit
+      take: limit,
     });
   }
 
@@ -398,7 +396,7 @@ export class UserRepository extends BaseRepository<User> {
    */
   async deleteInactiveUsers(inactiveDays: number): Promise<number> {
     const cutoffDate = new Date(Date.now() - inactiveDays * 24 * 60 * 60 * 1000);
-    
+
     const result = await this.repository
       .createQueryBuilder()
       .delete()
@@ -407,9 +405,9 @@ export class UserRepository extends BaseRepository<User> {
       .andWhere('created_at < :cutoffDate', { cutoffDate })
       .execute();
 
-    this.logger.info(`Deleted ${result.affected} inactive users`, { 
-      inactiveDays, 
-      cutoffDate 
+    this.logger.info(`Deleted ${result.affected} inactive users`, {
+      inactiveDays,
+      cutoffDate,
     });
 
     return result.affected || 0;
