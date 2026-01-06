@@ -183,29 +183,15 @@ export class ResponseBuilder {
   ): ApiResponse<ListResponse<T>> {
     const meta: ResponseMeta = { pagination };
     if (performance) meta.performance = performance;
-    
-    return this.success(
-      { items, pagination },
-      meta,
-      requestId,
-      version
-    );
+
+    return this.success({ items, pagination }, meta, requestId, version);
   }
 
   /**
    * Create a creation response
    */
-  static created<T>(
-    item: T,
-    requestId?: string,
-    version?: string
-  ): ApiResponse<CreateResponse<T>> {
-    return this.success(
-      { item, created: true },
-      undefined,
-      requestId,
-      version
-    );
+  static created<T>(item: T, requestId?: string, version?: string): ApiResponse<CreateResponse<T>> {
+    return this.success({ item, created: true }, undefined, requestId, version);
   }
 
   /**
@@ -219,24 +205,15 @@ export class ResponseBuilder {
   ): ApiResponse<UpdateResponse<T>> {
     const data: UpdateResponse<T> = { item, updated: true };
     if (changes) data.changes = changes;
-    
+
     return this.success(data, undefined, requestId, version);
   }
 
   /**
    * Create a deletion response
    */
-  static deleted(
-    id: string,
-    requestId?: string,
-    version?: string
-  ): ApiResponse<DeleteResponse> {
-    return this.success(
-      { deleted: true, id },
-      undefined,
-      requestId,
-      version
-    );
+  static deleted(id: string, requestId?: string, version?: string): ApiResponse<DeleteResponse> {
+    return this.success({ deleted: true, id }, undefined, requestId, version);
   }
 
   /**
@@ -284,7 +261,7 @@ export class ResponseBuilder {
   ): ApiResponse<BulkResponse<T>> {
     const data: BulkResponse<T> = { items, successful, failed };
     if (errors) data.errors = errors;
-    
+
     return this.success(data, undefined, requestId, version);
   }
 
@@ -302,10 +279,10 @@ export class ResponseBuilder {
       code: ErrorCode.VALIDATION_ERROR,
       message,
     };
-    
+
     if (details) error.details = details;
     if (field) error.field = field;
-    
+
     return this.error(error, undefined, requestId, version);
   }
 
@@ -352,11 +329,7 @@ export class ResponseBuilder {
   /**
    * Create forbidden error response
    */
-  static forbidden(
-    message = 'Access denied',
-    requestId?: string,
-    version?: string
-  ): ApiResponse {
+  static forbidden(message = 'Access denied', requestId?: string, version?: string): ApiResponse {
     return this.error(
       {
         code: ErrorCode.AUTHORIZATION_ERROR,
@@ -371,11 +344,7 @@ export class ResponseBuilder {
   /**
    * Create rate limit error response
    */
-  static rateLimited(
-    retryAfter?: number,
-    requestId?: string,
-    version?: string
-  ): ApiResponse {
+  static rateLimited(retryAfter?: number, requestId?: string, version?: string): ApiResponse {
     return this.error(
       {
         code: ErrorCode.RATE_LIMIT_ERROR,
@@ -416,13 +385,9 @@ export class ResponseBuilder {
 /**
  * Calculate pagination metadata
  */
-export function calculatePagination(
-  page: number,
-  limit: number,
-  total: number
-): PaginationMeta {
+export function calculatePagination(page: number, limit: number, total: number): PaginationMeta {
   const totalPages = Math.ceil(total / limit);
-  
+
   return {
     page,
     limit,
