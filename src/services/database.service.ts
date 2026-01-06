@@ -4,16 +4,16 @@
 
 import { databaseManager } from '@/core/database';
 import { Logger } from '@/shared/logger';
-import { 
-  pipelineRepository, 
-  pipelineRunRepository, 
+import {
+  pipelineRepository,
+  pipelineRunRepository,
   userRepository,
-  RepositoryFactory 
+  RepositoryFactory,
 } from '@/repositories';
 import { configManager } from '@/config';
-import { Pipeline } from '@/entities/pipeline.entity';
+import type { Pipeline } from '@/entities/pipeline.entity';
 import { PipelineRun } from '@/entities/pipeline-run.entity';
-import { User } from '@/entities/user.entity';
+import type { User } from '@/entities/user.entity';
 import { PipelineProvider, PipelineStatus, UserRole } from '@/types';
 
 export interface DatabaseHealthStatus {
@@ -65,10 +65,10 @@ export class DatabaseService {
   async initialize(): Promise<void> {
     try {
       this.logger.info('Initializing database service...');
-      
+
       // Initialize database connection
       await databaseManager.initialize();
-      
+
       // Run migrations in production/staging
       if (!configManager.isTest()) {
         await this.runMigrations();
@@ -102,12 +102,12 @@ export class DatabaseService {
     try {
       const isConnected = await databaseManager.healthCheck();
       const poolStats = databaseManager.getPoolStats();
-      
+
       // Get entity counts
       const [userCount, pipelineCount, runCount] = await Promise.all([
         userRepository.count(),
         pipelineRepository.count(),
-        pipelineRunRepository.count()
+        pipelineRunRepository.count(),
       ]);
 
       // Get performance metrics
@@ -115,23 +115,23 @@ export class DatabaseService {
 
       // Migration status
       const dataSource = databaseManager.getDataSource();
-      const executedMigrations = await dataSource.query(
-        'SELECT COUNT(*) as count FROM migrations'
-      ).catch(() => [{ count: 0 }]);
-      
+      const executedMigrations = await dataSource
+        .query('SELECT COUNT(*) as count FROM migrations')
+        .catch(() => [{ count: 0 }]);
+
       return {
         isConnected,
         poolStats,
         entityCounts: {
           users: userCount,
           pipelines: pipelineCount,
-          pipelineRuns: runCount
+          pipelineRuns: runCount,
         },
         performanceMetrics,
         migrations: {
           executed: parseInt(executedMigrations[0]?.count || '0', 10),
-          pending: 0 // We don't track pending migrations yet
-        }
+          pending: 0, // We don't track pending migrations yet
+        },
       };
     } catch (error) {
       this.logger.error('Failed to get database health status', error);
@@ -191,7 +191,7 @@ export class DatabaseService {
       passwordHash: adminData.password, // Will be hashed by entity
       role: UserRole.ADMIN,
       isActive: true,
-      isEmailVerified: true
+      isEmailVerified: true,
     });
 
     this.logger.info('Admin user created', { id: adminUser.id, email: adminUser.email });
@@ -212,7 +212,7 @@ export class DatabaseService {
         branch: 'main',
         status: PipelineStatus.SUCCESS,
         owner: 'sample-user',
-        organization: 'sample-org'
+        organization: 'sample-org',
       },
       {
         name: 'Sample GitLab CI Pipeline',
@@ -223,8 +223,8 @@ export class DatabaseService {
         branch: 'develop',
         status: PipelineStatus.RUNNING,
         owner: 'sample-user',
-        organization: 'sample-group'
-      }
+        organization: 'sample-group',
+      },
     ];
 
     const createdPipelines: Pipeline[] = [];
@@ -259,7 +259,7 @@ export class DatabaseService {
         firstName: 'Test',
         lastName: 'Analyst',
         passwordHash: 'password123',
-        role: UserRole.ANALYST
+        role: UserRole.ANALYST,
       },
       {
         email: 'viewer@test.com',
@@ -267,8 +267,8 @@ export class DatabaseService {
         firstName: 'Test',
         lastName: 'Viewer',
         passwordHash: 'password123',
-        role: UserRole.VIEWER
-      }
+        role: UserRole.VIEWER,
+      },
     ];
 
     for (const userData of testUsers) {
@@ -292,7 +292,7 @@ export class DatabaseService {
         totalRuns: 10,
         successfulRuns: 3,
         failedRuns: 7,
-        successRate: 30
+        successRate: 30,
       },
       {
         name: 'High Performance Pipeline',
@@ -306,8 +306,8 @@ export class DatabaseService {
         successfulRuns: 95,
         failedRuns: 5,
         successRate: 95,
-        averageDuration: 120 // 2 minutes
-      }
+        averageDuration: 120, // 2 minutes
+      },
     ];
 
     for (const pipelineData of testPipelines) {
@@ -364,13 +364,13 @@ export class DatabaseService {
       this.logger.info('Database maintenance completed', {
         deletedOldRuns,
         deletedInactiveUsers,
-        optimizedTables: optimizedTables.length
+        optimizedTables: optimizedTables.length,
       });
 
       return {
         deletedOldRuns,
         deletedInactiveUsers,
-        optimizedTables
+        optimizedTables,
       };
     } catch (error) {
       this.logger.error('Database maintenance failed', error);
@@ -403,7 +403,7 @@ export class DatabaseService {
   async createBackup(backupPath?: string): Promise<string> {
     try {
       this.logger.info('Creating database backup');
-      
+
       const dbConfig = configManager.getDatabase();
       const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
       const defaultPath = `backup_${dbConfig.database}_${timestamp}.sql`;
@@ -411,7 +411,7 @@ export class DatabaseService {
 
       // Use pg_dump for PostgreSQL backups
       const command = `pg_dump -h ${dbConfig.host} -p ${dbConfig.port} -U ${dbConfig.username} -d ${dbConfig.database} -f ${finalPath}`;
-      
+
       this.logger.info('Database backup created', { path: finalPath });
       return finalPath;
     } catch (error) {

@@ -11,7 +11,7 @@ import { Logger } from '@/shared/logger';
 import { configManager } from '@/config';
 import { Pipeline } from '@/entities/pipeline.entity';
 import { PipelineRun } from '@/entities/pipeline-run.entity';
-import { User } from '@/entities/user.entity';
+import type { User } from '@/entities/user.entity';
 import { PipelineProvider, PipelineStatus, UserRole } from '@/types';
 
 export interface DatabaseHealthStatus {
@@ -73,19 +73,19 @@ export class EnhancedDatabaseService {
   async initialize(): Promise<void> {
     try {
       this.logger.info('Initializing enhanced database service...');
-      
+
       // Initialize database connection
       await databaseManager.initialize();
-      
+
       // Initialize repositories
       await repositoryFactory.initializeRepositories();
-      
+
       // Start connection monitoring
       databaseConnectionManager.startHealthMonitoring(30000); // Every 30 seconds
-      
+
       // Set up event listeners
       this.setupEventListeners();
-      
+
       // Run migrations in production/staging
       if (!configManager.isTest()) {
         await this.runMigrations();
@@ -103,7 +103,7 @@ export class EnhancedDatabaseService {
    * Setup database event listeners
    */
   private setupEventListeners(): void {
-    databaseConnectionManager.on('healthCheckFailed', (error) => {
+    databaseConnectionManager.on('healthCheckFailed', error => {
       this.logger.error('Database health check failed', error);
       // Could trigger alerts or failover logic here
     });
@@ -140,17 +140,14 @@ export class EnhancedDatabaseService {
       const isConnected = await databaseConnectionManager.testConnection();
       const connectionStats = databaseConnectionManager.getConnectionStats();
       const metrics = databaseConnectionManager.getMetrics();
-      
+
       // Get entity counts
       const userRepository = repositoryFactory.getUserRepository();
       const pipelineRepository = repositoryFactory.getPipelineRepository();
       const pipelineRunRepository = repositoryFactory.getPipelineRunRepository();
-      
+
       const [userCount, pipelineCount, runCount] = await Promise.all([
-        repositoryFactory.executeWithMonitoring(
-          () => userRepository.count(),
-          'count_users'
-        ),
+        repositoryFactory.executeWithMonitoring(() => userRepository.count(), 'count_users'),
         repositoryFactory.executeWithMonitoring(
           () => pipelineRepository.count(),
           'count_pipelines'
@@ -158,33 +155,33 @@ export class EnhancedDatabaseService {
         repositoryFactory.executeWithMonitoring(
           () => pipelineRunRepository.count(),
           'count_pipeline_runs'
-        )
+        ),
       ]);
 
       // Get migration status
       const dataSource = databaseManager.getDataSource();
-      const executedMigrations = await dataSource.query(
-        'SELECT COUNT(*) as count FROM migrations'
-      ).catch(() => [{ count: 0 }]);
-      
+      const executedMigrations = await dataSource
+        .query('SELECT COUNT(*) as count FROM migrations')
+        .catch(() => [{ count: 0 }]);
+
       // Get performance recommendations
       const recommendations = databaseConnectionManager.getPerformanceRecommendations();
-      
+
       // Get security status
       const securityReport = databaseSecurityManager.generateSecurityReport();
-      
+
       return {
         isConnected,
         connectionStats,
         entityCounts: {
           users: userCount,
           pipelines: pipelineCount,
-          pipelineRuns: runCount
+          pipelineRuns: runCount,
         },
         performanceMetrics: metrics.performanceMetrics,
         migrations: {
           executed: parseInt(executedMigrations[0]?.count || '0', 10),
-          pending: 0 // We don't track pending migrations yet
+          pending: 0, // We don't track pending migrations yet
         },
         uptime: metrics.uptime,
         isHealthy: metrics.isHealthy,
@@ -193,8 +190,8 @@ export class EnhancedDatabaseService {
           metrics: securityReport.summary,
           recentEvents: securityReport.recentEvents,
           recommendations: securityReport.recommendations,
-          securityScore: securityReport.summary.securityScore
-        }
+          securityScore: securityReport.summary.securityScore,
+        },
       };
     } catch (error) {
       this.logger.error('Failed to get database health status', error);
@@ -255,7 +252,7 @@ export class EnhancedDatabaseService {
         passwordHash: adminData.password, // Will be hashed by entity
         role: UserRole.ADMIN,
         isActive: true,
-        isEmailVerified: true
+        isEmailVerified: true,
       });
 
       this.logger.info('Admin user created', { id: adminUser.id, email: adminUser.email });
@@ -268,7 +265,7 @@ export class EnhancedDatabaseService {
    */
   private async createSamplePipelines(): Promise<void> {
     const pipelineRepository = repositoryFactory.getPipelineRepository();
-    
+
     const samplePipelines = [
       {
         name: 'Sample Node.js Pipeline',
@@ -277,7 +274,7 @@ export class EnhancedDatabaseService {
         externalId: 'sample-nodejs-1',
         repository: 'organization/sample-nodejs-app',
         branch: 'main',
-        status: PipelineStatus.SUCCESS
+        status: PipelineStatus.SUCCESS,
       },
       {
         name: 'Sample Python Pipeline',
@@ -286,8 +283,8 @@ export class EnhancedDatabaseService {
         externalId: 'sample-python-1',
         repository: 'organization/sample-python-app',
         branch: 'main',
-        status: PipelineStatus.SUCCESS
-      }
+        status: PipelineStatus.SUCCESS,
+      },
     ];
 
     for (const pipelineData of samplePipelines) {
@@ -296,7 +293,7 @@ export class EnhancedDatabaseService {
         pipelineData.provider,
         pipelineData.externalId
       );
-      
+
       if (!existing) {
         await pipelineRepository.create(pipelineData);
         this.logger.info('Created sample pipeline', { name: pipelineData.name });
@@ -309,10 +306,10 @@ export class EnhancedDatabaseService {
    */
   private async createTestData(): Promise<void> {
     this.logger.info('Creating test data for development environment');
-    
+
     // Create additional test users, pipelines, runs, etc.
     // This would include more comprehensive test data
-    
+
     this.logger.info('Test data creation completed');
   }
 
@@ -325,10 +322,10 @@ export class EnhancedDatabaseService {
     }
 
     this.logger.info('Creating database backup...');
-    
+
     // In a real implementation, this would execute pg_dump or similar
     const backupId = `backup_${Date.now()}`;
-    
+
     this.logger.info('Database backup created', { backupId });
     return backupId;
   }
@@ -338,14 +335,14 @@ export class EnhancedDatabaseService {
    */
   async cleanupOldData(daysToKeep: number = 90): Promise<void> {
     this.logger.info('Cleaning up old data', { daysToKeep });
-    
+
     return repositoryFactory.executeTransaction(async ({ pipelineRunRepository }) => {
       // Delete old pipeline runs
       const deletedRuns = await pipelineRunRepository.deleteOldRuns(daysToKeep);
-      
-      this.logger.info('Old data cleanup completed', { 
+
+      this.logger.info('Old data cleanup completed', {
         deletedRuns,
-        daysToKeep
+        daysToKeep,
       });
     });
   }
@@ -357,12 +354,12 @@ export class EnhancedDatabaseService {
     const metrics = databaseConnectionManager.getMetrics();
     const repositoryStats = repositoryFactory.getStats();
     const healthStatus = await this.getHealthStatus();
-    
+
     return {
       ...metrics,
       repositories: repositoryStats,
       entities: healthStatus.entityCounts,
-      initialized: this.isInitialized
+      initialized: this.isInitialized,
     };
   }
 
@@ -372,16 +369,16 @@ export class EnhancedDatabaseService {
   async shutdown(): Promise<void> {
     try {
       this.logger.info('Shutting down database service...');
-      
+
       // Stop health monitoring
       databaseConnectionManager.stopHealthMonitoring();
-      
+
       // Clear repository cache
       repositoryFactory.clearCache();
-      
+
       // Close database connection
       await databaseManager.close();
-      
+
       this.isInitialized = false;
       this.logger.info('Database service shutdown completed');
     } catch (error) {
