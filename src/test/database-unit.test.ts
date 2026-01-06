@@ -10,9 +10,9 @@ describe('Database Layer Unit Tests', () => {
   describe('Configuration', () => {
     it('should load database configuration', () => {
       const dbConfig = configManager.getDatabase();
-      
+
       console.log('Actual DB Config:', dbConfig);
-      
+
       expect(dbConfig).toBeDefined();
       expect(dbConfig.type).toBe('postgres');
       expect(dbConfig.host).toBe('localhost');
@@ -43,7 +43,7 @@ describe('Database Layer Unit Tests', () => {
     it('should have singleton instance', () => {
       const instance1 = databaseService;
       const instance2 = databaseService;
-      
+
       expect(instance1).toBe(instance2);
       expect(databaseService.initialize).toBeDefined();
       expect(databaseService.getHealthStatus).toBeDefined();
@@ -56,10 +56,10 @@ describe('Database Layer Unit Tests', () => {
 describe('Database Layer Smoke Tests', () => {
   it('should pass all configuration tests', () => {
     console.log('✅ Configuration loading works');
-    console.log('✅ Repository factory works');  
+    console.log('✅ Repository factory works');
     console.log('✅ Database service singleton works');
     console.log('✅ Environment detection works');
-    
+
     expect(true).toBe(true);
   });
 });

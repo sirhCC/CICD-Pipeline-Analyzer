@@ -4,16 +4,8 @@
 
 import { databaseService } from '../services/database.service';
 import { configManager } from '../config';
-import { 
-  pipelineRepository, 
-  pipelineRunRepository, 
-  userRepository 
-} from '../repositories';
-import { 
-  PipelineProvider, 
-  PipelineStatus, 
-  UserRole 
-} from '../types';
+import { pipelineRepository, pipelineRunRepository, userRepository } from '../repositories';
+import { PipelineProvider, PipelineStatus, UserRole } from '../types';
 import { MockDatabaseService, setupTestDatabase, cleanupTestDatabase } from './test-db-setup';
 import { DataSource } from 'typeorm';
 
@@ -35,7 +27,7 @@ describe('Database Layer Basic Tests', () => {
         // Try to initialize real database
         await databaseService.initialize();
         isDatabaseAvailable = true;
-        
+
         // Clear existing data
         if (configManager.isTest()) {
           await databaseService.clearAllData();
@@ -49,7 +41,10 @@ describe('Database Layer Basic Tests', () => {
         testDataSource = mockDbService.getDataSource();
         isDatabaseAvailable = true;
       } catch (mockError) {
-        console.warn('Database not available for testing - skipping database tests:', error instanceof Error ? error.message : String(error));
+        console.warn(
+          'Database not available for testing - skipping database tests:',
+          error instanceof Error ? error.message : String(error)
+        );
         isDatabaseAvailable = false;
       }
     }
@@ -68,7 +63,10 @@ describe('Database Layer Basic Tests', () => {
           await databaseService.close();
         }
       } catch (error) {
-        console.warn('Error cleaning up database:', error instanceof Error ? error.message : String(error));
+        console.warn(
+          'Error cleaning up database:',
+          error instanceof Error ? error.message : String(error)
+        );
       }
     }
   });
@@ -99,8 +97,8 @@ describe('Database Layer Basic Tests', () => {
           username: 'testadmin',
           password: 'password123',
           firstName: 'Test',
-          lastName: 'Admin'
-        }
+          lastName: 'Admin',
+        },
       });
 
       const health = await databaseService.getHealthStatus();
@@ -124,7 +122,7 @@ describe('Database Layer Basic Tests', () => {
         firstName: 'Test',
         lastName: 'User',
         passwordHash: 'hashedpassword',
-        role: UserRole.ANALYST
+        role: UserRole.ANALYST,
       });
 
       expect(testUser).toBeDefined();
@@ -183,7 +181,7 @@ describe('Database Layer Basic Tests', () => {
         branch: 'main',
         status: PipelineStatus.SUCCESS,
         owner: 'testowner',
-        organization: 'testorg'
+        organization: 'testorg',
       });
 
       expect(testPipeline).toBeDefined();
@@ -258,7 +256,7 @@ describe('Database Layer Basic Tests', () => {
         branch: 'main',
         status: PipelineStatus.SUCCESS,
         owner: 'testowner',
-        organization: 'testorg'
+        organization: 'testorg',
       });
     });
 
@@ -276,7 +274,7 @@ describe('Database Layer Basic Tests', () => {
         triggeredEvent: 'push',
         branch: 'main',
         commitSha: 'abc123',
-        commitAuthor: 'testuser'
+        commitAuthor: 'testuser',
       });
 
       expect(testRun).toBeDefined();
