@@ -3,7 +3,8 @@
  * Provides centralized repository creation and management
  */
 
-import { Repository, EntityTarget, DataSource, ObjectLiteral } from 'typeorm';
+import type { Repository, EntityTarget, ObjectLiteral } from 'typeorm';
+import { DataSource } from 'typeorm';
 import { databaseManager } from '@/core/database';
 import { databaseConnectionManager } from '@/core/database-monitor';
 import { Logger } from '@/shared/logger';
@@ -40,15 +41,15 @@ export class EnhancedRepositoryFactory {
    */
   public getRepository<T extends ObjectLiteral>(entityClass: EntityTarget<T>): Repository<T> {
     const entityName = this.getEntityName(entityClass);
-    
+
     if (!this.repositories.has(entityName)) {
       const dataSource = databaseManager.getDataSource();
       const repository = dataSource.getRepository(entityClass);
       this.repositories.set(entityName, repository);
-      
+
       this.logger.debug(`Created repository for ${entityName}`);
     }
-    
+
     return this.repositories.get(entityName);
   }
 
@@ -57,13 +58,13 @@ export class EnhancedRepositoryFactory {
    */
   public getUserRepository(): UserRepository {
     const key = 'UserRepository';
-    
+
     if (!this.customRepositories.has(key)) {
       const repository = new UserRepository();
       this.customRepositories.set(key, repository);
       this.logger.debug(`Created ${key}`);
     }
-    
+
     return this.customRepositories.get(key);
   }
 
@@ -72,13 +73,13 @@ export class EnhancedRepositoryFactory {
    */
   public getPipelineRepository(): PipelineRepository {
     const key = 'PipelineRepository';
-    
+
     if (!this.customRepositories.has(key)) {
       const repository = new PipelineRepository();
       this.customRepositories.set(key, repository);
       this.logger.debug(`Created ${key}`);
     }
-    
+
     return this.customRepositories.get(key);
   }
 
@@ -87,13 +88,13 @@ export class EnhancedRepositoryFactory {
    */
   public getPipelineRunRepository(): PipelineRunRepository {
     const key = 'PipelineRunRepository';
-    
+
     if (!this.customRepositories.has(key)) {
       const repository = new PipelineRunRepository();
       this.customRepositories.set(key, repository);
       this.logger.debug(`Created ${key}`);
     }
-    
+
     return this.customRepositories.get(key);
   }
 
@@ -106,7 +107,7 @@ export class EnhancedRepositoryFactory {
   ): Promise<T> {
     const startTime = Date.now();
     let isError = false;
-    
+
     try {
       this.logger.debug(`Starting repository operation: ${operationName}`);
       const result = await operation();
@@ -133,23 +134,24 @@ export class EnhancedRepositoryFactory {
     }) => Promise<T>
   ): Promise<T> {
     return this.executeWithMonitoring(
-      () => databaseManager.transaction(async (manager) => {
-        // Create transaction-scoped repositories
-        const userRepository = new UserRepository();
-        const pipelineRepository = new PipelineRepository();
-        const pipelineRunRepository = new PipelineRunRepository();
-        
-        // Set the transaction manager
-        (userRepository as any).manager = manager;
-        (pipelineRepository as any).manager = manager;
-        (pipelineRunRepository as any).manager = manager;
-        
-        return operation({
-          userRepository,
-          pipelineRepository,
-          pipelineRunRepository
-        });
-      }),
+      () =>
+        databaseManager.transaction(async manager => {
+          // Create transaction-scoped repositories
+          const userRepository = new UserRepository();
+          const pipelineRepository = new PipelineRepository();
+          const pipelineRunRepository = new PipelineRunRepository();
+
+          // Set the transaction manager
+          (userRepository as any).manager = manager;
+          (pipelineRepository as any).manager = manager;
+          (pipelineRunRepository as any).manager = manager;
+
+          return operation({
+            userRepository,
+            pipelineRepository,
+            pipelineRunRepository,
+          });
+        }),
       'transaction'
     );
   }
@@ -161,11 +163,11 @@ export class EnhancedRepositoryFactory {
     if (typeof entityClass === 'string') {
       return entityClass;
     }
-    
+
     if (typeof entityClass === 'function') {
       return entityClass.name;
     }
-    
+
     return 'Unknown';
   }
 
@@ -186,7 +188,7 @@ export class EnhancedRepositoryFactory {
   } {
     return {
       cachedRepositories: this.repositories.size,
-      repositoryNames: Array.from(this.repositories.keys())
+      repositoryNames: Array.from(this.repositories.keys()),
     };
   }
 
@@ -196,12 +198,12 @@ export class EnhancedRepositoryFactory {
   public async initializeRepositories(): Promise<void> {
     try {
       this.logger.info('Initializing repositories...');
-      
+
       // Pre-initialize common repositories
       this.getUserRepository();
       this.getPipelineRepository();
       this.getPipelineRunRepository();
-      
+
       this.logger.info('Repositories initialized successfully');
     } catch (error) {
       this.logger.error('Failed to initialize repositories', error);
