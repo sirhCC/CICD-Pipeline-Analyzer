@@ -1,10 +1,10 @@
-import { Repository } from 'typeorm';
+import type { Repository } from 'typeorm';
 import { Logger } from '../shared/logger';
-import { 
-  PipelineMetrics, 
-  FailurePattern, 
-  OptimizationRecommendation, 
-  AnalyticsAlert 
+import {
+  PipelineMetrics,
+  FailurePattern,
+  OptimizationRecommendation,
+  AnalyticsAlert,
 } from '../entities/pipeline-metrics.entity';
 import { Pipeline, PipelineRun } from '../entities';
 import { PipelineStatus } from '../types';
@@ -80,7 +80,7 @@ export class AnalyticsService {
   private alertsRepo: Repository<AnalyticsAlert>;
   private pipelineRepo: Repository<Pipeline>;
   private pipelineRunRepo: Repository<PipelineRun>;
-  
+
   private config: AnalyticsConfig;
   private analysisInProgress = false;
   private analysisInterval: NodeJS.Timeout | null = null;
@@ -92,11 +92,11 @@ export class AnalyticsService {
       alertThresholds: {
         failureRate: 0.15, // 15%
         avgDuration: 1800, // 30 minutes
-        errorSpike: 5 // 5x normal rate
+        errorSpike: 5, // 5x normal rate
       },
       batchSize: 100,
       analysisInterval: 15, // 15 minutes
-      ...config
+      ...config,
     };
 
     // Initialize repositories
@@ -116,7 +116,7 @@ export class AnalyticsService {
    * Calculate and store pipeline metrics
    */
   async calculateMetrics(
-    pipelineId: string, 
+    pipelineId: string,
     period: 'hourly' | 'daily' | 'weekly' | 'monthly' = 'daily'
   ): Promise<MetricCalculationResult[]> {
     try {
@@ -128,14 +128,14 @@ export class AnalyticsService {
       }
 
       const { startDate, endDate } = this.getPeriodRange(period);
-      
+
       // Get pipeline runs for the period
       const runs = await this.pipelineRunRepo.find({
-        where: { 
+        where: {
           pipelineId,
-          startedAt: { $gte: startDate, $lte: endDate } as any
+          startedAt: { $gte: startDate, $lte: endDate } as any,
         },
-        order: { startedAt: 'ASC' }
+        order: { startedAt: 'ASC' },
       });
 
       const results: MetricCalculationResult[] = [];
@@ -148,7 +148,7 @@ export class AnalyticsService {
         value: successRate,
         timestamp,
         aggregationPeriod: period,
-        metadata: { totalRuns: runs.length }
+        metadata: { totalRuns: runs.length },
       });
 
       // Calculate average duration
@@ -158,7 +158,7 @@ export class AnalyticsService {
         value: avgDuration,
         timestamp,
         aggregationPeriod: period,
-        metadata: { unit: 'seconds' }
+        metadata: { unit: 'seconds' },
       });
 
       // Calculate failure count
@@ -167,7 +167,7 @@ export class AnalyticsService {
         metricType: 'failure_count',
         value: failureCount,
         timestamp,
-        aggregationPeriod: period
+        aggregationPeriod: period,
       });
 
       // Calculate throughput (runs per day)
@@ -177,22 +177,22 @@ export class AnalyticsService {
         value: throughput,
         timestamp,
         aggregationPeriod: period,
-        metadata: { unit: 'runs_per_day' }
+        metadata: { unit: 'runs_per_day' },
       });
 
       // Store metrics in database
       await this.storeMetrics(pipelineId, results);
 
-      logger.info('Metrics calculated successfully', { 
-        pipelineId, 
-        period, 
-        metricsCount: results.length 
+      logger.info('Metrics calculated successfully', {
+        pipelineId,
+        period,
+        metricsCount: results.length,
       });
 
       // Add pipelineId to all results
       const resultsWithPipelineId = results.map(result => ({
         ...result,
-        pipelineId
+        pipelineId,
       }));
 
       return resultsWithPipelineId;
@@ -209,15 +209,13 @@ export class AnalyticsService {
     try {
       logger.info('Detecting failure patterns', { pipelineId });
 
-      const query = pipelineId 
-        ? { pipelineId, status: 'failed' }
-        : { status: 'failed' };
+      const query = pipelineId ? { pipelineId, status: 'failed' } : { status: 'failed' };
 
       // Get recent failed runs
       const failedRuns = await this.pipelineRunRepo.find({
         where: query as any,
         order: { startedAt: 'DESC' },
-        take: 1000 // Analyze last 1000 failures
+        take: 1000, // Analyze last 1000 failures
       });
 
       const patterns: FailurePatternResult[] = [];
@@ -237,9 +235,9 @@ export class AnalyticsService {
       // Store detected patterns
       await this.storeFailurePatterns(pipelineId, patterns);
 
-      logger.info('Failure patterns detected', { 
-        pipelineId, 
-        patternsCount: patterns.length 
+      logger.info('Failure patterns detected', {
+        pipelineId,
+        patternsCount: patterns.length,
       });
 
       return patterns;
@@ -266,7 +264,7 @@ export class AnalyticsService {
       const recentRuns = await this.pipelineRunRepo.find({
         where: { pipelineId },
         order: { startedAt: 'DESC' },
-        take: 100
+        take: 100,
       });
 
       const recommendations: OptimizationResult[] = [];
@@ -286,9 +284,9 @@ export class AnalyticsService {
       // Store recommendations
       await this.storeOptimizationRecommendations(pipelineId, recommendations);
 
-      logger.info('Optimization recommendations generated', { 
-        pipelineId, 
-        recommendationsCount: recommendations.length 
+      logger.info('Optimization recommendations generated', {
+        pipelineId,
+        recommendationsCount: recommendations.length,
       });
 
       return recommendations;
@@ -322,9 +320,9 @@ export class AnalyticsService {
       // Store alerts
       await this.storeAlerts(pipelineId, alerts);
 
-      logger.info('Analytics alerts generated', { 
-        pipelineId, 
-        alertsCount: alerts.length 
+      logger.info('Analytics alerts generated', {
+        pipelineId,
+        alertsCount: alerts.length,
       });
 
       return alerts;
@@ -343,33 +341,33 @@ export class AnalyticsService {
 
       const [metrics, patterns, recommendations, alerts, recentRuns] = await Promise.all([
         this.metricsRepo.find({
-          where: { 
+          where: {
             ...whereClause,
-            aggregationPeriod: period 
+            aggregationPeriod: period,
           },
           order: { timestamp: 'DESC' },
-          take: 100
+          take: 100,
         }),
         this.failurePatternsRepo.find({
           where: { ...whereClause, active: true },
           order: { detectedAt: 'DESC' },
-          take: 20
+          take: 20,
         }),
         this.optimizationRepo.find({
           where: { ...whereClause, implemented: false },
           order: { createdAt: 'DESC' },
-          take: 10
+          take: 10,
         }),
         this.alertsRepo.find({
           where: { ...whereClause, acknowledged: false },
           order: { createdAt: 'DESC' },
-          take: 50
+          take: 50,
         }),
         this.pipelineRunRepo.find({
           where: whereClause,
           order: { startedAt: 'DESC' },
-          take: 20
-        })
+          take: 20,
+        }),
       ]);
 
       // Create recent activity from pipeline runs
@@ -379,7 +377,7 @@ export class AnalyticsService {
         status: run.status,
         startedAt: run.startedAt,
         duration: run.duration,
-        triggeredBy: run.triggeredBy
+        triggeredBy: run.triggeredBy,
       }));
 
       // Create top failures from patterns
@@ -388,16 +386,18 @@ export class AnalyticsService {
         patternType: pattern.patternType,
         frequency: pattern.occurrenceCount,
         description: pattern.description,
-        impact: pattern.severity
+        impact: pattern.severity,
       }));
 
       // Create performance trends from metrics
-      const performanceTrends = metrics.filter(m => m.metricType === 'avg_duration' || m.metricType === 'success_rate')
-        .slice(0, 10).map(metric => ({
+      const performanceTrends = metrics
+        .filter(m => m.metricType === 'avg_duration' || m.metricType === 'success_rate')
+        .slice(0, 10)
+        .map(metric => ({
           timestamp: metric.timestamp,
           metricType: metric.metricType,
           value: metric.value,
-          period: metric.aggregationPeriod
+          period: metric.aggregationPeriod,
         }));
 
       return {
@@ -408,7 +408,7 @@ export class AnalyticsService {
         recentActivity,
         topFailures,
         performanceTrends,
-        summary: this.generateSummary(metrics, patterns, recommendations, alerts)
+        summary: this.generateSummary(metrics, patterns, recommendations, alerts),
       };
     } catch (error) {
       logger.error('Failed to get dashboard data', { pipelineId, period, error });
@@ -419,42 +419,49 @@ export class AnalyticsService {
   /**
    * Generate comprehensive dashboard data
    */
-  async generateDashboard(options: {
-    timeRange?: string;
-    pipelineId?: string;
-  } = {}): Promise<any> {
+  async generateDashboard(
+    options: {
+      timeRange?: string;
+      pipelineId?: string;
+    } = {}
+  ): Promise<any> {
     try {
       logger.info('Generating analytics dashboard', options);
-      
+
       const { timeRange = 'daily', pipelineId } = options;
-      
+
       // Get dashboard data
       const dashboardData = await this.getDashboardData(pipelineId, timeRange);
-      
+
       // Get additional analytics
       const [metrics, patterns, recommendations, alerts] = await Promise.all([
-        pipelineId ? this.calculateMetrics(pipelineId, timeRange as 'hourly' | 'daily' | 'weekly' | 'monthly') : Promise.resolve([]),
+        pipelineId
+          ? this.calculateMetrics(
+              pipelineId,
+              timeRange as 'hourly' | 'daily' | 'weekly' | 'monthly'
+            )
+          : Promise.resolve([]),
         this.detectFailurePatterns(pipelineId),
         pipelineId ? this.generateOptimizationRecommendations(pipelineId) : Promise.resolve([]),
-        this.generateAlerts(pipelineId)
+        this.generateAlerts(pipelineId),
       ]);
-      
+
       // Get pipeline counts and statistics
       const totalPipelines = await this.pipelineRepo.count();
       const activePipelines = await this.pipelineRepo.count({ where: { isActive: true } });
-      
+
       // Calculate total runs and success rate from all recent runs
       const allRuns = await this.pipelineRunRepo.find({
         order: { startedAt: 'DESC' },
-        take: 1000 // Last 1000 runs for stats
+        take: 1000, // Last 1000 runs for stats
       });
-      
+
       const totalRuns = allRuns.length;
       const successfulRuns = allRuns.filter(run => run.status === PipelineStatus.SUCCESS).length;
       const successRate = totalRuns > 0 ? successfulRuns / totalRuns : 0;
-      const averageDuration = totalRuns > 0 ? 
-        allRuns.reduce((sum, run) => sum + (run.duration || 0), 0) / totalRuns : 0;
-      
+      const averageDuration =
+        totalRuns > 0 ? allRuns.reduce((sum, run) => sum + (run.duration || 0), 0) / totalRuns : 0;
+
       return {
         ...dashboardData,
         summary: {
@@ -465,12 +472,12 @@ export class AnalyticsService {
           averageDuration,
           recentFailures: patterns.length,
           criticalAlerts: alerts.filter(a => a.severity === 'critical').length,
-          pendingRecommendations: recommendations.length
+          pendingRecommendations: recommendations.length,
         },
         metrics: metrics.slice(0, 10), // Latest 10 metrics
         patterns: patterns.slice(0, 5), // Top 5 patterns
         recommendations: recommendations.slice(0, 3), // Top 3 recommendations
-        alerts: alerts.filter(a => a.severity === 'critical' || a.severity === 'error').slice(0, 5) // Important alerts
+        alerts: alerts.filter(a => a.severity === 'critical' || a.severity === 'error').slice(0, 5), // Important alerts
       };
     } catch (error: any) {
       logger.error('Failed to generate dashboard', { error: error.message, options });
@@ -484,24 +491,24 @@ export class AnalyticsService {
   async analyzeAsync(pipelineId?: string): Promise<void> {
     try {
       logger.info('Starting async analytics analysis', { pipelineId });
-      
+
       // Run the analysis cycle
       if (pipelineId) {
         await this.runAnalysisCycle(pipelineId);
       } else {
         // Run for all pipelines
         const pipelines = await this.pipelineRepo.find({ where: { isActive: true } });
-        
+
         for (const pipeline of pipelines) {
           await this.runAnalysisCycle(pipeline.id);
         }
       }
-      
+
       logger.info('Async analytics analysis completed', { pipelineId });
     } catch (error: any) {
-      logger.error('Async analytics analysis failed', { 
-        pipelineId, 
-        error: error.message 
+      logger.error('Async analytics analysis failed', {
+        pipelineId,
+        error: error.message,
       });
       throw error;
     }
@@ -510,21 +517,24 @@ export class AnalyticsService {
   /**
    * Update alert status (acknowledge/resolve)
    */
-  async updateAlert(alertId: string, updates: {
-    acknowledged?: boolean;
-    status?: 'active' | 'resolved' | 'muted';
-    acknowledgedBy?: string;
-    notes?: string;
-  }): Promise<any> {
+  async updateAlert(
+    alertId: string,
+    updates: {
+      acknowledged?: boolean;
+      status?: 'active' | 'resolved' | 'muted';
+      acknowledgedBy?: string;
+      notes?: string;
+    }
+  ): Promise<any> {
     try {
       logger.info('Updating alert', { alertId, updates });
-      
+
       const alert = await this.alertsRepo.findOne({ where: { id: alertId } });
-      
+
       if (!alert) {
         throw new Error(`Alert not found: ${alertId}`);
       }
-      
+
       // Update alert properties
       if (updates.acknowledged !== undefined) {
         alert.acknowledged = updates.acknowledged;
@@ -532,17 +542,17 @@ export class AnalyticsService {
           alert.acknowledgedAt = new Date();
         }
       }
-      
+
       if (updates.status) {
         alert.active = updates.status === 'active';
       }
-      
+
       if (updates.acknowledgedBy) {
         alert.acknowledgedBy = updates.acknowledgedBy;
       }
-      
+
       await this.alertsRepo.save(alert);
-      
+
       logger.info('Alert updated successfully', { alertId });
       return alert;
     } catch (error: any) {
@@ -555,23 +565,23 @@ export class AnalyticsService {
 
   private async startRealTimeAnalysis() {
     const intervalMs = this.config.analysisInterval * 60 * 1000;
-    
+
     this.analysisInterval = setInterval(async () => {
       if (this.analysisInProgress) return;
-      
+
       try {
         this.analysisInProgress = true;
         logger.debug('Starting real-time analysis cycle');
-        
+
         // Run analytics for all active pipelines
-        const activePipelines = await this.pipelineRepo.find({ 
-          where: { isActive: true } 
+        const activePipelines = await this.pipelineRepo.find({
+          where: { isActive: true },
         });
 
         for (const pipeline of activePipelines) {
           await this.runAnalysisCycle(pipeline.id);
         }
-        
+
         logger.debug('Real-time analysis cycle completed');
       } catch (error) {
         logger.error('Real-time analysis cycle failed', { error });
@@ -593,14 +603,14 @@ export class AnalyticsService {
       // Calculate metrics for multiple periods
       await Promise.all([
         this.calculateMetrics(pipelineId, 'hourly'),
-        this.calculateMetrics(pipelineId, 'daily')
+        this.calculateMetrics(pipelineId, 'daily'),
       ]);
 
       // Detect patterns and generate recommendations/alerts
       await Promise.all([
         this.detectFailurePatterns(pipelineId),
         this.generateOptimizationRecommendations(pipelineId),
-        this.generateAlerts(pipelineId)
+        this.generateAlerts(pipelineId),
       ]);
     } catch (error) {
       logger.error('Analysis cycle failed for pipeline', { pipelineId, error });
@@ -650,12 +660,13 @@ export class AnalyticsService {
   private calculateThroughput(runs: PipelineRun[], period: string): number {
     if (runs.length === 0) return 0;
 
-    const periodMultiplier = {
-      hourly: 24,
-      daily: 1,
-      weekly: 1/7,
-      monthly: 1/30
-    }[period] || 1;
+    const periodMultiplier =
+      {
+        hourly: 24,
+        daily: 1,
+        weekly: 1 / 7,
+        monthly: 1 / 30,
+      }[period] || 1;
 
     return runs.length * periodMultiplier;
   }
@@ -680,7 +691,7 @@ export class AnalyticsService {
   private detectRecurringFailures(failedRuns: PipelineRun[]): FailurePatternResult[] {
     // Group failures by error message similarity
     const errorGroups = new Map<string, PipelineRun[]>();
-    
+
     failedRuns.forEach(run => {
       const errorKey = this.normalizeErrorMessage(run.errorMessage || 'Unknown error');
       if (!errorGroups.has(errorKey)) {
@@ -692,10 +703,11 @@ export class AnalyticsService {
     const patterns: FailurePatternResult[] = [];
 
     errorGroups.forEach((runs, errorKey) => {
-      if (runs.length >= 3) { // At least 3 occurrences to be considered a pattern
+      if (runs.length >= 3) {
+        // At least 3 occurrences to be considered a pattern
         const firstSeen = new Date(Math.min(...runs.map(r => r.startedAt!.getTime())));
         const lastSeen = new Date(Math.max(...runs.map(r => r.startedAt!.getTime())));
-        
+
         patterns.push({
           patternType: 'recurring_failure',
           description: `Recurring failure: ${errorKey}`,
@@ -704,11 +716,11 @@ export class AnalyticsService {
           data: {
             errorMessage: errorKey,
             affectedRuns: runs.map(r => r.id),
-            frequency: runs.length
+            frequency: runs.length,
           },
           firstSeen,
           lastSeen,
-          occurrenceCount: runs.length
+          occurrenceCount: runs.length,
         });
       }
     });
@@ -717,65 +729,72 @@ export class AnalyticsService {
   }
 
   private detectTimeoutPatterns(failedRuns: PipelineRun[]): FailurePatternResult[] {
-    const timeoutRuns = failedRuns.filter(run => 
-      run.errorMessage?.toLowerCase().includes('timeout') ||
-      run.errorMessage?.toLowerCase().includes('timed out')
+    const timeoutRuns = failedRuns.filter(
+      run =>
+        run.errorMessage?.toLowerCase().includes('timeout') ||
+        run.errorMessage?.toLowerCase().includes('timed out')
     );
 
     if (timeoutRuns.length < 2) return [];
 
-    const avgDuration = timeoutRuns.reduce((sum, run) => {
-      if (run.completedAt && run.startedAt) {
-        return sum + (run.completedAt.getTime() - run.startedAt.getTime()) / 1000;
-      }
-      return sum;
-    }, 0) / timeoutRuns.length;
+    const avgDuration =
+      timeoutRuns.reduce((sum, run) => {
+        if (run.completedAt && run.startedAt) {
+          return sum + (run.completedAt.getTime() - run.startedAt.getTime()) / 1000;
+        }
+        return sum;
+      }, 0) / timeoutRuns.length;
 
-    return [{
-      patternType: 'timeout_pattern',
-      description: `Frequent timeout failures detected (avg duration: ${Math.round(avgDuration)}s)`,
-      confidence: Math.min(timeoutRuns.length / 5, 1.0),
-      severity: timeoutRuns.length > 5 ? 'high' : 'medium',
-      data: {
-        timeoutCount: timeoutRuns.length,
-        averageDuration: avgDuration,
-        affectedRuns: timeoutRuns.map(r => r.id)
+    return [
+      {
+        patternType: 'timeout_pattern',
+        description: `Frequent timeout failures detected (avg duration: ${Math.round(avgDuration)}s)`,
+        confidence: Math.min(timeoutRuns.length / 5, 1.0),
+        severity: timeoutRuns.length > 5 ? 'high' : 'medium',
+        data: {
+          timeoutCount: timeoutRuns.length,
+          averageDuration: avgDuration,
+          affectedRuns: timeoutRuns.map(r => r.id),
+        },
+        firstSeen: new Date(Math.min(...timeoutRuns.map(r => r.startedAt!.getTime()))),
+        lastSeen: new Date(Math.max(...timeoutRuns.map(r => r.startedAt!.getTime()))),
+        occurrenceCount: timeoutRuns.length,
       },
-      firstSeen: new Date(Math.min(...timeoutRuns.map(r => r.startedAt!.getTime()))),
-      lastSeen: new Date(Math.max(...timeoutRuns.map(r => r.startedAt!.getTime()))),
-      occurrenceCount: timeoutRuns.length
-    }];
+    ];
   }
 
   private detectDependencyFailures(failedRuns: PipelineRun[]): FailurePatternResult[] {
-    const dependencyKeywords = ['dependency', 'service unavailable', 'connection refused', 'network'];
-    
-    const dependencyRuns = failedRuns.filter(run => 
-      dependencyKeywords.some(keyword => 
-        run.errorMessage?.toLowerCase().includes(keyword)
-      )
+    const dependencyKeywords = [
+      'dependency',
+      'service unavailable',
+      'connection refused',
+      'network',
+    ];
+
+    const dependencyRuns = failedRuns.filter(run =>
+      dependencyKeywords.some(keyword => run.errorMessage?.toLowerCase().includes(keyword))
     );
 
     if (dependencyRuns.length < 2) return [];
 
-    return [{
-      patternType: 'dependency_failure',
-      description: 'Recurring dependency-related failures detected',
-      confidence: Math.min(dependencyRuns.length / 3, 1.0),
-      severity: dependencyRuns.length > 3 ? 'high' : 'medium',
-      data: {
-        dependencyFailureCount: dependencyRuns.length,
-        affectedRuns: dependencyRuns.map(r => r.id),
-        commonKeywords: dependencyKeywords.filter(keyword =>
-          dependencyRuns.some(run => 
-            run.errorMessage?.toLowerCase().includes(keyword)
-          )
-        )
+    return [
+      {
+        patternType: 'dependency_failure',
+        description: 'Recurring dependency-related failures detected',
+        confidence: Math.min(dependencyRuns.length / 3, 1.0),
+        severity: dependencyRuns.length > 3 ? 'high' : 'medium',
+        data: {
+          dependencyFailureCount: dependencyRuns.length,
+          affectedRuns: dependencyRuns.map(r => r.id),
+          commonKeywords: dependencyKeywords.filter(keyword =>
+            dependencyRuns.some(run => run.errorMessage?.toLowerCase().includes(keyword))
+          ),
+        },
+        firstSeen: new Date(Math.min(...dependencyRuns.map(r => r.startedAt!.getTime()))),
+        lastSeen: new Date(Math.max(...dependencyRuns.map(r => r.startedAt!.getTime()))),
+        occurrenceCount: dependencyRuns.length,
       },
-      firstSeen: new Date(Math.min(...dependencyRuns.map(r => r.startedAt!.getTime()))),
-      lastSeen: new Date(Math.max(...dependencyRuns.map(r => r.startedAt!.getTime()))),
-      occurrenceCount: dependencyRuns.length
-    }];
+    ];
   }
 
   private normalizeErrorMessage(message: string): string {
@@ -788,7 +807,10 @@ export class AnalyticsService {
       .trim();
   }
 
-  private async storeFailurePatterns(pipelineId: string | undefined, patterns: FailurePatternResult[]) {
+  private async storeFailurePatterns(
+    pipelineId: string | undefined,
+    patterns: FailurePatternResult[]
+  ) {
     const entities = patterns.map(pattern => {
       const entity = new FailurePattern();
       if (pipelineId) {
@@ -819,13 +841,16 @@ export class AnalyticsService {
     return this.metricsRepo.find({
       where: {
         pipelineId,
-        timestamp: { $gte: startDate } as any
+        timestamp: { $gte: startDate } as any,
       },
-      order: { timestamp: 'DESC' }
+      order: { timestamp: 'DESC' },
     });
   }
 
-  private analyzePerformanceBottlenecks(runs: PipelineRun[], metrics: PipelineMetrics[]): OptimizationResult[] {
+  private analyzePerformanceBottlenecks(
+    runs: PipelineRun[],
+    metrics: PipelineMetrics[]
+  ): OptimizationResult[] {
     const recommendations: OptimizationResult[] = [];
 
     // Find slow runs
@@ -838,7 +863,7 @@ export class AnalyticsService {
         title: 'Optimize Pipeline Duration',
         description: `Pipeline average duration (${Math.round(currentAvgDuration)}s) exceeds recommended threshold (${this.config.alertThresholds.avgDuration}s)`,
         potentialSavings: {
-          time: currentAvgDuration - this.config.alertThresholds.avgDuration
+          time: currentAvgDuration - this.config.alertThresholds.avgDuration,
         },
         implementationEffort: 'medium',
         priority: 'high',
@@ -846,8 +871,8 @@ export class AnalyticsService {
           'Analyze pipeline stages for bottlenecks',
           'Consider parallelizing independent tasks',
           'Optimize resource allocation',
-          'Review and optimize build steps'
-        ]
+          'Review and optimize build steps',
+        ],
       });
     }
 
@@ -872,7 +897,7 @@ export class AnalyticsService {
         title: 'Improve Pipeline Reliability',
         description: `Pipeline failure rate (${(failureRate * 100).toFixed(1)}%) exceeds recommended threshold (${(this.config.alertThresholds.failureRate * 100).toFixed(1)}%)`,
         potentialSavings: {
-          cost: failedRuns.length * 10 // Estimated cost savings per prevented failure
+          cost: failedRuns.length * 10, // Estimated cost savings per prevented failure
         },
         implementationEffort: 'medium',
         priority: 'high',
@@ -880,15 +905,18 @@ export class AnalyticsService {
           'Implement proper error handling and retries',
           'Add health checks for dependencies',
           'Improve test coverage',
-          'Add monitoring and alerting'
-        ]
+          'Add monitoring and alerting',
+        ],
       });
     }
 
     return recommendations;
   }
 
-  private async storeOptimizationRecommendations(pipelineId: string, recommendations: OptimizationResult[]) {
+  private async storeOptimizationRecommendations(
+    pipelineId: string,
+    recommendations: OptimizationResult[]
+  ) {
     const entities = recommendations.map(rec => {
       const entity = new OptimizationRecommendation();
       entity.pipelineId = pipelineId;
@@ -953,9 +981,9 @@ export class AnalyticsService {
   }
 
   private generateSummary(
-    metrics: PipelineMetrics[], 
-    patterns: FailurePattern[], 
-    recommendations: OptimizationRecommendation[], 
+    metrics: PipelineMetrics[],
+    patterns: FailurePattern[],
+    recommendations: OptimizationRecommendation[],
     alerts: AnalyticsAlert[]
   ) {
     return {
@@ -964,13 +992,13 @@ export class AnalyticsService {
       pendingRecommendations: recommendations.length,
       unacknowledgedAlerts: alerts.length,
       healthScore: this.calculateHealthScore(metrics, patterns, alerts),
-      lastUpdated: new Date()
+      lastUpdated: new Date(),
     };
   }
 
   private calculateHealthScore(
-    metrics: PipelineMetrics[], 
-    patterns: FailurePattern[], 
+    metrics: PipelineMetrics[],
+    patterns: FailurePattern[],
     alerts: AnalyticsAlert[]
   ): number {
     // Simple health score calculation (0-100)
@@ -997,37 +1025,41 @@ export class AnalyticsService {
    */
   async healthCheck(): Promise<{
     status: 'healthy' | 'degraded' | 'unhealthy';
-    checks: Record<string, {
-      status: 'pass' | 'fail';
-      message?: string;
-      duration?: number;
-    }>;
+    checks: Record<
+      string,
+      {
+        status: 'pass' | 'fail';
+        message?: string;
+        duration?: number;
+      }
+    >;
     uptime: number;
     version: string;
   }> {
     const startTime = Date.now();
-    const checks: Record<string, { status: 'pass' | 'fail'; message?: string; duration?: number }> = {};
-    
+    const checks: Record<string, { status: 'pass' | 'fail'; message?: string; duration?: number }> =
+      {};
+
     // Check repository access
     try {
       const checkStart = Date.now();
       await repositoryFactory.getPipelineRepository().count();
       checks.database = {
         status: 'pass',
-        duration: Date.now() - checkStart
+        duration: Date.now() - checkStart,
       };
     } catch (error) {
       checks.database = {
         status: 'fail',
         message: error instanceof Error ? error.message : 'Database connection failed',
-        duration: Date.now() - startTime
+        duration: Date.now() - startTime,
       };
     }
 
     // Check service status
     checks.service = {
       status: 'pass',
-      message: 'Analytics service operational'
+      message: 'Analytics service operational',
     };
 
     // Check metrics calculation capability
@@ -1039,25 +1071,25 @@ export class AnalyticsService {
       checks.calculations = {
         status: 'pass',
         duration: Date.now() - checkStart,
-        message: `Sample calculation result: ${avg}`
+        message: `Sample calculation result: ${avg}`,
       };
     } catch (error) {
       checks.calculations = {
         status: 'fail',
-        message: 'Mathematical calculations failed'
+        message: 'Mathematical calculations failed',
       };
     }
 
     // Determine overall status
     const failedChecks = Object.values(checks).filter(check => check.status === 'fail');
-    const status = failedChecks.length === 0 ? 'healthy' : 
-                  failedChecks.length <= 1 ? 'degraded' : 'unhealthy';
+    const status =
+      failedChecks.length === 0 ? 'healthy' : failedChecks.length <= 1 ? 'degraded' : 'unhealthy';
 
     return {
       status,
       checks,
       uptime: process.uptime(),
-      version: process.env.npm_package_version || '1.0.0'
+      version: process.env.npm_package_version || '1.0.0',
     };
   }
 }
