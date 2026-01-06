@@ -249,11 +249,7 @@ export class ApiVersionManager {
   /**
    * Mark a version as deprecated
    */
-  public deprecateVersion(
-    version: string,
-    deprecationDate?: string,
-    sunsetDate?: string
-  ): void {
+  public deprecateVersion(version: string, deprecationDate?: string, sunsetDate?: string): void {
     const versionConfig = this.getVersionConfig(version);
     if (versionConfig) {
       versionConfig.deprecated = true;
