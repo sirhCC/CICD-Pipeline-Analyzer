@@ -5,17 +5,14 @@
 
 import axios from 'axios';
 import { BaseCICDProvider } from './base.provider';
-import {
-  PipelineProvider,
-  PipelineStatus
-} from '../types';
+import { PipelineProvider, PipelineStatus } from '../types';
 import type {
   ProviderConfig,
   PipelineData,
   JobData,
   LogData,
   WebhookPayload,
-  ProviderMetrics
+  ProviderMetrics,
 } from './base.provider';
 import { Logger } from '../shared/logger';
 
@@ -62,20 +59,20 @@ export class GitLabCIProvider extends BaseCICDProvider {
   constructor(config: GitLabConfig) {
     super(config);
     this.gitlabConfig = config;
-    
+
     // Initialize GitLab API client
     this.client = axios.create({
       baseURL: this.gitlabConfig.baseUrl || 'https://gitlab.com/api/v4',
       headers: {
         'Private-Token': this.gitlabConfig.token || this.gitlabConfig.apiKey,
-        'Content-Type': 'application/json'
+        'Content-Type': 'application/json',
       },
       timeout: this.gitlabConfig.timeout || 30000,
     });
 
     logger.info('GitLab CI provider initialized', {
       baseUrl: this.gitlabConfig.baseUrl,
-      hasToken: !!(this.gitlabConfig.token || this.gitlabConfig.apiKey)
+      hasToken: !!(this.gitlabConfig.token || this.gitlabConfig.apiKey),
     });
   }
 
@@ -95,16 +92,16 @@ export class GitLabCIProvider extends BaseCICDProvider {
 
       // Test API connection
       const response = await this.client.get('/user');
-      
+
       logger.info('GitLab CI configuration validated successfully', {
         userId: response.data.id,
-        username: response.data.username
+        username: response.data.username,
       });
 
       return true;
     } catch (error) {
       logger.error('GitLab CI configuration validation failed', {
-        error: error instanceof Error ? error.message : String(error)
+        error: error instanceof Error ? error.message : String(error),
       });
       return false;
     }
@@ -119,12 +116,15 @@ export class GitLabCIProvider extends BaseCICDProvider {
     }
   }
 
-  async fetchPipelines(repository: string, options: {
-    branch?: string;
-    limit?: number;
-    since?: Date;
-    status?: PipelineStatus[];
-  } = {}): Promise<PipelineData[]> {
+  async fetchPipelines(
+    repository: string,
+    options: {
+      branch?: string;
+      limit?: number;
+      since?: Date;
+      status?: PipelineStatus[];
+    } = {}
+  ): Promise<PipelineData[]> {
     try {
       const projectId = repository || this.gitlabConfig.projectId;
       if (!projectId) {
@@ -134,7 +134,7 @@ export class GitLabCIProvider extends BaseCICDProvider {
       const params: any = {
         per_page: options.limit || 100,
         order_by: 'updated_at',
-        sort: 'desc'
+        sort: 'desc',
       };
 
       if (options.branch) {
@@ -146,22 +146,22 @@ export class GitLabCIProvider extends BaseCICDProvider {
       }
 
       const response = await this.client.get(`/projects/${projectId}/pipelines`, {
-        params
+        params,
       });
 
-      const pipelines = response.data.map((pipeline: GitLabPipeline) => 
+      const pipelines = response.data.map((pipeline: GitLabPipeline) =>
         this.transformPipeline(pipeline, projectId)
       );
 
       logger.info('Fetched GitLab pipelines', {
         count: pipelines.length,
-        projectId
+        projectId,
       });
 
       return pipelines;
     } catch (error) {
       logger.error('Failed to fetch GitLab pipelines', {
-        error: error instanceof Error ? error.message : String(error)
+        error: error instanceof Error ? error.message : String(error),
       });
       throw error;
     }
@@ -170,7 +170,7 @@ export class GitLabCIProvider extends BaseCICDProvider {
   async fetchPipeline(pipelineId: string): Promise<PipelineData> {
     try {
       const [projectId, gitlabPipelineId] = pipelineId.split(':');
-      
+
       const response = await this.client.get(
         `/projects/${projectId}/pipelines/${gitlabPipelineId}`
       );
@@ -179,7 +179,7 @@ export class GitLabCIProvider extends BaseCICDProvider {
     } catch (error) {
       logger.error('Failed to fetch GitLab pipeline', {
         error: error instanceof Error ? error.message : String(error),
-        pipelineId
+        pipelineId,
       });
       throw error;
     }
@@ -188,14 +188,12 @@ export class GitLabCIProvider extends BaseCICDProvider {
   async fetchPipelineRun(pipelineId: string, runId: string): Promise<PipelineData> {
     try {
       const [projectId] = pipelineId.split(':');
-      
-      const response = await this.client.get(
-        `/projects/${projectId}/jobs/${runId}`
-      );
+
+      const response = await this.client.get(`/projects/${projectId}/jobs/${runId}`);
 
       // For GitLab, a "run" is actually a job, so we return job details as pipeline data
       const job = this.transformJob(response.data);
-      
+
       const pipelineData: PipelineData = {
         id: runId,
         name: job.name,
@@ -208,7 +206,7 @@ export class GitLabCIProvider extends BaseCICDProvider {
         commitSha: 'unknown',
         commitAuthor: 'unknown',
         runNumber: parseInt(runId) || 0,
-        jobs: [job]
+        jobs: [job],
       };
 
       if (job.finishedAt) {
@@ -223,25 +221,28 @@ export class GitLabCIProvider extends BaseCICDProvider {
     } catch (error) {
       logger.error('Failed to fetch GitLab job', {
         error: error instanceof Error ? error.message : String(error),
-        runId
+        runId,
       });
       throw error;
     }
   }
 
-  async getPipelineRuns(pipelineId: string, options: {
-    limit?: number;
-    since?: Date;
-  } = {}): Promise<JobData[]> {
+  async getPipelineRuns(
+    pipelineId: string,
+    options: {
+      limit?: number;
+      since?: Date;
+    } = {}
+  ): Promise<JobData[]> {
     try {
       const [projectId, gitlabPipelineId] = pipelineId.split(':');
-      
+
       const response = await this.client.get(
         `/projects/${projectId}/pipelines/${gitlabPipelineId}/jobs`,
         {
           params: {
-            per_page: options.limit || 100
-          }
+            per_page: options.limit || 100,
+          },
         }
       );
 
@@ -249,7 +250,7 @@ export class GitLabCIProvider extends BaseCICDProvider {
     } catch (error) {
       logger.error('Failed to fetch GitLab pipeline runs', {
         error: error instanceof Error ? error.message : String(error),
-        pipelineId
+        pipelineId,
       });
       return [];
     }
@@ -259,18 +260,18 @@ export class GitLabCIProvider extends BaseCICDProvider {
     try {
       const [projectId] = pipelineId.split(':');
       const response = await this.client.get(`/projects/${projectId}/jobs/${runId}/trace`);
-      
+
       // Convert raw log text to LogData format
       const logText = response.data || '';
       const logLines = logText.split('\n').filter((line: string) => line.trim());
-      
+
       return logLines.map((line: string, index: number) => ({
         timestamp: new Date(),
         level: this.detectLogLevel(line),
         message: line,
         source: 'gitlab-ci',
         jobId: runId,
-        stepId: undefined
+        stepId: undefined,
       }));
     } catch {
       return [];
@@ -287,21 +288,21 @@ export class GitLabCIProvider extends BaseCICDProvider {
 
   async processWebhook(payload: WebhookPayload): Promise<PipelineData | null> {
     try {
-      logger.info('Processing GitLab webhook', { 
+      logger.info('Processing GitLab webhook', {
         event: payload.event,
-        provider: payload.provider 
+        provider: payload.provider,
       });
-      
+
       // Basic webhook processing - would need to parse GitLab webhook format
       if (payload.event === 'pipeline' && payload.data) {
         // Transform GitLab webhook data to PipelineData
         return this.transformWebhookToPipelineData(payload.data);
       }
-      
+
       return null;
     } catch (error) {
       logger.error('Failed to process GitLab webhook', {
-        error: error instanceof Error ? error.message : String(error)
+        error: error instanceof Error ? error.message : String(error),
       });
       return null;
     }
@@ -322,7 +323,7 @@ export class GitLabCIProvider extends BaseCICDProvider {
       runNumber: webhookData.id || 0,
       jobs: [],
       artifacts: [],
-      logs: []
+      logs: [],
     };
 
     if (webhookData.finished_at) {
@@ -345,7 +346,11 @@ export class GitLabCIProvider extends BaseCICDProvider {
     return ['push', 'pipeline', 'job', 'merge_request'];
   }
 
-  async setupWebhook(repository: string, webhookUrl: string, events: string[]): Promise<{ id: string; secret: string }> {
+  async setupWebhook(
+    repository: string,
+    webhookUrl: string,
+    events: string[]
+  ): Promise<{ id: string; secret: string }> {
     try {
       const projectId = repository;
       const response = await this.client.post(`/projects/${projectId}/hooks`, {
@@ -353,23 +358,23 @@ export class GitLabCIProvider extends BaseCICDProvider {
         pipeline_events: events.includes('pipeline'),
         job_events: events.includes('job'),
         push_events: events.includes('push'),
-        merge_requests_events: events.includes('merge_request')
+        merge_requests_events: events.includes('merge_request'),
       });
 
       logger.info('Created GitLab webhook', {
         repository,
         webhookUrl,
-        webhookId: response.data.id
+        webhookId: response.data.id,
       });
 
       return {
         id: response.data.id.toString(),
-        secret: this.gitlabConfig.webhookSecret || 'no-secret'
+        secret: this.gitlabConfig.webhookSecret || 'no-secret',
       };
     } catch (error) {
       logger.error('Failed to create GitLab webhook', {
         error: error instanceof Error ? error.message : String(error),
-        repository
+        repository,
       });
       throw error;
     }
@@ -382,7 +387,7 @@ export class GitLabCIProvider extends BaseCICDProvider {
       averageResponseTime: 0,
       lastSyncTime: new Date(),
       errorCount: 0,
-      rateLimitRemaining: 1000
+      rateLimitRemaining: 1000,
     };
   }
 
@@ -391,13 +396,13 @@ export class GitLabCIProvider extends BaseCICDProvider {
       const pipelines = await this.fetchPipelines(repository, { limit: 10 });
       logger.info('Synced GitLab repository', {
         repository,
-        pipelineCount: pipelines.length
+        pipelineCount: pipelines.length,
       });
       return true;
     } catch (error) {
       logger.error('Failed to sync GitLab repository', {
         error: error instanceof Error ? error.message : String(error),
-        repository
+        repository,
       });
       return false;
     }
@@ -418,7 +423,7 @@ export class GitLabCIProvider extends BaseCICDProvider {
       runNumber: gitlabPipeline.id,
       jobs: [],
       artifacts: [],
-      logs: []
+      logs: [],
     };
 
     // Only add finishedAt if it exists
@@ -434,8 +439,10 @@ export class GitLabCIProvider extends BaseCICDProvider {
       id: gitlabJob.id.toString(),
       name: gitlabJob.name,
       status: this.mapStatus(gitlabJob.status),
-      startedAt: gitlabJob.started_at ? new Date(gitlabJob.started_at) : new Date(gitlabJob.created_at),
-      steps: []
+      startedAt: gitlabJob.started_at
+        ? new Date(gitlabJob.started_at)
+        : new Date(gitlabJob.created_at),
+      steps: [],
     };
 
     // Only add optional fields if they exist

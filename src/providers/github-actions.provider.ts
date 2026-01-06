@@ -3,7 +3,8 @@
  * Integrates with GitHub Actions API for pipeline data collection
  */
 
-import { BaseCICDProvider, ProviderConfig, PipelineData, JobData, StepData, LogData, WebhookPayload } from './base.provider';
+import type { ProviderConfig, PipelineData, LogData, WebhookPayload } from './base.provider';
+import { BaseCICDProvider, JobData, StepData } from './base.provider';
 import { PipelineProvider, PipelineStatus } from '../types';
 import { Logger } from '../shared/logger';
 import axios from 'axios';
@@ -140,8 +141,8 @@ export class GitHubActionsProvider extends BaseCICDProvider {
     this.client = axios.create({
       baseURL: config.baseUrl || 'https://api.github.com',
       headers: {
-        'Authorization': `Bearer ${config.apiKey}`,
-        'Accept': 'application/vnd.github.v3+json',
+        Authorization: `Bearer ${config.apiKey}`,
+        Accept: 'application/vnd.github.v3+json',
         'User-Agent': 'CICD-Pipeline-Analyzer/1.0.0',
       },
       timeout: config.timeout || 30000,
@@ -149,18 +150,18 @@ export class GitHubActionsProvider extends BaseCICDProvider {
 
     // Add request/response interceptors for metrics
     this.client.interceptors.request.use((config: any) => {
-      (config as any).metadata = { startTime: Date.now() };
+      config.metadata = { startTime: Date.now() };
       return config;
     });
 
     this.client.interceptors.response.use(
       (response: any) => {
-        const duration = Date.now() - ((response.config as any).metadata?.startTime || 0);
+        const duration = Date.now() - (response.config.metadata?.startTime || 0);
         this.updateMetrics(duration, true);
         return response;
       },
       (error: any) => {
-        const duration = Date.now() - ((error.config as any)?.metadata?.startTime || 0);
+        const duration = Date.now() - (error.config?.metadata?.startTime || 0);
         this.updateMetrics(duration, false, error.message);
         return Promise.reject(error);
       }
@@ -196,7 +197,7 @@ export class GitHubActionsProvider extends BaseCICDProvider {
       // For GitHub Actions, pipelineId is actually a workflow run ID
       const [owner, repo] = this.getOwnerRepo();
       const response = await this.client.get(`/repos/${owner}/${repo}/actions/runs/${pipelineId}`);
-      
+
       return this.transformWorkflowRun(response.data);
     });
   }
@@ -230,8 +231,8 @@ export class GitHubActionsProvider extends BaseCICDProvider {
       }
 
       const response = await this.client.get(`/repos/${owner}/${repo}/actions/runs`, { params });
-      
-      return response.data.workflow_runs.map((run: GitHubWorkflowRun) => 
+
+      return response.data.workflow_runs.map((run: GitHubWorkflowRun) =>
         this.transformWorkflowRun(run)
       );
     });
@@ -250,14 +251,14 @@ export class GitHubActionsProvider extends BaseCICDProvider {
   ): Promise<LogData[]> {
     return this.executeWithMetrics(async () => {
       const [owner, repo] = this.getOwnerRepo();
-      
+
       if (jobId) {
         // Fetch logs for specific job
         const response = await this.client.get(
           `/repos/${owner}/${repo}/actions/jobs/${jobId}/logs`,
           { responseType: 'text' }
         );
-        
+
         return this.parseJobLogs(response.data, jobId, stepId);
       } else {
         // Fetch logs for entire workflow run
@@ -265,7 +266,7 @@ export class GitHubActionsProvider extends BaseCICDProvider {
           `/repos/${owner}/${repo}/actions/runs/${runId}/logs`,
           { responseType: 'arraybuffer' }
         );
-        
+
         // GitHub returns logs as a zip file, we'd need to extract and parse
         // For now, return empty array - this would need zip extraction logic
         return [];
@@ -303,12 +304,7 @@ export class GitHubActionsProvider extends BaseCICDProvider {
   }
 
   getSupportedEvents(): string[] {
-    return [
-      'workflow_run',
-      'workflow_job',
-      'check_run',
-      'check_suite',
-    ];
+    return ['workflow_run', 'workflow_job', 'check_run', 'check_suite'];
   }
 
   async setupWebhook(
@@ -348,13 +344,15 @@ export class GitHubActionsProvider extends BaseCICDProvider {
 
   private transformWorkflowRun(run: GitHubWorkflowRun): PipelineData {
     const finishedAt = run.updated_at ? new Date(run.updated_at) : undefined;
-    
+
     const result: any = {
       id: run.id.toString(),
       name: run.name || run.display_title,
       repository: run.repository.full_name,
       branch: run.head_branch,
-      status: this.normalizePipelineStatus(run.status === 'completed' ? run.conclusion || 'unknown' : run.status),
+      status: this.normalizePipelineStatus(
+        run.status === 'completed' ? run.conclusion || 'unknown' : run.status
+      ),
       startedAt: new Date(run.run_started_at),
       triggeredBy: run.triggering_actor.login,
       triggeredEvent: run.event,
@@ -405,7 +403,7 @@ export class GitHubActionsProvider extends BaseCICDProvider {
     for (const line of lines) {
       // Parse GitHub Actions log format: timestamp level message
       const match = line.match(/^(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z)\s+(.+)$/);
-      if (match && match[1] && match[2]) {
+      if (match?.[1] && match[2]) {
         const logEntry: LogData = {
           timestamp: new Date(match[1]),
           level: 'info', // GitHub doesn't provide detailed log levels
@@ -413,11 +411,11 @@ export class GitHubActionsProvider extends BaseCICDProvider {
           source: 'github-actions',
           jobId,
         };
-        
+
         if (stepId) {
           logEntry.stepId = stepId;
         }
-        
+
         logs.push(logEntry);
       }
     }
