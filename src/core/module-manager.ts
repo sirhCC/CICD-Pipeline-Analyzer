@@ -39,11 +39,13 @@ export class ModuleManager {
    */
   public registerModule(definition: ModuleDefinition): void {
     this.logger.info(`Registering module: ${definition.name}`);
-    
+
     this.moduleDefinitions.set(definition.name, definition);
     this.dependencyGraph.set(definition.name, new Set(definition.dependencies));
-    
-    this.logger.debug(`Module ${definition.name} registered with dependencies:`, { dependencies: definition.dependencies });
+
+    this.logger.debug(`Module ${definition.name} registered with dependencies:`, {
+      dependencies: definition.dependencies,
+    });
   }
 
   /**
@@ -51,13 +53,13 @@ export class ModuleManager {
    */
   public async initializeModules(): Promise<void> {
     this.logger.info('Initializing modules...');
-    
+
     const initOrder = this.calculateInitializationOrder();
-    
+
     for (const moduleName of initOrder) {
       await this.initializeModule(moduleName);
     }
-    
+
     this.logger.info(`Successfully initialized ${this.modules.size} modules`);
   }
 
@@ -77,24 +79,25 @@ export class ModuleManager {
 
     try {
       this.logger.info(`Initializing module: ${name}`);
-      
+
       // Check dependencies
       await this.checkDependencies(name);
-      
+
       // Initialize the module
       const module = await definition.factory();
-      
+
       // Validate module
       this.validateModule(module, definition);
-      
+
       // Store the module
       this.modules.set(name, module);
-      
+
       this.logger.info(`Successfully initialized module: ${name} v${module.version}`);
-      
     } catch (error) {
       if (definition.optional) {
-        this.logger.warn(`Optional module ${name} failed to initialize:`, { error: error instanceof Error ? error.message : String(error) });
+        this.logger.warn(`Optional module ${name} failed to initialize:`, {
+          error: error instanceof Error ? error.message : String(error),
+        });
       } else {
         this.logger.error(`Critical module ${name} failed to initialize:`, error);
         throw error;
@@ -107,7 +110,7 @@ export class ModuleManager {
    */
   public getModule<T extends Module>(name: string): T | null {
     const module = this.modules.get(name);
-    return module as T || null;
+    return (module as T) || null;
   }
 
   /**
@@ -115,14 +118,14 @@ export class ModuleManager {
    */
   public getModulesByType<T extends Module>(type: string): T[] {
     const modules: T[] = [];
-    
+
     for (const [name, module] of this.modules) {
       const definition = this.moduleDefinitions.get(name);
       if (definition?.type === type) {
         modules.push(module as T);
       }
     }
-    
+
     return modules;
   }
 
@@ -189,13 +192,13 @@ export class ModuleManager {
    */
   public async shutdown(): Promise<void> {
     this.logger.info('Shutting down modules...');
-    
+
     const shutdownOrder = this.calculateShutdownOrder();
-    
+
     for (const moduleName of shutdownOrder) {
       await this.shutdownModule(moduleName);
     }
-    
+
     this.modules.clear();
     this.logger.info('All modules shut down successfully');
   }
@@ -211,15 +214,14 @@ export class ModuleManager {
 
     try {
       this.logger.info(`Shutting down module: ${name}`);
-      
+
       // Call shutdown hook if available
       if ('shutdown' in module && typeof module.shutdown === 'function') {
         await (module.shutdown as () => Promise<void>)();
       }
-      
+
       this.modules.delete(name);
       this.logger.info(`Successfully shut down module: ${name}`);
-      
     } catch (error) {
       this.logger.error(`Error shutting down module ${name}:`, error);
     }
@@ -275,19 +277,21 @@ export class ModuleManager {
    */
   private async checkDependencies(moduleName: string): Promise<void> {
     const dependencies = this.dependencyGraph.get(moduleName) || new Set();
-    
+
     for (const dependency of dependencies) {
       if (!this.modules.has(dependency) && this.moduleDefinitions.has(dependency)) {
         // Try to initialize the dependency first
         await this.initializeModule(dependency);
       }
-      
+
       if (!this.modules.has(dependency)) {
         const definition = this.moduleDefinitions.get(moduleName);
         if (!definition?.optional) {
           throw new Error(`Missing required dependency: ${dependency} for module: ${moduleName}`);
         }
-        this.logger.warn(`Optional dependency ${dependency} not available for module: ${moduleName}`);
+        this.logger.warn(
+          `Optional dependency ${dependency} not available for module: ${moduleName}`
+        );
       }
     }
   }
@@ -325,7 +329,7 @@ export class ModuleManager {
    */
   public getModuleStatus(): Record<string, any> {
     const status: Record<string, any> = {};
-    
+
     for (const [name, module] of this.modules) {
       const definition = this.moduleDefinitions.get(name);
       status[name] = {
@@ -337,7 +341,7 @@ export class ModuleManager {
         config: module.config,
       };
     }
-    
+
     return status;
   }
 
@@ -351,15 +355,15 @@ export class ModuleManager {
     }
 
     this.logger.info(`Reloading configuration for module: ${name}`);
-    
+
     // Update module configuration
     module.config = { ...module.config, ...newConfig };
-    
+
     // Call reload hook if available
     if ('reload' in module && typeof module.reload === 'function') {
       await (module.reload as (config: Record<string, unknown>) => Promise<void>)(module.config);
     }
-    
+
     this.logger.info(`Successfully reloaded configuration for module: ${name}`);
   }
 }
