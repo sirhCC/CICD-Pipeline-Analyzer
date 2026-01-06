@@ -424,11 +424,11 @@ export interface LoggingConfig {
 }
 
 // === Express Request Types ===
-import { Request, ParamsDictionary } from 'express-serve-static-core';
-import { ParsedQs } from 'qs';
+import type { Request, ParamsDictionary } from 'express-serve-static-core';
+import type { ParsedQs } from 'qs';
 
 export interface TypedRequest<
   TParams extends ParamsDictionary = ParamsDictionary,
   TQuery extends ParsedQs = ParsedQs,
-  TBody = any
+  TBody = any,
 > extends Request<TParams, any, TBody, TQuery> {}
