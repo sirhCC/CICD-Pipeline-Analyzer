@@ -95,18 +95,18 @@ const configSchema = Joi.object({
   LOG_FORMAT: Joi.string().valid('json', 'simple').default('json'),
 
   // Provider-specific configurations (GitHub Actions)
-  GITHUB_TOKEN: Joi.string().optional(),
-  GITHUB_WEBHOOK_SECRET: Joi.string().optional(),
+  GITHUB_TOKEN: Joi.string().allow('').optional(),
+  GITHUB_WEBHOOK_SECRET: Joi.string().allow('').optional(),
 
   // Provider-specific configurations (GitLab CI)
-  GITLAB_TOKEN: Joi.string().optional(),
-  GITLAB_BASE_URL: Joi.string().uri().optional(),
-  GITLAB_WEBHOOK_SECRET: Joi.string().optional(),
+  GITLAB_TOKEN: Joi.string().allow('').optional(),
+  GITLAB_BASE_URL: Joi.string().uri().allow('').optional(),
+  GITLAB_WEBHOOK_SECRET: Joi.string().allow('').optional(),
 
   // Provider-specific configurations (Jenkins)
-  JENKINS_URL: Joi.string().uri().optional(),
-  JENKINS_USERNAME: Joi.string().optional(),
-  JENKINS_TOKEN: Joi.string().optional(),
+  JENKINS_URL: Joi.string().uri().allow('').optional(),
+  JENKINS_USERNAME: Joi.string().allow('').optional(),
+  JENKINS_TOKEN: Joi.string().allow('').optional(),
 });
 
 // === Validate Environment Variables ===
