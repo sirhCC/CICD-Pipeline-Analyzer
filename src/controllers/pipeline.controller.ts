@@ -3,12 +3,14 @@
  * Handles CRUD operations and analytics for CI/CD pipelines
  */
 
-import { Request, Response, NextFunction } from 'express';
+import type { Response, NextFunction } from 'express';
+import { Request } from 'express';
 import { pipelineRepository, pipelineRunRepository } from '../repositories';
-import { AuthenticatedRequest } from '../middleware/auth';
+import type { AuthenticatedRequest } from '../middleware/auth';
 import { Logger } from '../shared/logger';
 import { providerFactory } from '../providers/factory';
-import { PipelineProvider, PipelineStatus } from '../types';
+import type { PipelineProvider } from '../types';
+import { PipelineStatus } from '../types';
 import { calculatePagination } from '../shared/api-response';
 import { trackDatabaseQuery } from '../middleware/response';
 
@@ -44,7 +46,7 @@ export const pipelineController = {
         where,
         take: limit,
         skip: (page - 1) * limit,
-        order: { createdAt: 'DESC' }
+        order: { createdAt: 'DESC' },
       });
       trackDatabaseQuery(req);
 
@@ -56,7 +58,7 @@ export const pipelineController = {
         total,
         page,
         limit,
-        filters: { provider, status, repository }
+        filters: { provider, status, repository },
       });
 
       // Use standardized response format
@@ -64,7 +66,7 @@ export const pipelineController = {
     } catch (error) {
       logger.error('Failed to list pipelines', {
         error: error instanceof Error ? error.message : String(error),
-        userId: req.user?.userId
+        userId: req.user?.userId,
       });
       return res.apiInternalError('Failed to list pipelines');
     }
@@ -73,14 +75,13 @@ export const pipelineController = {
   /**
    * Create a new pipeline
    */
-  async createPipeline(req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> {
+  async createPipeline(
+    req: AuthenticatedRequest,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> {
     try {
-      const {
-        name,
-        provider,
-        repository,
-        branch = 'main'
-      } = req.body;
+      const { name, provider, repository, branch = 'main' } = req.body;
 
       // Validate required fields
       if (!name || !provider || !repository) {
@@ -103,21 +104,21 @@ export const pipelineController = {
         metadata: {
           createdAt: new Date(),
           createdBy: req.user!.userId,
-        }
+        },
       });
 
       logger.info('Pipeline created', {
         pipelineId: pipeline.id,
         userId: req.user?.userId,
         provider,
-        repository
+        repository,
       });
 
       res.apiCreated({ pipeline });
     } catch (error) {
       logger.error('Failed to create pipeline', {
         error: error instanceof Error ? error.message : String(error),
-        userId: req.user?.userId
+        userId: req.user?.userId,
       });
       return res.apiInternalError('Failed to create pipeline');
     }
@@ -141,7 +142,7 @@ export const pipelineController = {
 
       logger.info('Pipeline retrieved', {
         pipelineId,
-        userId: req.user?.userId
+        userId: req.user?.userId,
       });
 
       res.apiSuccess({ pipeline });
@@ -149,7 +150,7 @@ export const pipelineController = {
       logger.error('Failed to retrieve pipeline', {
         error: error instanceof Error ? error.message : String(error),
         userId: req.user?.userId,
-        pipelineId: req.params.pipelineId
+        pipelineId: req.params.pipelineId,
       });
       return res.apiInternalError('Failed to retrieve pipeline');
     }
@@ -158,7 +159,11 @@ export const pipelineController = {
   /**
    * Update a pipeline (simplified)
    */
-  async updatePipeline(req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> {
+  async updatePipeline(
+    req: AuthenticatedRequest,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> {
     try {
       const { pipelineId } = req.params;
 
@@ -174,18 +179,18 @@ export const pipelineController = {
       // For now, just return success without actual update logic
       logger.info('Pipeline update requested', {
         pipelineId,
-        userId: req.user?.userId
+        userId: req.user?.userId,
       });
 
-      res.apiSuccess({ 
+      res.apiSuccess({
         pipeline,
-        message: 'Pipeline update functionality will be implemented in Phase 2'
+        message: 'Pipeline update functionality will be implemented in Phase 2',
       });
     } catch (error) {
       logger.error('Failed to update pipeline', {
         error: error instanceof Error ? error.message : String(error),
         userId: req.user?.userId,
-        pipelineId: req.params.pipelineId
+        pipelineId: req.params.pipelineId,
       });
       return res.apiInternalError('Failed to update pipeline');
     }
@@ -194,7 +199,11 @@ export const pipelineController = {
   /**
    * Delete a pipeline (simplified)
    */
-  async deletePipeline(req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> {
+  async deletePipeline(
+    req: AuthenticatedRequest,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> {
     try {
       const { pipelineId } = req.params;
 
@@ -210,7 +219,7 @@ export const pipelineController = {
       // For now, just return success without actual deletion
       logger.info('Pipeline deletion requested', {
         pipelineId,
-        userId: req.user?.userId
+        userId: req.user?.userId,
       });
 
       res.apiSuccess({ message: 'Pipeline deletion functionality will be implemented in Phase 2' });
@@ -218,7 +227,7 @@ export const pipelineController = {
       logger.error('Failed to delete pipeline', {
         error: error instanceof Error ? error.message : String(error),
         userId: req.user?.userId,
-        pipelineId: req.params.pipelineId
+        pipelineId: req.params.pipelineId,
       });
       return res.apiInternalError('Failed to delete pipeline');
     }
@@ -227,7 +236,11 @@ export const pipelineController = {
   /**
    * Get pipeline runs (simplified)
    */
-  async getPipelineRuns(req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> {
+  async getPipelineRuns(
+    req: AuthenticatedRequest,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> {
     try {
       const { pipelineId } = req.params;
 
@@ -246,7 +259,7 @@ export const pipelineController = {
       logger.info('Pipeline runs retrieved', {
         pipelineId,
         userId: req.user?.userId,
-        count: runs.length
+        count: runs.length,
       });
 
       res.apiSuccess({
@@ -255,14 +268,14 @@ export const pipelineController = {
           page: 1,
           limit: 20,
           total: 0,
-          totalPages: 0
-        }
+          totalPages: 0,
+        },
       });
     } catch (error) {
       logger.error('Failed to retrieve pipeline runs', {
         error: error instanceof Error ? error.message : String(error),
         userId: req.user?.userId,
-        pipelineId: req.params.pipelineId
+        pipelineId: req.params.pipelineId,
       });
       return res.apiInternalError('Failed to retrieve pipeline runs');
     }
@@ -271,7 +284,11 @@ export const pipelineController = {
   /**
    * Get a specific pipeline run (simplified)
    */
-  async getPipelineRun(req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> {
+  async getPipelineRun(
+    req: AuthenticatedRequest,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> {
     try {
       const { pipelineId, runId } = req.params;
 
@@ -291,13 +308,13 @@ export const pipelineController = {
         status: PipelineStatus.SUCCESS,
         startTime: new Date(),
         endTime: new Date(),
-        duration: 120000
+        duration: 120000,
       };
 
       logger.info('Pipeline run retrieved', {
         pipelineId,
         runId,
-        userId: req.user?.userId
+        userId: req.user?.userId,
       });
 
       res.apiSuccess({ run });
@@ -306,7 +323,7 @@ export const pipelineController = {
         error: error instanceof Error ? error.message : String(error),
         userId: req.user?.userId,
         pipelineId: req.params.pipelineId,
-        runId: req.params.runId
+        runId: req.params.runId,
       });
       return res.apiInternalError('Failed to retrieve pipeline run');
     }
@@ -315,7 +332,11 @@ export const pipelineController = {
   /**
    * Analyze a pipeline (trigger analytics processing)
    */
-  async analyzePipeline(req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> {
+  async analyzePipeline(
+    req: AuthenticatedRequest,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> {
     try {
       const { pipelineId } = req.params;
 
@@ -333,19 +354,19 @@ export const pipelineController = {
       logger.info('Pipeline analysis triggered', {
         pipelineId,
         analysisJobId,
-        userId: req.user?.userId
+        userId: req.user?.userId,
       });
 
       res.apiSuccess({
         analysisJobId,
         message: 'Pipeline analysis started',
-        estimatedCompletion: new Date(Date.now() + 5 * 60 * 1000)
+        estimatedCompletion: new Date(Date.now() + 5 * 60 * 1000),
       });
     } catch (error) {
       logger.error('Failed to trigger pipeline analysis', {
         error: error instanceof Error ? error.message : String(error),
         userId: req.user?.userId,
-        pipelineId: req.params.pipelineId
+        pipelineId: req.params.pipelineId,
       });
       return res.apiInternalError('Failed to trigger pipeline analysis');
     }
@@ -372,21 +393,21 @@ export const pipelineController = {
       logger.info('Pipeline sync triggered', {
         pipelineId,
         syncJobId,
-        userId: req.user?.userId
+        userId: req.user?.userId,
       });
 
       res.apiSuccess({
         syncJobId,
         message: 'Pipeline sync started',
-        estimatedCompletion: new Date(Date.now() + 2 * 60 * 1000)
+        estimatedCompletion: new Date(Date.now() + 2 * 60 * 1000),
       });
     } catch (error) {
       logger.error('Failed to trigger pipeline sync', {
         error: error instanceof Error ? error.message : String(error),
         userId: req.user?.userId,
-        pipelineId: req.params.pipelineId
+        pipelineId: req.params.pipelineId,
       });
       return res.apiInternalError('Failed to trigger pipeline sync');
     }
-  }
+  },
 };
