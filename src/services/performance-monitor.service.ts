@@ -1,6 +1,6 @@
 /**
  * Performance Monitoring Service - Advanced Metrics Collection & Analysis
- * 
+ *
  * Features:
  * - Real-time performance metrics collection
  * - Memory usage tracking and optimization
@@ -8,7 +8,7 @@
  * - Database query performance analysis
  * - Resource utilization alerts
  * - Performance trend analysis
- * 
+ *
  * @author sirhCC
  * @version 1.0.0
  */
@@ -94,11 +94,11 @@ export class PerformanceMonitorService extends EventEmitter {
     super();
     this.logger = new Logger('PerformanceMonitor');
     this.thresholds = {
-      memory: { warning: 0.80, critical: 0.95 },
-      cpu: { warning: 0.70, critical: 0.90 },
+      memory: { warning: 0.8, critical: 0.95 },
+      cpu: { warning: 0.7, critical: 0.9 },
       responseTime: { warning: 1000, critical: 5000 },
-      database: { connectionWarning: 0.80, queryTimeWarning: 1000 },
-      cache: { hitRatioWarning: 0.70 }
+      database: { connectionWarning: 0.8, queryTimeWarning: 1000 },
+      cache: { hitRatioWarning: 0.7 },
     };
   }
 
@@ -148,7 +148,7 @@ export class PerformanceMonitorService extends EventEmitter {
       cpu: this.getCpuMetrics(),
       requests: this.getRequestMetrics(),
       database: this.getDatabaseMetrics(),
-      cache: this.getCacheMetrics()
+      cache: this.getCacheMetrics(),
     };
 
     this.metrics.push(metrics);
@@ -172,9 +172,9 @@ export class PerformanceMonitorService extends EventEmitter {
       total: usage.heapTotal,
       heap: {
         used: usage.heapUsed,
-        total: usage.heapTotal
+        total: usage.heapTotal,
       },
-      external: usage.external
+      external: usage.external,
     };
   }
 
@@ -184,10 +184,10 @@ export class PerformanceMonitorService extends EventEmitter {
   private getCpuMetrics() {
     const usage = process.cpuUsage();
     const loadAverage = process.platform !== 'win32' ? require('os').loadavg() : [0, 0, 0];
-    
+
     return {
       usage: (usage.user + usage.system) / 1000000, // Convert to seconds
-      loadAverage
+      loadAverage,
     };
   }
 
@@ -196,22 +196,25 @@ export class PerformanceMonitorService extends EventEmitter {
    */
   private getRequestMetrics() {
     const activeRequests = this.requestMetrics.size;
-    const completedRequests = Array.from(this.requestMetrics.values())
-      .filter(req => req.endTime !== undefined);
-    
-    const averageResponseTime = completedRequests.length > 0
-      ? completedRequests.reduce((sum, req) => sum + (req.endTime! - req.startTime), 0) / completedRequests.length
-      : 0;
+    const completedRequests = Array.from(this.requestMetrics.values()).filter(
+      req => req.endTime !== undefined
+    );
 
-    const slowQueries = completedRequests.filter(req => 
-      (req.endTime! - req.startTime) > this.thresholds.responseTime.warning
+    const averageResponseTime =
+      completedRequests.length > 0
+        ? completedRequests.reduce((sum, req) => sum + (req.endTime! - req.startTime), 0) /
+          completedRequests.length
+        : 0;
+
+    const slowQueries = completedRequests.filter(
+      req => req.endTime! - req.startTime > this.thresholds.responseTime.warning
     ).length;
 
     return {
       total: completedRequests.length,
       active: activeRequests,
       averageResponseTime,
-      slowQueries
+      slowQueries,
     };
   }
 
@@ -222,7 +225,7 @@ export class PerformanceMonitorService extends EventEmitter {
     return {
       activeConnections: 5, // Would get from connection pool
       queryTime: 50, // Average query time
-      slowQueries: 0
+      slowQueries: 0,
     };
   }
 
@@ -233,7 +236,7 @@ export class PerformanceMonitorService extends EventEmitter {
     return {
       hitRatio: 0.85, // Would get from cache implementation
       size: 1024, // Cache size in entries
-      evictions: 0
+      evictions: 0,
     };
   }
 
@@ -244,26 +247,56 @@ export class PerformanceMonitorService extends EventEmitter {
     // Memory threshold check
     const memoryUsage = metrics.memory.used / metrics.memory.total;
     if (memoryUsage > this.thresholds.memory.critical) {
-      this.emitAlert('memory', 'critical', 'Critical memory usage detected', metrics, 
-        this.thresholds.memory.critical, memoryUsage);
+      this.emitAlert(
+        'memory',
+        'critical',
+        'Critical memory usage detected',
+        metrics,
+        this.thresholds.memory.critical,
+        memoryUsage
+      );
     } else if (memoryUsage > this.thresholds.memory.warning) {
-      this.emitAlert('memory', 'warning', 'High memory usage detected', metrics,
-        this.thresholds.memory.warning, memoryUsage);
+      this.emitAlert(
+        'memory',
+        'warning',
+        'High memory usage detected',
+        metrics,
+        this.thresholds.memory.warning,
+        memoryUsage
+      );
     }
 
     // Response time threshold check
     if (metrics.requests.averageResponseTime > this.thresholds.responseTime.critical) {
-      this.emitAlert('response_time', 'critical', 'Critical response time detected', metrics,
-        this.thresholds.responseTime.critical, metrics.requests.averageResponseTime);
+      this.emitAlert(
+        'response_time',
+        'critical',
+        'Critical response time detected',
+        metrics,
+        this.thresholds.responseTime.critical,
+        metrics.requests.averageResponseTime
+      );
     } else if (metrics.requests.averageResponseTime > this.thresholds.responseTime.warning) {
-      this.emitAlert('response_time', 'warning', 'High response time detected', metrics,
-        this.thresholds.responseTime.warning, metrics.requests.averageResponseTime);
+      this.emitAlert(
+        'response_time',
+        'warning',
+        'High response time detected',
+        metrics,
+        this.thresholds.responseTime.warning,
+        metrics.requests.averageResponseTime
+      );
     }
 
     // Cache hit ratio check
     if (metrics.cache.hitRatio < this.thresholds.cache.hitRatioWarning) {
-      this.emitAlert('cache', 'warning', 'Low cache hit ratio detected', metrics,
-        this.thresholds.cache.hitRatioWarning, metrics.cache.hitRatio);
+      this.emitAlert(
+        'cache',
+        'warning',
+        'Low cache hit ratio detected',
+        metrics,
+        this.thresholds.cache.hitRatioWarning,
+        metrics.cache.hitRatio
+      );
     }
   }
 
@@ -285,16 +318,16 @@ export class PerformanceMonitorService extends EventEmitter {
       metrics,
       threshold,
       actual,
-      timestamp: new Date()
+      timestamp: new Date(),
     };
 
     this.emit('alert', alert);
-    this.logger.warn('Performance alert', { 
-      type: alert.type, 
-      severity: alert.severity, 
+    this.logger.warn('Performance alert', {
+      type: alert.type,
+      severity: alert.severity,
       message: alert.message,
       threshold: alert.threshold,
-      actual: alert.actual
+      actual: alert.actual,
     });
   }
 
@@ -313,7 +346,7 @@ export class PerformanceMonitorService extends EventEmitter {
     if (request) {
       request.endTime = Date.now();
       const duration = request.endTime - request.startTime;
-      
+
       // Clean up completed requests after a delay
       setTimeout(() => {
         this.requestMetrics.delete(requestId);
@@ -339,7 +372,7 @@ export class PerformanceMonitorService extends EventEmitter {
       return {
         current: null,
         average: {},
-        trends: { memory: 'stable', responseTime: 'stable' }
+        trends: { memory: 'stable', responseTime: 'stable' },
       };
     }
 
@@ -348,47 +381,60 @@ export class PerformanceMonitorService extends EventEmitter {
       return {
         current: null,
         average: {},
-        trends: { memory: 'stable', responseTime: 'stable' }
+        trends: { memory: 'stable', responseTime: 'stable' },
       };
     }
 
     const recent = this.metrics.slice(-10); // Last 10 metrics
 
-    const averageMemory = recent.reduce((sum, m) => sum + (m.memory.used / m.memory.total), 0) / recent.length;
-    const averageResponseTime = recent.reduce((sum, m) => sum + m.requests.averageResponseTime, 0) / recent.length;
+    const averageMemory =
+      recent.reduce((sum, m) => sum + m.memory.used / m.memory.total, 0) / recent.length;
+    const averageResponseTime =
+      recent.reduce((sum, m) => sum + m.requests.averageResponseTime, 0) / recent.length;
 
     // Simple trend analysis
     const oldMetrics = this.metrics.slice(-20, -10);
-    const memoryTrend = oldMetrics.length > 0
-      ? this.calculateTrend(oldMetrics.map(m => m.memory.used / m.memory.total), recent.map(m => m.memory.used / m.memory.total))
-      : 'stable';
-    
-    const responseTimeTrend = oldMetrics.length > 0
-      ? this.calculateTrend(oldMetrics.map(m => m.requests.averageResponseTime), recent.map(m => m.requests.averageResponseTime))
-      : 'stable';
+    const memoryTrend =
+      oldMetrics.length > 0
+        ? this.calculateTrend(
+            oldMetrics.map(m => m.memory.used / m.memory.total),
+            recent.map(m => m.memory.used / m.memory.total)
+          )
+        : 'stable';
+
+    const responseTimeTrend =
+      oldMetrics.length > 0
+        ? this.calculateTrend(
+            oldMetrics.map(m => m.requests.averageResponseTime),
+            recent.map(m => m.requests.averageResponseTime)
+          )
+        : 'stable';
 
     return {
       current,
       average: {
         memory: { used: averageMemory * current.memory.total, total: current.memory.total } as any,
-        requests: { averageResponseTime } as any
+        requests: { averageResponseTime } as any,
       },
       trends: {
         memory: memoryTrend,
-        responseTime: responseTimeTrend
-      }
+        responseTime: responseTimeTrend,
+      },
     };
   }
 
   /**
    * Calculate trend direction
    */
-  private calculateTrend(oldValues: number[], newValues: number[]): 'increasing' | 'decreasing' | 'stable' {
+  private calculateTrend(
+    oldValues: number[],
+    newValues: number[]
+  ): 'increasing' | 'decreasing' | 'stable' {
     const oldAvg = oldValues.reduce((sum, val) => sum + val, 0) / oldValues.length;
     const newAvg = newValues.reduce((sum, val) => sum + val, 0) / newValues.length;
-    
+
     const change = (newAvg - oldAvg) / oldAvg;
-    
+
     if (change > 0.1) return 'increasing';
     if (change < -0.1) return 'decreasing';
     return 'stable';
@@ -412,7 +458,8 @@ export class PerformanceMonitorService extends EventEmitter {
 
     // Response time score
     if (current.requests.averageResponseTime > this.thresholds.responseTime.critical) score -= 30;
-    else if (current.requests.averageResponseTime > this.thresholds.responseTime.warning) score -= 15;
+    else if (current.requests.averageResponseTime > this.thresholds.responseTime.warning)
+      score -= 15;
 
     // Cache hit ratio score
     if (current.cache.hitRatio < this.thresholds.cache.hitRatioWarning) score -= 10;
