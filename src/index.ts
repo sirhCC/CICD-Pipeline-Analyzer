@@ -129,7 +129,7 @@ class Application {
       } catch (err) {
         const meta: Record<string, unknown> = err instanceof Error
           ? { error: { name: err.name, message: err.message, stack: err.stack } }
-          : { error: err as unknown };
+          : { error: err };
         this.logger.warn('Background job service not initialized or already shut down', meta);
       }
 
@@ -452,10 +452,10 @@ class Application {
   if (!skipRedis) promises.push(redisManager.healthCheck());
   const checks = await Promise.allSettled(promises);
 
-  const dbHealth = !skipDb && checks[0] && checks[0].status === 'fulfilled' ? (checks[0] as PromiseFulfilledResult<any>).value : null;
+  const dbHealth = !skipDb && checks[0] && checks[0].status === 'fulfilled' ? (checks[0]).value : null;
   const dbHealthy = skipDb ? false : (dbHealth?.isHealthy || false);
   const redisIndex = skipDb ? 0 : 1;
-  const redisHealthy = skipRedis ? false : (checks[redisIndex] && (checks[redisIndex] as PromiseSettledResult<any>).status === 'fulfilled' && (checks[redisIndex] as PromiseFulfilledResult<any>).value);
+  const redisHealthy = skipRedis ? false : (checks[redisIndex] && (checks[redisIndex]).status === 'fulfilled' && (checks[redisIndex]).value);
 
     const overall = dbHealthy && redisHealthy ? 'healthy' : 'degraded';
 
