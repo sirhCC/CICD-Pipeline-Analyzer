@@ -7,13 +7,18 @@ import * as cron from 'node-cron';
 import { v4 as uuidv4 } from 'uuid';
 import { Logger } from '@/shared/logger';
 import { statisticalAnalyticsService } from './statistical-analytics.service';
-import { WebSocketService } from './websocket.service';
+import type { WebSocketService } from './websocket.service';
 import { AppError } from '@/middleware/error-handler';
 
 export interface JobConfiguration {
   id: string;
   name: string;
-  type: 'anomaly_detection' | 'trend_analysis' | 'sla_monitoring' | 'cost_analysis' | 'full_analysis';
+  type:
+    | 'anomaly_detection'
+    | 'trend_analysis'
+    | 'sla_monitoring'
+    | 'cost_analysis'
+    | 'full_analysis';
   schedule: string; // cron expression
   enabled: boolean;
   pipelineId?: string; // specific pipeline or null for global
@@ -78,12 +83,12 @@ export class BackgroundJobService {
     failedExecutions: 0,
     averageExecutionTime: 0,
     alertsGenerated: 0,
-    lastReset: new Date()
+    lastReset: new Date(),
   };
 
   constructor(config: Partial<BackgroundJobConfig> = {}) {
     this.logger = new Logger('BackgroundJobService');
-    
+
     this.config = {
       maxConcurrentJobs: 5,
       defaultRetryAttempts: 3,
@@ -91,12 +96,12 @@ export class BackgroundJobService {
       enableRealTimeAlerts: true,
       historicalDataRetention: 30,
       enableMetrics: true,
-      ...config
+      ...config,
     };
 
     this.logger.info('Background job service initialized', {
       maxConcurrentJobs: this.config.maxConcurrentJobs,
-      enableRealTimeAlerts: this.config.enableRealTimeAlerts
+      enableRealTimeAlerts: this.config.enableRealTimeAlerts,
     });
   }
 
@@ -113,7 +118,7 @@ export class BackgroundJobService {
    */
   public async createJob(jobConfig: Omit<JobConfiguration, 'id' | 'metadata'>): Promise<string> {
     const jobId = uuidv4();
-    
+
     const job: JobConfiguration = {
       id: jobId,
       ...jobConfig,
@@ -121,8 +126,8 @@ export class BackgroundJobService {
         createdBy: 'system', // TODO: get from current user context
         createdAt: new Date(),
         runCount: 0,
-        errorCount: 0
-      }
+        errorCount: 0,
+      },
     };
 
     // Validate cron expression
@@ -142,7 +147,7 @@ export class BackgroundJobService {
       type: job.type,
       schedule: job.schedule,
       pipelineId: job.pipelineId,
-      enabled: job.enabled
+      enabled: job.enabled,
     });
 
     return jobId;
@@ -168,7 +173,7 @@ export class BackgroundJobService {
     this.logger.info('Job scheduled', {
       jobId: job.id,
       schedule: job.schedule,
-      type: job.type
+      type: job.type,
     });
   }
 
@@ -189,7 +194,7 @@ export class BackgroundJobService {
     if (this.activeExecutions.size >= this.config.maxConcurrentJobs) {
       this.logger.warn('Max concurrent jobs reached, queuing job', {
         jobId,
-        activeJobs: this.activeExecutions.size
+        activeJobs: this.activeExecutions.size,
       });
       // TODO: Implement job queue for later execution
       throw new AppError('Max concurrent jobs limit reached', 429);
@@ -200,7 +205,7 @@ export class BackgroundJobService {
       jobId,
       startTime: new Date(),
       status: 'running',
-      alertsGenerated: 0
+      alertsGenerated: 0,
     };
 
     this.activeExecutions.set(execution.id, execution);
@@ -210,12 +215,12 @@ export class BackgroundJobService {
       executionId: execution.id,
       jobId,
       type: job.type,
-      pipelineId: job.pipelineId
+      pipelineId: job.pipelineId,
     });
 
     try {
       const result = await this.runJobLogic(job, execution);
-      
+
       execution.status = 'completed';
       execution.result = result;
       execution.endTime = new Date();
@@ -233,9 +238,8 @@ export class BackgroundJobService {
         executionId: execution.id,
         jobId,
         duration: execution.duration,
-        alertsGenerated: execution.alertsGenerated
+        alertsGenerated: execution.alertsGenerated,
       });
-
     } catch (error) {
       execution.status = 'failed';
       execution.error = error instanceof Error ? error.message : String(error);
@@ -253,7 +257,7 @@ export class BackgroundJobService {
         executionId: execution.id,
         jobId,
         error: execution.error,
-        duration: execution.duration
+        duration: execution.duration,
       });
     } finally {
       this.activeExecutions.delete(execution.id);
@@ -330,8 +334,8 @@ export class BackgroundJobService {
     const severityOrder = { low: 1, medium: 2, high: 3, critical: 4 };
     const minSeverity = severityOrder[alertThreshold];
 
-    const significantAnomalies = anomalies.filter(anomaly => 
-      severityOrder[anomaly.severity as keyof typeof severityOrder] >= minSeverity
+    const significantAnomalies = anomalies.filter(
+      anomaly => severityOrder[anomaly.severity as keyof typeof severityOrder] >= minSeverity
     );
 
     // Send real-time alerts for significant anomalies
@@ -345,7 +349,7 @@ export class BackgroundJobService {
       totalAnomalies: anomalies.length,
       significantAnomalies: significantAnomalies.length,
       anomalies: significantAnomalies,
-      parameters: { metric, method, periodDays, alertThreshold }
+      parameters: { metric, method, periodDays, alertThreshold },
     };
   }
 
@@ -386,7 +390,7 @@ export class BackgroundJobService {
       pipelineId,
       trend: trendResult,
       alertGenerated: shouldAlert,
-      parameters: { metric, periodDays, alertThreshold }
+      parameters: { metric, periodDays, alertThreshold },
     };
   }
 
@@ -430,7 +434,7 @@ export class BackgroundJobService {
       pipelineId,
       sla: slaResult,
       alertGenerated: slaResult?.violated || false,
-      parameters: { metric, periodDays, slaTarget }
+      parameters: { metric, periodDays, slaTarget },
     };
   }
 
@@ -469,7 +473,7 @@ export class BackgroundJobService {
       pipelineId,
       cost: costResult,
       alertGenerated: shouldAlert,
-      parameters: { periodDays, costThreshold }
+      parameters: { periodDays, costThreshold },
     };
   }
 
@@ -484,7 +488,7 @@ export class BackgroundJobService {
     const results: any = {
       anomalies: await this.runAnomalyDetectionJob(pipelineId, parameters, execution),
       trends: await this.runTrendAnalysisJob(pipelineId, parameters, execution),
-      costs: await this.runCostAnalysisJob(pipelineId, parameters, execution)
+      costs: await this.runCostAnalysisJob(pipelineId, parameters, execution),
     };
 
     // Add SLA monitoring if target is provided
@@ -496,9 +500,10 @@ export class BackgroundJobService {
       type: 'full_analysis',
       pipelineId,
       results,
-      totalAlerts: Object.values(results).reduce((sum: number, result: any) => 
-        sum + (result.alertGenerated ? 1 : 0), 0
-      )
+      totalAlerts: Object.values(results).reduce(
+        (sum: number, result: any) => sum + (result.alertGenerated ? 1 : 0),
+        0
+      ),
     };
   }
 
@@ -520,8 +525,8 @@ export class BackgroundJobService {
         severity: anomaly.severity,
         metadata: {
           jobExecutionId: execution.id,
-          analysisType: 'background_job'
-        }
+          analysisType: 'background_job',
+        },
       };
 
       // Only include pipelineId if it exists
@@ -537,7 +542,7 @@ export class BackgroundJobService {
       this.logger.info('Anomaly alert sent', {
         pipelineId,
         severity: anomaly.severity,
-        value: anomaly.value
+        value: anomaly.value,
       });
     }
   }
@@ -559,8 +564,8 @@ export class BackgroundJobService {
       severity: this.getTrendSeverity(trendResult),
       metadata: {
         jobExecutionId: execution.id,
-        analysisType: 'background_job'
-      }
+        analysisType: 'background_job',
+      },
     };
 
     // Only include pipelineId if it exists
@@ -576,7 +581,7 @@ export class BackgroundJobService {
     this.logger.info('Trend alert sent', {
       pipelineId,
       trend: trendResult.trend,
-      correlation: trendResult.correlation
+      correlation: trendResult.correlation,
     });
   }
 
@@ -597,8 +602,8 @@ export class BackgroundJobService {
       severity: slaResult.severity || 'medium',
       metadata: {
         jobExecutionId: execution.id,
-        analysisType: 'background_job'
-      }
+        analysisType: 'background_job',
+      },
     };
 
     // Only include pipelineId if it exists
@@ -614,7 +619,7 @@ export class BackgroundJobService {
     this.logger.warn('SLA violation alert sent', {
       pipelineId,
       violation: slaResult.violationPercent,
-      severity: slaResult.severity
+      severity: slaResult.severity,
     });
   }
 
@@ -635,8 +640,8 @@ export class BackgroundJobService {
       severity: this.getCostSeverity(costResult),
       metadata: {
         jobExecutionId: execution.id,
-        analysisType: 'background_job'
-      }
+        analysisType: 'background_job',
+      },
     };
 
     // Only include pipelineId if it exists
@@ -652,7 +657,7 @@ export class BackgroundJobService {
     this.logger.warn('Cost alert sent', {
       pipelineId,
       totalCost: costResult.totalCost,
-      efficiency: costResult.efficiency?.score
+      efficiency: costResult.efficiency?.score,
     });
   }
 
@@ -661,9 +666,9 @@ export class BackgroundJobService {
    */
   private shouldAlertOnTrend(trendResult: any, threshold: string): boolean {
     if (!trendResult) return false;
-    
+
     const significance = Math.abs(trendResult.slope || 0);
-    
+
     switch (threshold) {
       case 'significant':
         return significance > 0.1 && Math.abs(trendResult.correlation || 0) > 0.7;
@@ -676,17 +681,21 @@ export class BackgroundJobService {
 
   private shouldAlertOnCost(costResult: any, thresholdPercent: number): boolean {
     if (!costResult?.efficiency?.score) return false;
-    
+
     // Alert if efficiency drops below threshold or cost increase detected
-    return costResult.efficiency.score < (100 - thresholdPercent) ||
-           (costResult.optimizationOpportunities?.length > 0 && 
-            costResult.optimizationOpportunities.some((op: any) => op.priority === 'high' || op.priority === 'critical'));
+    return (
+      costResult.efficiency.score < 100 - thresholdPercent ||
+      (costResult.optimizationOpportunities?.length > 0 &&
+        costResult.optimizationOpportunities.some(
+          (op: any) => op.priority === 'high' || op.priority === 'critical'
+        ))
+    );
   }
 
   private getTrendSeverity(trendResult: any): 'low' | 'medium' | 'high' | 'critical' {
     const significance = Math.abs(trendResult?.slope || 0);
     const correlation = Math.abs(trendResult?.correlation || 0);
-    
+
     if (significance > 0.2 && correlation > 0.8) return 'critical';
     if (significance > 0.1 && correlation > 0.7) return 'high';
     if (significance > 0.05 && correlation > 0.5) return 'medium';
@@ -695,7 +704,7 @@ export class BackgroundJobService {
 
   private getCostSeverity(costResult: any): 'low' | 'medium' | 'high' | 'critical' {
     const efficiency = costResult?.efficiency?.score || 100;
-    
+
     if (efficiency < 50) return 'critical';
     if (efficiency < 70) return 'high';
     if (efficiency < 85) return 'medium';
@@ -736,26 +745,29 @@ export class BackgroundJobService {
   public async deleteJob(jobId: string): Promise<void> {
     await this.disableJob(jobId);
     this.jobs.delete(jobId);
-    
+
     this.logger.info('Job deleted', { jobId });
   }
 
   /**
    * Get job status and information
    */
-  public async getJobStatus(jobId: string): Promise<JobConfiguration & { 
-    currentExecution?: JobExecution | undefined;
-    recentExecutions: JobExecution[];
-    isActive: boolean;
-  }> {
+  public async getJobStatus(jobId: string): Promise<
+    JobConfiguration & {
+      currentExecution?: JobExecution | undefined;
+      recentExecutions: JobExecution[];
+      isActive: boolean;
+    }
+  > {
     const job = this.jobs.get(jobId);
     if (!job) {
       throw new AppError(`Job not found: ${jobId}`, 404);
     }
 
     // Find current execution
-    const currentExecution = Array.from(this.activeExecutions.values())
-      .find(execution => execution.jobId === jobId);
+    const currentExecution = Array.from(this.activeExecutions.values()).find(
+      execution => execution.jobId === jobId
+    );
 
     // Get recent executions for this job
     const recentExecutions = this.executionHistory
@@ -767,7 +779,7 @@ export class BackgroundJobService {
       ...job,
       currentExecution,
       recentExecutions,
-      isActive: !!currentExecution
+      isActive: !!currentExecution,
     };
   }
 
@@ -775,20 +787,22 @@ export class BackgroundJobService {
    * Cancel a running job execution
    */
   public async cancelJob(jobId: string): Promise<{ cancelled: boolean; message: string }> {
-    const currentExecution = Array.from(this.activeExecutions.values())
-      .find(execution => execution.jobId === jobId);
+    const currentExecution = Array.from(this.activeExecutions.values()).find(
+      execution => execution.jobId === jobId
+    );
 
     if (!currentExecution) {
       return {
         cancelled: false,
-        message: 'No active execution found for this job'
+        message: 'No active execution found for this job',
       };
     }
 
     // Mark execution as cancelled
     currentExecution.status = 'cancelled';
     currentExecution.endTime = new Date();
-    currentExecution.duration = currentExecution.endTime.getTime() - currentExecution.startTime.getTime();
+    currentExecution.duration =
+      currentExecution.endTime.getTime() - currentExecution.startTime.getTime();
 
     // Remove from active executions
     this.activeExecutions.delete(currentExecution.id);
@@ -799,12 +813,12 @@ export class BackgroundJobService {
     this.logger.info('Job execution cancelled', {
       executionId: currentExecution.id,
       jobId,
-      duration: currentExecution.duration
+      duration: currentExecution.duration,
     });
 
     return {
       cancelled: true,
-      message: 'Job execution cancelled successfully'
+      message: 'Job execution cancelled successfully',
     };
   }
 
@@ -819,10 +833,10 @@ export class BackgroundJobService {
    * Get job execution history
    */
   public getExecutionHistory(jobId?: string): JobExecution[] {
-    const history = jobId 
+    const history = jobId
       ? this.executionHistory.filter(execution => execution.jobId === jobId)
       : this.executionHistory;
-    
+
     return history.sort((a, b) => b.startTime.getTime() - a.startTime.getTime());
   }
 
@@ -832,16 +846,17 @@ export class BackgroundJobService {
   public getMetrics() {
     const now = new Date();
     const uptime = now.getTime() - this.metrics.lastReset.getTime();
-    
+
     return {
       ...this.metrics,
       uptime,
       activeJobs: this.activeExecutions.size,
       scheduledJobs: this.scheduledTasks.size,
       totalJobs: this.jobs.size,
-      successRate: this.metrics.totalExecutions > 0 
-        ? (this.metrics.successfulExecutions / this.metrics.totalExecutions) * 100 
-        : 0
+      successRate:
+        this.metrics.totalExecutions > 0
+          ? (this.metrics.successfulExecutions / this.metrics.totalExecutions) * 100
+          : 0,
     };
   }
 
@@ -849,14 +864,15 @@ export class BackgroundJobService {
    * Utility methods
    */
   private updateAverageExecutionTime(duration: number): void {
-    const totalTime = this.metrics.averageExecutionTime * (this.metrics.successfulExecutions - 1) + duration;
+    const totalTime =
+      this.metrics.averageExecutionTime * (this.metrics.successfulExecutions - 1) + duration;
     this.metrics.averageExecutionTime = totalTime / this.metrics.successfulExecutions;
   }
 
   private cleanupExecutionHistory(): void {
     const retentionDate = new Date();
     retentionDate.setDate(retentionDate.getDate() - this.config.historicalDataRetention);
-    
+
     this.executionHistory = this.executionHistory.filter(
       execution => execution.startTime >= retentionDate
     );
@@ -867,7 +883,7 @@ export class BackgroundJobService {
    */
   public async shutdown(): Promise<void> {
     this.isShuttingDown = true;
-    
+
     this.logger.info('Shutting down background job service...');
 
     // Stop all scheduled tasks
@@ -880,17 +896,17 @@ export class BackgroundJobService {
     // Wait for active executions to complete (with timeout)
     const shutdownTimeout = 30000; // 30 seconds
     const startTime = Date.now();
-    
-    while (this.activeExecutions.size > 0 && (Date.now() - startTime) < shutdownTimeout) {
+
+    while (this.activeExecutions.size > 0 && Date.now() - startTime < shutdownTimeout) {
       this.logger.info('Waiting for active jobs to complete', {
-        activeJobs: this.activeExecutions.size
+        activeJobs: this.activeExecutions.size,
       });
       await new Promise(resolve => setTimeout(resolve, 1000));
     }
 
     if (this.activeExecutions.size > 0) {
       this.logger.warn('Forcefully terminating remaining jobs', {
-        remainingJobs: this.activeExecutions.size
+        remainingJobs: this.activeExecutions.size,
       });
       this.activeExecutions.clear();
     }
@@ -902,7 +918,9 @@ export class BackgroundJobService {
 // Export singleton instance
 let _backgroundJobService: BackgroundJobService | undefined;
 
-export const createBackgroundJobService = (config?: Partial<BackgroundJobConfig>): BackgroundJobService => {
+export const createBackgroundJobService = (
+  config?: Partial<BackgroundJobConfig>
+): BackgroundJobService => {
   if (_backgroundJobService) {
     throw new Error('Background job service already initialized');
   }
@@ -912,7 +930,9 @@ export const createBackgroundJobService = (config?: Partial<BackgroundJobConfig>
 
 export const getBackgroundJobService = (): BackgroundJobService => {
   if (!_backgroundJobService) {
-    throw new Error('Background job service not initialized. Call createBackgroundJobService() first.');
+    throw new Error(
+      'Background job service not initialized. Call createBackgroundJobService() first.'
+    );
   }
   return _backgroundJobService;
 };
