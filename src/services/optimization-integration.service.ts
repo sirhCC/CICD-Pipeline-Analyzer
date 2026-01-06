@@ -442,8 +442,10 @@ export class OptimizationIntegrationService extends EventEmitter {
     return status;
   }
 
-  private calculateOverallStatus(services: any): 'optimal' | 'good' | 'degraded' | 'critical' {
-    const statuses = Object.values(services);
+  private calculateOverallStatus(
+    services: any
+  ): 'optimal' | 'good' | 'degraded' | 'critical' {
+    const statuses = Object.values(services) as Array<{ status: string }>;
     const errorCount = statuses.filter(s => s.status === 'error').length;
     const warningCount = statuses.filter(s => s.status === 'warning').length;
 
