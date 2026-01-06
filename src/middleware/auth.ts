@@ -1,6 +1,6 @@
 /**
  * Enterprise-grade JWT Authentication Middleware
- * 
+ *
  * Features:
  * - JWT token validation with refresh token support
  * - Role-based access control (RBAC)
@@ -11,23 +11,23 @@
  * - Token blacklist support for logout
  * - Multi-factor authentication (MFA) validation
  * - IP allowlisting for sensitive operations
- * 
+ *
  * @author sirhCC
  * @version 1.0.0
  */
 
-import { Request, Response, NextFunction } from 'express';
+import type { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
 import { v4 as uuidv4 } from 'uuid';
 import { Logger } from '@/shared/logger';
 import { configManager } from '@/config';
-import { 
-  AuthenticationError, 
-  AuthorizationError, 
+import {
+  AuthenticationError,
+  AuthorizationError,
   RateLimitError,
   ValidationError,
-  AppError 
+  AppError,
 } from './error-handler';
 
 // Types and Interfaces
@@ -85,7 +85,7 @@ export enum UserRole {
   ADMIN = 'admin',
   ANALYST = 'analyst',
   VIEWER = 'viewer',
-  DEVELOPER = 'developer'
+  DEVELOPER = 'developer',
 }
 
 export enum Permission {
@@ -94,30 +94,30 @@ export enum Permission {
   PIPELINES_WRITE = 'pipelines:write',
   PIPELINES_DELETE = 'pipelines:delete',
   PIPELINES_ANALYZE = 'pipelines:analyze',
-  
+
   // User management
   USERS_READ = 'users:read',
   USERS_WRITE = 'users:write',
   USERS_DELETE = 'users:delete',
-  
+
   // System administration
   SYSTEM_CONFIG = 'system:config',
   SYSTEM_LOGS = 'system:logs',
   SYSTEM_METRICS = 'system:metrics',
-  
+
   // API keys
   API_KEYS_READ = 'api_keys:read',
   API_KEYS_WRITE = 'api_keys:write',
   API_KEYS_DELETE = 'api_keys:delete',
-  
+
   // Reports and exports
   REPORTS_READ = 'reports:read',
   REPORTS_WRITE = 'reports:write',
   REPORTS_EXPORT = 'reports:export',
-  
+
   // Analytics permissions
   ANALYTICS_READ = 'analytics:read',
-  ANALYTICS_WRITE = 'analytics:write'
+  ANALYTICS_WRITE = 'analytics:write',
 }
 
 // Role to permissions mapping
@@ -132,13 +132,13 @@ const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     Permission.REPORTS_EXPORT,
     Permission.USERS_READ,
     Permission.ANALYTICS_READ,
-    Permission.ANALYTICS_WRITE
+    Permission.ANALYTICS_WRITE,
   ],
   [UserRole.VIEWER]: [
     Permission.PIPELINES_READ,
     Permission.REPORTS_READ,
     Permission.USERS_READ,
-    Permission.ANALYTICS_READ
+    Permission.ANALYTICS_READ,
   ],
   [UserRole.DEVELOPER]: [
     Permission.PIPELINES_READ,
@@ -146,8 +146,8 @@ const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     Permission.PIPELINES_ANALYZE,
     Permission.REPORTS_READ,
     Permission.ANALYTICS_READ,
-    Permission.ANALYTICS_WRITE
-  ]
+    Permission.ANALYTICS_WRITE,
+  ],
 };
 
 // In-memory stores (in production, these would be Redis/Database)
@@ -171,12 +171,12 @@ export class AuthService {
     const config = configManager.get();
     const isProduction = configManager.isProduction();
     const isDevelopment = configManager.isDevelopment();
-    
+
     // For production, require environment variables - no fallbacks to weak defaults
     let jwtSecret: string;
     let jwtRefreshSecret: string;
     let apiKeySecret: string;
-    
+
     if (isProduction) {
       // Production requires strong secrets from environment
       const envJwtSecret = process.env.JWT_SECRET;
@@ -187,7 +187,7 @@ export class AuthService {
         throw new Error('JWT_SECRET must be at least 32 characters long in production');
       }
       jwtSecret = envJwtSecret;
-      
+
       const envJwtRefreshSecret = process.env.JWT_REFRESH_SECRET;
       if (!envJwtRefreshSecret) {
         throw new Error('JWT_REFRESH_SECRET environment variable is required in production');
@@ -196,7 +196,7 @@ export class AuthService {
         throw new Error('JWT_REFRESH_SECRET must be at least 32 characters long in production');
       }
       jwtRefreshSecret = envJwtRefreshSecret;
-      
+
       const envApiKeySecret = process.env.API_KEY_SECRET;
       if (!envApiKeySecret) {
         throw new Error('API_KEY_SECRET environment variable is required in production');
@@ -211,29 +211,35 @@ export class AuthService {
       if (!jwtSecret) {
         if (isDevelopment) {
           jwtSecret = 'dev-jwt-secret-change-in-production-32chars-min';
-          this.logger.warn('Using default JWT secret for development. Set JWT_SECRET environment variable.');
+          this.logger.warn(
+            'Using default JWT secret for development. Set JWT_SECRET environment variable.'
+          );
         } else {
           throw new Error('JWT_SECRET is required');
         }
       }
-      
+
       const envJwtRefreshSecret = process.env.JWT_REFRESH_SECRET;
       if (!envJwtRefreshSecret) {
         if (isDevelopment) {
           jwtRefreshSecret = 'dev-refresh-secret-change-in-production-32chars-min';
-          this.logger.warn('Using default JWT refresh secret for development. Set JWT_REFRESH_SECRET environment variable.');
+          this.logger.warn(
+            'Using default JWT refresh secret for development. Set JWT_REFRESH_SECRET environment variable.'
+          );
         } else {
           throw new Error('JWT_REFRESH_SECRET is required');
         }
       } else {
         jwtRefreshSecret = envJwtRefreshSecret;
       }
-      
+
       const envApiKeySecret = process.env.API_KEY_SECRET;
       if (!envApiKeySecret) {
         if (isDevelopment) {
           apiKeySecret = 'dev-api-key-secret-change-in-production-32chars-min';
-          this.logger.warn('Using default API key secret for development. Set API_KEY_SECRET environment variable.');
+          this.logger.warn(
+            'Using default API key secret for development. Set API_KEY_SECRET environment variable.'
+          );
         } else {
           throw new Error('API_KEY_SECRET is required');
         }
@@ -241,19 +247,21 @@ export class AuthService {
         apiKeySecret = envApiKeySecret;
       }
     }
-    
+
     return {
       jwtSecret,
       jwtRefreshSecret,
       jwtExpiresIn: process.env.JWT_EXPIRES_IN || config.auth.jwtExpiresIn || '15m',
       jwtRefreshExpiresIn: process.env.JWT_REFRESH_EXPIRES_IN || '7d',
       apiKeySecret,
-      bcryptRounds: parseInt(process.env.BCRYPT_ROUNDS || config.auth.bcryptRounds?.toString() || '12'),
+      bcryptRounds: parseInt(
+        process.env.BCRYPT_ROUNDS || config.auth.bcryptRounds?.toString() || '12'
+      ),
       requireMfa: (process.env.REQUIRE_MFA || 'false') === 'true',
       enableApiKeys: (process.env.ENABLE_API_KEYS || 'true') === 'true',
       maxFailedAttempts: parseInt(process.env.MAX_FAILED_ATTEMPTS || '5'),
       lockoutDuration: parseInt(process.env.LOCKOUT_DURATION || '900000'), // 15 minutes
-      enableIpWhitelisting: (process.env.ENABLE_IP_WHITELISTING || 'false') === 'true'
+      enableIpWhitelisting: (process.env.ENABLE_IP_WHITELISTING || 'false') === 'true',
     };
   }
 
@@ -266,7 +274,7 @@ export class AuthService {
    */
   generateAccessToken(payload: Omit<JWTPayload, 'iat' | 'exp'>): string {
     const options: any = {
-      expiresIn: this.authConfig.jwtExpiresIn
+      expiresIn: this.authConfig.jwtExpiresIn,
     };
     return jwt.sign(payload, String(this.authConfig.jwtSecret), options);
   }
@@ -278,11 +286,11 @@ export class AuthService {
     const payload: Omit<RefreshTokenPayload, 'iat' | 'exp'> = {
       userId,
       sessionId,
-      tokenFamily
+      tokenFamily,
     };
 
     const options: any = {
-      expiresIn: this.authConfig.jwtRefreshExpiresIn
+      expiresIn: this.authConfig.jwtRefreshExpiresIn,
     };
     return jwt.sign(payload, String(this.authConfig.jwtRefreshSecret), options);
   }
@@ -297,7 +305,7 @@ export class AuthService {
       permissions: payload.permissions,
       rateLimit: payload.rateLimit,
       ...(payload.allowedIPs && { allowedIPs: payload.allowedIPs }),
-      iat: Math.floor(Date.now() / 1000)
+      iat: Math.floor(Date.now() / 1000),
     };
 
     const options: any = {};
@@ -337,7 +345,7 @@ export class AuthService {
    */
   blacklistToken(token: string): void {
     tokenBlacklist.add(token);
-    
+
     // Clean up old tokens periodically (in production, use Redis expiry)
     if (tokenBlacklist.size > 10000) {
       const tokensToRemove = Array.from(tokenBlacklist).slice(0, 5000);
@@ -351,11 +359,11 @@ export class AuthService {
   trackFailedAttempt(identifier: string): void {
     const attempts = failedAttempts.get(identifier) || { count: 0 };
     attempts.count++;
-    
+
     if (attempts.count >= this.authConfig.maxFailedAttempts) {
       attempts.lockUntil = new Date(Date.now() + this.authConfig.lockoutDuration);
     }
-    
+
     failedAttempts.set(identifier, attempts);
   }
 
@@ -364,13 +372,13 @@ export class AuthService {
    */
   isAccountLocked(identifier: string): boolean {
     const attempts = failedAttempts.get(identifier);
-    if (!attempts || !attempts.lockUntil) return false;
-    
+    if (!attempts?.lockUntil) return false;
+
     if (attempts.lockUntil < new Date()) {
       failedAttempts.delete(identifier);
       return false;
     }
-    
+
     return true;
   }
 
@@ -385,7 +393,8 @@ export class AuthService {
    * Validate IP address against whitelist
    */
   isIpAllowed(ip: string, allowedIPs?: string[]): boolean {
-    if (!this.authConfig.enableIpWhitelisting || !allowedIPs || allowedIPs.length === 0) return true;
+    if (!this.authConfig.enableIpWhitelisting || !allowedIPs || allowedIPs.length === 0)
+      return true;
     return allowedIPs.includes(ip) || allowedIPs.includes('*');
   }
 
@@ -395,13 +404,18 @@ export class AuthService {
   private parseExpiration(expiration: string): number {
     const unit = expiration.slice(-1);
     const value = parseInt(expiration.slice(0, -1));
-    
+
     switch (unit) {
-      case 's': return value;
-      case 'm': return value * 60;
-      case 'h': return value * 3600;
-      case 'd': return value * 86400;
-      default: return value;
+      case 's':
+        return value;
+      case 'm':
+        return value * 60;
+      case 'h':
+        return value * 3600;
+      case 'd':
+        return value * 86400;
+      default:
+        return value;
     }
   }
 }
@@ -419,25 +433,32 @@ export const getAuthService = (): AuthService => {
 /**
  * JWT Authentication Middleware
  */
-export const authenticateJWT = (req: AuthenticatedRequest, res: Response, next: NextFunction): void => {
+export const authenticateJWT = (
+  req: AuthenticatedRequest,
+  res: Response,
+  next: NextFunction
+): void => {
   const logger = new Logger('JWTMiddleware');
-  
+
   try {
     const authHeader = req.headers.authorization;
     const apiKey = req.headers['x-api-key'] as string;
-    
+
     // Check for API key authentication first
     if (apiKey && getAuthService().config.enableApiKeys) {
       try {
-        const decoded = getAuthService().verifyToken(apiKey, String(getAuthService().config.apiKeySecret)) as ApiKeyPayload;
-        
+        const decoded = getAuthService().verifyToken(
+          apiKey,
+          String(getAuthService().config.apiKeySecret)
+        ) as ApiKeyPayload;
+
         // Check IP whitelist for API keys
         const clientIP = req.ip || req.connection.remoteAddress || 'unknown';
         if (!getAuthService().isIpAllowed(clientIP, decoded.allowedIPs)) {
           logger.warn('API key access denied for IP', { ip: clientIP, keyId: decoded.keyId });
           throw new AuthorizationError('Access denied for this IP address');
         }
-        
+
         // Set user context for API key
         req.user = {
           userId: decoded.userId,
@@ -447,44 +468,47 @@ export const authenticateJWT = (req: AuthenticatedRequest, res: Response, next: 
           sessionId: `api-${decoded.keyId}`,
           isApiKey: true,
           iat: decoded.iat,
-          exp: decoded.exp || 0
+          exp: decoded.exp || 0,
         };
-        
+
         req.isApiKeyAuth = true;
-        
-        logger.info('API key authentication successful', { 
-          userId: decoded.userId, 
+
+        logger.info('API key authentication successful', {
+          userId: decoded.userId,
           keyId: decoded.keyId,
-          ip: clientIP
+          ip: clientIP,
         });
-        
+
         return next();
       } catch (error) {
         logger.error('API key authentication failed', error);
         throw new AuthenticationError('Invalid API key');
       }
     }
-    
+
     // JWT token authentication
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    if (!authHeader?.startsWith('Bearer ')) {
       throw new AuthenticationError('Authorization header missing or invalid');
     }
-    
+
     const token = authHeader.substring(7);
-    
+
     // Check if token is blacklisted
     if (getAuthService().isTokenBlacklisted(token)) {
       throw new AuthenticationError('Token has been revoked');
     }
-    
+
     // Verify token
-    const decoded = getAuthService().verifyToken(token, String(getAuthService().config.jwtSecret)) as JWTPayload;
-    
+    const decoded = getAuthService().verifyToken(
+      token,
+      String(getAuthService().config.jwtSecret)
+    ) as JWTPayload;
+
     // Check MFA requirement
     if (getAuthService().config.requireMfa && !decoded.mfaVerified) {
       throw new AuthenticationError('MFA verification required');
     }
-    
+
     // Update session activity
     if (decoded.sessionId) {
       const session = activeSessions.get(decoded.sessionId);
@@ -492,16 +516,16 @@ export const authenticateJWT = (req: AuthenticatedRequest, res: Response, next: 
         session.lastActivity = new Date();
       }
     }
-    
+
     req.user = decoded;
     req.sessionId = decoded.sessionId;
-    
-    logger.info('JWT authentication successful', { 
-      userId: decoded.userId, 
+
+    logger.info('JWT authentication successful', {
+      userId: decoded.userId,
       role: decoded.role,
-      sessionId: decoded.sessionId
+      sessionId: decoded.sessionId,
     });
-    
+
     next();
   } catch (error) {
     logger.error('Authentication failed', error);
@@ -515,26 +539,26 @@ export const authenticateJWT = (req: AuthenticatedRequest, res: Response, next: 
 export const requireRole = (...allowedRoles: UserRole[]) => {
   return (req: AuthenticatedRequest, res: Response, next: NextFunction): void => {
     const logger = new Logger('RoleMiddleware');
-    
+
     try {
       if (!req.user) {
         throw new AuthenticationError('Authentication required');
       }
-      
+
       if (!allowedRoles.includes(req.user.role)) {
-        logger.warn('Access denied for role', { 
-          userId: req.user.userId, 
-          userRole: req.user.role, 
-          requiredRoles: allowedRoles 
+        logger.warn('Access denied for role', {
+          userId: req.user.userId,
+          userRole: req.user.role,
+          requiredRoles: allowedRoles,
         });
         throw new AuthorizationError('Insufficient permissions');
       }
-      
-      logger.debug('Role authorization successful', { 
-        userId: req.user.userId, 
-        role: req.user.role 
+
+      logger.debug('Role authorization successful', {
+        userId: req.user.userId,
+        role: req.user.role,
       });
-      
+
       next();
     } catch (error) {
       next(error);
@@ -548,31 +572,31 @@ export const requireRole = (...allowedRoles: UserRole[]) => {
 export const requirePermission = (...requiredPermissions: Permission[]) => {
   return (req: AuthenticatedRequest, res: Response, next: NextFunction): void => {
     const logger = new Logger('PermissionMiddleware');
-    
+
     try {
       if (!req.user) {
         throw new AuthenticationError('Authentication required');
       }
-      
+
       const userPermissions = req.user.permissions;
-      const hasPermission = requiredPermissions.every(permission => 
+      const hasPermission = requiredPermissions.every(permission =>
         userPermissions.includes(permission)
       );
-      
+
       if (!hasPermission) {
-        logger.warn('Access denied for permissions', { 
-          userId: req.user.userId, 
-          userPermissions, 
-          requiredPermissions 
+        logger.warn('Access denied for permissions', {
+          userId: req.user.userId,
+          userPermissions,
+          requiredPermissions,
         });
         throw new AuthorizationError('Insufficient permissions');
       }
-      
-      logger.debug('Permission authorization successful', { 
-        userId: req.user.userId, 
-        permissions: requiredPermissions 
+
+      logger.debug('Permission authorization successful', {
+        userId: req.user.userId,
+        permissions: requiredPermissions,
       });
-      
+
       next();
     } catch (error) {
       next(error);
@@ -583,16 +607,20 @@ export const requirePermission = (...requiredPermissions: Permission[]) => {
 /**
  * Optional authentication middleware (doesn't fail if no auth)
  */
-export const optionalAuth = (req: AuthenticatedRequest, res: Response, next: NextFunction): void => {
+export const optionalAuth = (
+  req: AuthenticatedRequest,
+  res: Response,
+  next: NextFunction
+): void => {
   const authHeader = req.headers.authorization;
   const apiKey = req.headers['x-api-key'] as string;
-  
+
   if (!authHeader && !apiKey) {
     return next();
   }
-  
+
   // If auth is provided, validate it
-  authenticateJWT(req, res, (error) => {
+  authenticateJWT(req, res, error => {
     if (error) {
       // For optional auth, we log the error but don't fail the request
       const logger = new Logger('OptionalAuth');
