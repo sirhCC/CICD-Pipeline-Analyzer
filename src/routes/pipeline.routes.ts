@@ -1,5 +1,5 @@
 /**
- * Pipeline Management Routes  
+ * Pipeline Management Routes
  * CRUD operations for CI/CD pipelines with analytics integration
  */
 
@@ -14,53 +14,62 @@ const router = Router();
 router.use(authenticateJWT);
 
 // Pipeline CRUD operations
-router.get('/', 
+router.get(
+  '/',
   requirePermission(Permission.PIPELINES_READ),
   validation.listPipelines,
   pipelineController.listPipelines
 );
 
-router.post('/', 
+router.post(
+  '/',
   requirePermission(Permission.PIPELINES_WRITE),
   validation.createPipeline,
   pipelineController.createPipeline
 );
 
-router.get('/:pipelineId', 
+router.get(
+  '/:pipelineId',
   requirePermission(Permission.PIPELINES_READ),
   validation.getPipeline,
   pipelineController.getPipeline
 );
 
-router.put('/:pipelineId', 
+router.put(
+  '/:pipelineId',
   requirePermission(Permission.PIPELINES_WRITE),
   validation.updatePipeline,
   pipelineController.updatePipeline
 );
 
-router.delete('/:pipelineId', 
+router.delete(
+  '/:pipelineId',
   requirePermission(Permission.PIPELINES_DELETE),
   pipelineController.deletePipeline
 );
 
 // Pipeline runs
-router.get('/:pipelineId/runs', 
+router.get(
+  '/:pipelineId/runs',
   requirePermission(Permission.PIPELINES_READ),
   pipelineController.getPipelineRuns
 );
 
-router.get('/:pipelineId/runs/:runId', 
+router.get(
+  '/:pipelineId/runs/:runId',
   requirePermission(Permission.PIPELINES_READ),
   pipelineController.getPipelineRun
 );
 
 // Pipeline actions
-router.post('/:pipelineId/analyze', 
+router.post(
+  '/:pipelineId/analyze',
   requirePermission(Permission.PIPELINES_ANALYZE),
   pipelineController.analyzePipeline
 );
 
-router.post('/:pipelineId/sync', 
+router.post(
+  '/:pipelineId/sync',
   requirePermission(Permission.PIPELINES_WRITE),
   pipelineController.syncPipeline
 );
