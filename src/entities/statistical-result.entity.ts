@@ -3,7 +3,16 @@
  * Stores statistical analysis results for historical tracking and trend analysis
  */
 
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, Index, ManyToOne, JoinColumn } from 'typeorm';
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  CreateDateColumn,
+  UpdateDateColumn,
+  Index,
+  ManyToOne,
+  JoinColumn,
+} from 'typeorm';
 import { Pipeline } from './pipeline.entity';
 
 export enum AnalysisType {
@@ -11,14 +20,14 @@ export enum AnalysisType {
   TREND_ANALYSIS = 'trend_analysis',
   SLA_MONITORING = 'sla_monitoring',
   COST_ANALYSIS = 'cost_analysis',
-  BENCHMARK_ANALYSIS = 'benchmark_analysis'
+  BENCHMARK_ANALYSIS = 'benchmark_analysis',
 }
 
 export enum ResultStatus {
   SUCCESS = 'success',
   WARNING = 'warning',
   ERROR = 'error',
-  CRITICAL = 'critical'
+  CRITICAL = 'critical',
 }
 
 @Entity('statistical_results')
@@ -38,14 +47,14 @@ export class StatisticalResult {
 
   @Column({
     type: 'enum',
-    enum: AnalysisType
+    enum: AnalysisType,
   })
   analysisType!: AnalysisType;
 
   @Column({
     type: 'enum',
     enum: ResultStatus,
-    default: ResultStatus.SUCCESS
+    default: ResultStatus.SUCCESS,
   })
   status!: ResultStatus;
 

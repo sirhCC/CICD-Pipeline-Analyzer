@@ -3,14 +3,21 @@
  * Caches frequently accessed statistical computations and benchmark data
  */
 
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, Index } from 'typeorm';
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  CreateDateColumn,
+  UpdateDateColumn,
+  Index,
+} from 'typeorm';
 
 export enum CacheType {
   BENCHMARK_DATA = 'benchmark_data',
   AGGREGATED_METRICS = 'aggregated_metrics',
   HISTORICAL_STATS = 'historical_stats',
   BASELINE_VALUES = 'baseline_values',
-  THRESHOLD_CONFIG = 'threshold_config'
+  THRESHOLD_CONFIG = 'threshold_config',
 }
 
 @Entity('statistical_cache')
@@ -26,7 +33,7 @@ export class StatisticalCache {
 
   @Column({
     type: 'enum',
-    enum: CacheType
+    enum: CacheType,
   })
   cacheType!: CacheType;
 
@@ -57,7 +64,7 @@ export class StatisticalCache {
   @CreateDateColumn()
   createdAt!: Date;
 
-  @UpdateDateColumn() 
+  @UpdateDateColumn()
   updatedAt!: Date;
 
   /**
