@@ -316,7 +316,7 @@ export class ConfigManager {
       
       for (const provider of requiredProviders) {
         const config = this.getProviderConfig(provider);
-        if (!config || !config.apiToken) {
+        if (!config?.apiToken) {
           throw new Error(`Missing configuration for required provider: ${provider}`);
         }
       }
