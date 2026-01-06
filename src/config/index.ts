@@ -41,17 +41,17 @@ const configSchema = Joi.object({
   DB_NAME: Joi.string().when('DB_TYPE', {
     is: 'sqlite',
     then: Joi.string().default(':memory:'),
-    otherwise: Joi.string().required()
+    otherwise: Joi.string().required(),
   }),
   DB_USERNAME: Joi.string().when('DB_TYPE', {
     is: 'sqlite',
     then: Joi.string().optional(),
-    otherwise: Joi.string().required()
+    otherwise: Joi.string().required(),
   }),
   DB_PASSWORD: Joi.string().when('DB_TYPE', {
     is: 'sqlite',
     then: Joi.string().optional(),
-    otherwise: Joi.string().required()
+    otherwise: Joi.string().required(),
   }),
   DB_SSL: Joi.boolean().default(false),
   DB_POOL_SIZE: Joi.number().min(1).max(100).default(10),
@@ -183,7 +183,7 @@ const appConfig: AppConfig = {
       },
       'gitlab-ci': {
         provider: PipelineProvider.GITLAB_CI,
-        baseUrl: envVars.GITLAB_BASE_URL as string || 'https://gitlab.com/api/v4',
+        baseUrl: (envVars.GITLAB_BASE_URL as string) || 'https://gitlab.com/api/v4',
         apiToken: envVars.GITLAB_TOKEN as string,
         webhookSecret: envVars.GITLAB_WEBHOOK_SECRET as string,
         rateLimits: {
@@ -200,7 +200,7 @@ const appConfig: AppConfig = {
       },
       jenkins: {
         provider: PipelineProvider.JENKINS,
-        baseUrl: envVars.JENKINS_URL as string || '',
+        baseUrl: (envVars.JENKINS_URL as string) || '',
         apiToken: envVars.JENKINS_TOKEN as string,
         rateLimits: {
           requestsPerMinute: 1000,
@@ -310,10 +310,10 @@ export class ConfigManager {
 
   // === Configuration Validation ===
   public validateConfiguration(): void {
-  // Only require providers in production
+    // Only require providers in production
     if (this.isProduction()) {
       const requiredProviders = ['github-actions'];
-      
+
       for (const provider of requiredProviders) {
         const config = this.getProviderConfig(provider);
         if (!config?.apiToken) {
