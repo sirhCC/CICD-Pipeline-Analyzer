@@ -3,7 +3,7 @@
  * Enterprise-grade factory pattern for CI/CD provider management
  */
 
-import { BaseCICDProvider, ProviderConfig } from './base.provider';
+import type { BaseCICDProvider, ProviderConfig } from './base.provider';
 import { GitHubActionsProvider } from './github-actions.provider';
 import { GitLabCIProvider } from './gitlab-ci.provider';
 import { PipelineProvider } from '../types';
@@ -75,7 +75,7 @@ export class ProviderFactory {
 
     try {
       const instance = registration.factory(config);
-      
+
       // Cache instance if instanceId provided
       if (instanceId) {
         this.instances.set(instanceId, instance);
@@ -205,33 +205,33 @@ export class ProviderFactory {
       case PipelineProvider.GITHUB_ACTIONS:
         const githubApiKey = process.env.GITHUB_TOKEN || process.env.GITHUB_API_KEY;
         if (!githubApiKey) return null;
-        
+
         const githubConfig: ProviderConfig = {
           apiKey: githubApiKey,
           baseUrl: process.env.GITHUB_API_URL || 'https://api.github.com',
           timeout: parseInt(process.env.GITHUB_TIMEOUT || '30000'),
         };
-        
+
         if (process.env.GITHUB_WEBHOOK_SECRET) {
           githubConfig.webhookSecret = process.env.GITHUB_WEBHOOK_SECRET;
         }
-        
+
         return githubConfig;
 
       case PipelineProvider.GITLAB_CI:
         const gitlabApiKey = process.env.GITLAB_TOKEN || process.env.GITLAB_API_KEY;
         if (!gitlabApiKey) return null;
-        
+
         const gitlabConfig: ProviderConfig = {
           apiKey: gitlabApiKey,
           baseUrl: process.env.GITLAB_API_URL || 'https://gitlab.com/api/v4',
           timeout: parseInt(process.env.GITLAB_TIMEOUT || '30000'),
         };
-        
+
         if (process.env.GITLAB_WEBHOOK_SECRET) {
           gitlabConfig.webhookSecret = process.env.GITLAB_WEBHOOK_SECRET;
         }
-        
+
         return gitlabConfig;
 
       default:
@@ -242,11 +242,13 @@ export class ProviderFactory {
   /**
    * Test all configured providers
    */
-  public async testAllProviders(): Promise<{
-    provider: PipelineProvider;
-    success: boolean;
-    error?: string;
-  }[]> {
+  public async testAllProviders(): Promise<
+    {
+      provider: PipelineProvider;
+      success: boolean;
+      error?: string;
+    }[]
+  > {
     const results: {
       provider: PipelineProvider;
       success: boolean;
@@ -280,58 +282,44 @@ export class ProviderFactory {
     // GitHub Actions provider registration
     this.registerProvider({
       provider: PipelineProvider.GITHUB_ACTIONS,
-      factory: (config) => {
+      factory: config => {
         return new GitHubActionsProvider(config as any);
       },
-      validateConfig: (config) => {
-        return !!(config.apiKey);
+      validateConfig: config => {
+        return !!config.apiKey;
       },
       getRequiredFields: () => ['apiKey'],
       getOptionalFields: () => ['baseUrl', 'webhookSecret', 'timeout', 'owner', 'repo'],
-      getSupportedFeatures: () => [
-        'pipelines',
-        'webhooks',
-        'logs',
-        'artifacts',
-        'resourceUsage',
-      ],
+      getSupportedFeatures: () => ['pipelines', 'webhooks', 'logs', 'artifacts', 'resourceUsage'],
     });
 
     // GitLab CI provider registration
     this.registerProvider({
       provider: PipelineProvider.GITLAB_CI,
-      factory: (config) => {
+      factory: config => {
         return new GitLabCIProvider(config as any);
       },
-      validateConfig: (config) => {
+      validateConfig: config => {
         return !!(config.apiKey && config.baseUrl);
       },
       getRequiredFields: () => ['apiKey', 'baseUrl'],
       getOptionalFields: () => ['webhookSecret', 'timeout', 'projectId'],
-      getSupportedFeatures: () => [
-        'pipelines',
-        'webhooks',
-        'logs',
-        'artifacts',
-      ],
+      getSupportedFeatures: () => ['pipelines', 'webhooks', 'logs', 'artifacts'],
     });
 
     // Jenkins provider registration (will implement later)
     this.registerProvider({
       provider: PipelineProvider.JENKINS,
-      factory: (config) => {
+      factory: config => {
         // TODO: Import and create JenkinsProvider
         throw new Error('Jenkins provider not implemented yet');
       },
-      validateConfig: (config) => {
+      validateConfig: config => {
         return !!(config.apiKey && config.baseUrl);
       },
       getRequiredFields: () => ['apiKey', 'baseUrl'],
       getOptionalFields: () => ['timeout'],
-      getSupportedFeatures: () => [
-        'pipelines',
-        'logs',
-      ],
+      getSupportedFeatures: () => ['pipelines', 'logs'],
     });
 
     this.logger.info('Registered built-in providers', {
@@ -349,7 +337,7 @@ export class ProviderFactory {
     instancesPerProvider: Record<string, number>;
   } {
     const instancesPerProvider: Record<string, number> = {};
-    
+
     for (const [, instance] of this.instances) {
       const provider = instance.getProviderType();
       instancesPerProvider[provider] = (instancesPerProvider[provider] || 0) + 1;
@@ -374,13 +362,15 @@ export class ProviderFactory {
   /**
    * Health check for all active instances
    */
-  public async healthCheck(): Promise<{
-    instanceId: string;
-    provider: PipelineProvider;
-    healthy: boolean;
-    metrics?: any;
-    error?: string;
-  }[]> {
+  public async healthCheck(): Promise<
+    {
+      instanceId: string;
+      provider: PipelineProvider;
+      healthy: boolean;
+      metrics?: any;
+      error?: string;
+    }[]
+  > {
     const results: {
       instanceId: string;
       provider: PipelineProvider;
@@ -393,7 +383,7 @@ export class ProviderFactory {
       try {
         const isHealthy = await instance.testConnection();
         const metrics = instance.getMetrics();
-        
+
         results.push({
           instanceId,
           provider: instance.getProviderType(),
