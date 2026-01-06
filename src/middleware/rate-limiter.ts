@@ -1,5 +1,5 @@
-import { Request, Response, NextFunction } from 'express';
-import { Redis } from 'ioredis';
+import type { Request, Response, NextFunction } from 'express';
+import type { Redis } from 'ioredis';
 import { log } from '../shared/logger';
 import { AuthenticationError, RateLimitError } from './error-handler';
 
@@ -10,7 +10,7 @@ export enum RateLimitStrategy {
   FIXED_WINDOW = 'fixed_window',
   SLIDING_WINDOW = 'sliding_window',
   TOKEN_BUCKET = 'token_bucket',
-  LEAKY_BUCKET = 'leaky_bucket'
+  LEAKY_BUCKET = 'leaky_bucket',
 }
 
 /**
@@ -80,7 +80,7 @@ export class RedisRateLimitStore implements RateLimitStore {
    */
   async incr(key: string): Promise<RateLimitInfo> {
     const strategy = this.options.strategy || RateLimitStrategy.FIXED_WINDOW;
-    
+
     switch (strategy) {
       case RateLimitStrategy.FIXED_WINDOW:
         return this.fixedWindowIncr(key);
@@ -105,16 +105,16 @@ export class RedisRateLimitStore implements RateLimitStore {
 
     multi.incr(windowKey);
     multi.expire(windowKey, Math.ceil(this.options.windowMs / 1000));
-    
+
     const results = await multi.exec();
-    const current = results?.[0]?.[1] as number || 0;
-    
+    const current = (results?.[0]?.[1] as number) || 0;
+
     return {
       limit: this.options.max,
       current,
       remaining: Math.max(0, this.options.max - current),
       resetTime: new Date(windowStart + this.options.windowMs),
-      totalHits: current
+      totalHits: current,
     };
   }
 
@@ -124,30 +124,30 @@ export class RedisRateLimitStore implements RateLimitStore {
   private async slidingWindowIncr(key: string): Promise<RateLimitInfo> {
     const now = Date.now();
     const windowStart = now - this.options.windowMs;
-    
+
     const multi = this.redis.multi();
-    
+
     // Remove old entries
     multi.zremrangebyscore(key, 0, windowStart);
-    
+
     // Add current request
     multi.zadd(key, now, `${now}-${Math.random()}`);
-    
+
     // Count current requests
     multi.zcard(key);
-    
+
     // Set expiration
     multi.expire(key, Math.ceil(this.options.windowMs / 1000));
-    
+
     const results = await multi.exec();
-    const current = results?.[2]?.[1] as number || 0;
-    
+    const current = (results?.[2]?.[1] as number) || 0;
+
     return {
       limit: this.options.max,
       current,
       remaining: Math.max(0, this.options.max - current),
       resetTime: new Date(now + this.options.windowMs),
-      totalHits: current
+      totalHits: current,
     };
   }
 
@@ -157,33 +157,33 @@ export class RedisRateLimitStore implements RateLimitStore {
   private async tokenBucketIncr(key: string): Promise<RateLimitInfo> {
     const now = Date.now();
     const bucketKey = `bucket:${key}`;
-    
+
     // Get current bucket state
     const bucket = await this.redis.hmget(bucketKey, 'tokens', 'lastRefill');
     let tokens = parseInt(bucket[0] || String(this.options.max));
     let lastRefill = parseInt(bucket[1] || String(now));
-    
+
     // Calculate tokens to add based on time elapsed
     const timeDiff = now - lastRefill;
-    const tokensToAdd = Math.floor(timeDiff / this.options.windowMs * this.options.max);
-    
+    const tokensToAdd = Math.floor((timeDiff / this.options.windowMs) * this.options.max);
+
     if (tokensToAdd > 0) {
       tokens = Math.min(this.options.max, tokens + tokensToAdd);
       lastRefill = now;
     }
-    
+
     if (tokens > 0) {
       tokens--;
       await this.redis.hmset(bucketKey, 'tokens', tokens, 'lastRefill', lastRefill);
-      await this.redis.expire(bucketKey, Math.ceil(this.options.windowMs / 1000 * 2));
+      await this.redis.expire(bucketKey, Math.ceil((this.options.windowMs / 1000) * 2));
     }
-    
+
     return {
       limit: this.options.max,
       current: this.options.max - tokens,
       remaining: tokens,
       resetTime: new Date(lastRefill + this.options.windowMs),
-      totalHits: this.options.max - tokens
+      totalHits: this.options.max - tokens,
     };
   }
 
@@ -193,33 +193,33 @@ export class RedisRateLimitStore implements RateLimitStore {
   private async leakyBucketIncr(key: string): Promise<RateLimitInfo> {
     const now = Date.now();
     const bucketKey = `leaky:${key}`;
-    
+
     // Get current bucket state
     const bucket = await this.redis.hmget(bucketKey, 'volume', 'lastLeak');
     let volume = parseFloat(bucket[0] || '0');
-    let lastLeak = parseInt(bucket[1] || String(now));
-    
+    const lastLeak = parseInt(bucket[1] || String(now));
+
     // Calculate volume leaked since last check
     const timeDiff = now - lastLeak;
     const leakRate = this.options.max / this.options.windowMs; // requests per ms
     const volumeLeaked = timeDiff * leakRate;
-    
+
     volume = Math.max(0, volume - volumeLeaked);
-    
+
     // Add current request
     volume += 1;
-    
+
     await this.redis.hmset(bucketKey, 'volume', volume, 'lastLeak', now);
-    await this.redis.expire(bucketKey, Math.ceil(this.options.windowMs / 1000 * 2));
-    
+    await this.redis.expire(bucketKey, Math.ceil((this.options.windowMs / 1000) * 2));
+
     const current = Math.floor(volume);
-    
+
     return {
       limit: this.options.max,
       current,
       remaining: Math.max(0, this.options.max - current),
-      resetTime: new Date(now + (volume / leakRate)),
-      totalHits: current
+      resetTime: new Date(now + volume / leakRate),
+      totalHits: current,
     };
   }
 
@@ -228,7 +228,7 @@ export class RedisRateLimitStore implements RateLimitStore {
    */
   async decrement(key: string): Promise<void> {
     const strategy = this.options.strategy || RateLimitStrategy.FIXED_WINDOW;
-    
+
     if (strategy === RateLimitStrategy.FIXED_WINDOW) {
       const windowStart = Math.floor(Date.now() / this.options.windowMs) * this.options.windowMs;
       const windowKey = `${key}:${windowStart}`;
@@ -244,7 +244,7 @@ export class RedisRateLimitStore implements RateLimitStore {
    */
   async resetKey(key: string): Promise<void> {
     const strategy = this.options.strategy || RateLimitStrategy.FIXED_WINDOW;
-    
+
     switch (strategy) {
       case RateLimitStrategy.FIXED_WINDOW:
         const windowStart = Math.floor(Date.now() / this.options.windowMs) * this.options.windowMs;
@@ -279,32 +279,32 @@ export class MemoryRateLimitStore implements RateLimitStore {
     const now = Date.now();
     const windowStart = Math.floor(now / this.options.windowMs) * this.options.windowMs;
     const resetTime = windowStart + this.options.windowMs;
-    
+
     let record = this.store.get(key);
-    
+
     if (!record || record.resetTime <= now) {
       record = { count: 0, resetTime, requests: [] };
     }
-    
+
     // Clean up old requests for sliding window
     if (this.options.strategy === RateLimitStrategy.SLIDING_WINDOW) {
       record.requests = record.requests.filter(req => req > now - this.options.windowMs);
       record.count = record.requests.length;
     }
-    
+
     record.count++;
     if (this.options.strategy === RateLimitStrategy.SLIDING_WINDOW) {
       record.requests.push(now);
     }
-    
+
     this.store.set(key, record);
-    
+
     return {
       limit: this.options.max,
       current: record.count,
       remaining: Math.max(0, this.options.max - record.count),
       resetTime: new Date(record.resetTime),
-      totalHits: record.count
+      totalHits: record.count,
     };
   }
 
@@ -333,22 +333,24 @@ export class RateLimiterService {
     standardHeaders: true,
     legacyHeaders: false,
     skipSuccessfulRequests: false,
-    skipFailedRequests: false
+    skipFailedRequests: false,
   };
 
   /**
    * Create rate limiter middleware
    */
-  createLimiter(options: Partial<RateLimitOptions> = {}): (req: Request, res: Response, next: NextFunction) => Promise<void> {
+  createLimiter(
+    options: Partial<RateLimitOptions> = {}
+  ): (req: Request, res: Response, next: NextFunction) => Promise<void> {
     const config = { ...this.defaultOptions, ...options };
-    
+
     // Default key generator
     if (!config.keyGenerator) {
       config.keyGenerator = (req: Request) => {
         const user = (req as any).user;
         const apiKey = req.headers['x-api-key'];
         const ip = req.ip || req.connection.remoteAddress || 'unknown';
-        
+
         if (user) {
           return `user:${user.id}`;
         } else if (apiKey) {
@@ -367,7 +369,7 @@ export class RateLimiterService {
     return async (req: Request, res: Response, next: NextFunction) => {
       try {
         // Skip if skip function returns true
-        if (config.skip && config.skip(req)) {
+        if (config.skip?.(req)) {
           return next();
         }
 
@@ -379,7 +381,7 @@ export class RateLimiterService {
           res.set({
             'X-RateLimit-Limit': rateLimitInfo.limit.toString(),
             'X-RateLimit-Remaining': rateLimitInfo.remaining.toString(),
-            'X-RateLimit-Reset': Math.ceil(rateLimitInfo.resetTime.getTime() / 1000).toString()
+            'X-RateLimit-Reset': Math.ceil(rateLimitInfo.resetTime.getTime() / 1000).toString(),
           });
         }
 
@@ -387,7 +389,7 @@ export class RateLimiterService {
           res.set({
             'X-Rate-Limit-Limit': rateLimitInfo.limit.toString(),
             'X-Rate-Limit-Remaining': rateLimitInfo.remaining.toString(),
-            'X-Rate-Limit-Reset': Math.ceil(rateLimitInfo.resetTime.getTime() / 1000).toString()
+            'X-Rate-Limit-Reset': Math.ceil(rateLimitInfo.resetTime.getTime() / 1000).toString(),
           });
         }
 
@@ -408,12 +410,10 @@ export class RateLimiterService {
             limit: rateLimitInfo.limit,
             current: rateLimitInfo.current,
             ip: req.ip,
-            userAgent: req.get('User-Agent')
+            userAgent: req.get('User-Agent'),
           });
 
-          throw new RateLimitError(
-            config.message || 'Rate limit exceeded'
-          );
+          throw new RateLimitError(config.message || 'Rate limit exceeded');
         }
 
         // Store rate limit info for potential use by other middleware
@@ -424,11 +424,11 @@ export class RateLimiterService {
         if (error instanceof RateLimitError) {
           throw error;
         }
-        
+
         log.error('Rate limiter error', error, {
-          module: 'RateLimiter'
+          module: 'RateLimiter',
         });
-        
+
         // If rate limiter fails, allow request to proceed
         next();
       }
@@ -442,9 +442,9 @@ export class RateLimiterService {
     return this.createLimiter({
       max: 1000,
       windowMs: 15 * 60 * 1000, // 15 minutes
-      keyGenerator: (req) => `global:${req.ip}`,
+      keyGenerator: req => `global:${req.ip}`,
       message: 'Too many requests from this IP, please try again later',
-      ...options
+      ...options,
     });
   }
 
@@ -455,10 +455,10 @@ export class RateLimiterService {
     return this.createLimiter({
       max: 100,
       windowMs: 60 * 1000, // 1 minute
-      keyGenerator: (req) => {
+      keyGenerator: req => {
         const user = (req as any).user;
         const apiKey = req.headers['x-api-key'];
-        
+
         if (user) {
           return `api:user:${user.id}`;
         } else if (apiKey) {
@@ -468,7 +468,7 @@ export class RateLimiterService {
         }
       },
       message: 'API rate limit exceeded',
-      ...options
+      ...options,
     });
   }
 
@@ -479,10 +479,10 @@ export class RateLimiterService {
     return this.createLimiter({
       max: 5,
       windowMs: 15 * 60 * 1000, // 15 minutes
-      keyGenerator: (req) => `auth:${req.ip}`,
+      keyGenerator: req => `auth:${req.ip}`,
       message: 'Too many authentication attempts, please try again later',
       skipSuccessfulRequests: true,
-      ...options
+      ...options,
     });
   }
 
@@ -494,12 +494,12 @@ export class RateLimiterService {
       max: 10,
       windowMs: 60 * 60 * 1000, // 1 hour
       strategy: RateLimitStrategy.TOKEN_BUCKET,
-      keyGenerator: (req) => {
+      keyGenerator: req => {
         const user = (req as any).user;
         return user ? `expensive:user:${user.id}` : `expensive:ip:${req.ip}`;
       },
       message: 'Rate limit exceeded for expensive operations',
-      ...options
+      ...options,
     });
   }
 
