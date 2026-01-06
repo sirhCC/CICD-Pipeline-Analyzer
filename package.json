@@ -40,6 +40,8 @@
     "format": "prettier --write src/**/*.ts",
     "format:check": "prettier --check src/**/*.ts",
     "type-check": "tsc --noEmit",
+    "quality": "npm run lint && npm run format:check && npm run type-check",
+    "quality:fix": "npm run lint:fix && npm run format",
     "clean": "rimraf dist",
     "setup": "npm run clean && npm run build",
     "docker:build": "docker build -t cicd-pipeline-analyzer .",
