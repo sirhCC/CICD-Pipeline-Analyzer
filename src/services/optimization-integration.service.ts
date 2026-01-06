@@ -446,8 +446,12 @@ export class OptimizationIntegrationService extends EventEmitter {
     services: any
   ): 'optimal' | 'good' | 'degraded' | 'critical' {
     const statuses = Object.values(services) as Array<{ status: string }>;
-    const errorCount = statuses.filter(s => s.status === 'error').length;
-    const warningCount = statuses.filter(s => s.status === 'warning').length;
+    const errorCount = statuses.filter((s): s is { status: string } => {
+      return typeof s === 'object' && s !== null && 'status' in s && s.status === 'error';
+    }).length;
+    const warningCount = statuses.filter((s): s is { status: string } => {
+      return typeof s === 'object' && s !== null && 'status' in s && s.status === 'warning';
+    }).length;
 
     if (errorCount > 0) return 'critical';
     if (warningCount > 2) return 'degraded';
