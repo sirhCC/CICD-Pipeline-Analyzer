@@ -1,4 +1,5 @@
-import { MigrationInterface, QueryRunner, Table } from 'typeorm';
+import type { MigrationInterface, QueryRunner } from 'typeorm';
+import { Table } from 'typeorm';
 
 export class InitialSchema1701234567890 implements MigrationInterface {
   name = 'InitialSchema1701234567890';
@@ -208,7 +209,15 @@ export class InitialSchema1701234567890 implements MigrationInterface {
           {
             name: 'provider',
             type: 'enum',
-            enum: ['github-actions', 'gitlab-ci', 'jenkins', 'azure-devops', 'circleci', 'bitbucket', 'custom'],
+            enum: [
+              'github-actions',
+              'gitlab-ci',
+              'jenkins',
+              'azure-devops',
+              'circleci',
+              'bitbucket',
+              'custom',
+            ],
           },
           {
             name: 'externalId',
@@ -228,7 +237,16 @@ export class InitialSchema1701234567890 implements MigrationInterface {
           {
             name: 'status',
             type: 'enum',
-            enum: ['unknown', 'pending', 'running', 'success', 'failed', 'cancelled', 'skipped', 'timeout'],
+            enum: [
+              'unknown',
+              'pending',
+              'running',
+              'success',
+              'failed',
+              'cancelled',
+              'skipped',
+              'timeout',
+            ],
             default: "'unknown'",
           },
           {
@@ -402,7 +420,16 @@ export class InitialSchema1701234567890 implements MigrationInterface {
           {
             name: 'status',
             type: 'enum',
-            enum: ['unknown', 'pending', 'running', 'success', 'failed', 'cancelled', 'skipped', 'timeout'],
+            enum: [
+              'unknown',
+              'pending',
+              'running',
+              'success',
+              'failed',
+              'cancelled',
+              'skipped',
+              'timeout',
+            ],
             default: "'pending'",
           },
           {
@@ -554,7 +581,16 @@ export class InitialSchema1701234567890 implements MigrationInterface {
           {
             name: 'status',
             type: 'enum',
-            enum: ['unknown', 'pending', 'running', 'success', 'failed', 'cancelled', 'skipped', 'timeout'],
+            enum: [
+              'unknown',
+              'pending',
+              'running',
+              'success',
+              'failed',
+              'cancelled',
+              'skipped',
+              'timeout',
+            ],
             default: "'pending'",
           },
           {
@@ -859,24 +895,50 @@ export class InitialSchema1701234567890 implements MigrationInterface {
     await queryRunner.query(`CREATE INDEX "IDX_users_role" ON "users" ("role")`);
     await queryRunner.query(`CREATE INDEX "IDX_users_isActive" ON "users" ("isActive")`);
 
-    await queryRunner.query(`CREATE UNIQUE INDEX "IDX_pipelines_provider_externalId" ON "pipelines" ("provider", "externalId")`);
-    await queryRunner.query(`CREATE INDEX "IDX_pipelines_repository_branch" ON "pipelines" ("repository", "branch")`);
+    await queryRunner.query(
+      `CREATE UNIQUE INDEX "IDX_pipelines_provider_externalId" ON "pipelines" ("provider", "externalId")`
+    );
+    await queryRunner.query(
+      `CREATE INDEX "IDX_pipelines_repository_branch" ON "pipelines" ("repository", "branch")`
+    );
     await queryRunner.query(`CREATE INDEX "IDX_pipelines_status" ON "pipelines" ("status")`);
     await queryRunner.query(`CREATE INDEX "IDX_pipelines_createdAt" ON "pipelines" ("createdAt")`);
 
-    await queryRunner.query(`CREATE UNIQUE INDEX "IDX_pipeline_runs_pipelineId_runNumber" ON "pipeline_runs" ("pipelineId", "runNumber")`);
-    await queryRunner.query(`CREATE INDEX "IDX_pipeline_runs_status" ON "pipeline_runs" ("status")`);
-    await queryRunner.query(`CREATE INDEX "IDX_pipeline_runs_triggeredBy" ON "pipeline_runs" ("triggeredBy")`);
-    await queryRunner.query(`CREATE INDEX "IDX_pipeline_runs_startedAt" ON "pipeline_runs" ("startedAt")`);
-    await queryRunner.query(`CREATE INDEX "IDX_pipeline_runs_branch" ON "pipeline_runs" ("branch")`);
+    await queryRunner.query(
+      `CREATE UNIQUE INDEX "IDX_pipeline_runs_pipelineId_runNumber" ON "pipeline_runs" ("pipelineId", "runNumber")`
+    );
+    await queryRunner.query(
+      `CREATE INDEX "IDX_pipeline_runs_status" ON "pipeline_runs" ("status")`
+    );
+    await queryRunner.query(
+      `CREATE INDEX "IDX_pipeline_runs_triggeredBy" ON "pipeline_runs" ("triggeredBy")`
+    );
+    await queryRunner.query(
+      `CREATE INDEX "IDX_pipeline_runs_startedAt" ON "pipeline_runs" ("startedAt")`
+    );
+    await queryRunner.query(
+      `CREATE INDEX "IDX_pipeline_runs_branch" ON "pipeline_runs" ("branch")`
+    );
 
-    await queryRunner.query(`CREATE INDEX "IDX_pipeline_run_stages_runId_name" ON "pipeline_run_stages" ("runId", "name")`);
-    await queryRunner.query(`CREATE INDEX "IDX_pipeline_run_stages_status" ON "pipeline_run_stages" ("status")`);
-    await queryRunner.query(`CREATE INDEX "IDX_pipeline_run_stages_startedAt" ON "pipeline_run_stages" ("startedAt")`);
+    await queryRunner.query(
+      `CREATE INDEX "IDX_pipeline_run_stages_runId_name" ON "pipeline_run_stages" ("runId", "name")`
+    );
+    await queryRunner.query(
+      `CREATE INDEX "IDX_pipeline_run_stages_status" ON "pipeline_run_stages" ("status")`
+    );
+    await queryRunner.query(
+      `CREATE INDEX "IDX_pipeline_run_stages_startedAt" ON "pipeline_run_stages" ("startedAt")`
+    );
 
-    await queryRunner.query(`CREATE UNIQUE INDEX "IDX_user_sessions_token" ON "user_sessions" ("token")`);
-    await queryRunner.query(`CREATE INDEX "IDX_user_sessions_userId" ON "user_sessions" ("userId")`);
-    await queryRunner.query(`CREATE INDEX "IDX_user_sessions_isActive" ON "user_sessions" ("isActive")`);
+    await queryRunner.query(
+      `CREATE UNIQUE INDEX "IDX_user_sessions_token" ON "user_sessions" ("token")`
+    );
+    await queryRunner.query(
+      `CREATE INDEX "IDX_user_sessions_userId" ON "user_sessions" ("userId")`
+    );
+    await queryRunner.query(
+      `CREATE INDEX "IDX_user_sessions_isActive" ON "user_sessions" ("isActive")`
+    );
 
     await queryRunner.query(`CREATE UNIQUE INDEX "IDX_api_keys_key" ON "api_keys" ("key")`);
     await queryRunner.query(`CREATE INDEX "IDX_api_keys_userId" ON "api_keys" ("userId")`);
