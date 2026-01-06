@@ -8,31 +8,16 @@ export { PipelineRun, PipelineRunStage } from './pipeline-run.entity';
 export { User, UserSession, ApiKey } from './user.entity';
 
 // Statistical Data Persistence Entities - Phase 3
-export { 
-  StatisticalResult, 
-  AnalysisType, 
-  ResultStatus 
-} from './statistical-result.entity';
-export { 
-  AnomalyHistory, 
-  AnomalyMethod, 
-  AnomalySeverity 
-} from './anomaly-history.entity';
-export { 
-  TrendHistory, 
-  TrendDirection, 
-  TrendStrength 
-} from './trend-history.entity';
-export { 
-  StatisticalCache, 
-  CacheType 
-} from './statistical-cache.entity';
+export { StatisticalResult, AnalysisType, ResultStatus } from './statistical-result.entity';
+export { AnomalyHistory, AnomalyMethod, AnomalySeverity } from './anomaly-history.entity';
+export { TrendHistory, TrendDirection, TrendStrength } from './trend-history.entity';
+export { StatisticalCache, CacheType } from './statistical-cache.entity';
 
-export { 
-  PipelineMetrics, 
-  FailurePattern, 
-  OptimizationRecommendation, 
-  AnalyticsAlert 
+export {
+  PipelineMetrics,
+  FailurePattern,
+  OptimizationRecommendation,
+  AnalyticsAlert,
 } from './pipeline-metrics.entity';
 
 // Entity arrays for TypeORM configuration
@@ -40,7 +25,7 @@ export const entities = [
   'Pipeline',
   'PipelineRun',
   'PipelineRunStage',
-  'User', 
+  'User',
   'UserSession',
   'ApiKey',
   'PipelineMetrics',
@@ -50,7 +35,7 @@ export const entities = [
   'StatisticalResult',
   'AnomalyHistory',
   'TrendHistory',
-  'StatisticalCache'
+  'StatisticalCache',
 ];
 
 // Entity metadata for introspection
@@ -58,51 +43,51 @@ export const entityMetadata = {
   Pipeline: {
     tableName: 'pipelines',
     primaryKey: 'id',
-    relations: ['runs']
+    relations: ['runs'],
   },
   PipelineRun: {
     tableName: 'pipeline_runs',
     primaryKey: 'id',
-    relations: ['pipeline', 'stages']
+    relations: ['pipeline', 'stages'],
   },
   PipelineRunStage: {
     tableName: 'pipeline_run_stages',
     primaryKey: 'id',
-    relations: ['run']
+    relations: ['run'],
   },
   User: {
     tableName: 'users',
     primaryKey: 'id',
-    relations: ['sessions', 'apiKeys']
+    relations: ['sessions', 'apiKeys'],
   },
   UserSession: {
     tableName: 'user_sessions',
     primaryKey: 'id',
-    relations: ['user']
+    relations: ['user'],
   },
   ApiKey: {
     tableName: 'api_keys',
     primaryKey: 'id',
-    relations: ['user']
+    relations: ['user'],
   },
   StatisticalResult: {
     tableName: 'statistical_results',
     primaryKey: 'id',
-    relations: []
+    relations: [],
   },
   AnomalyHistory: {
     tableName: 'anomaly_history',
     primaryKey: 'id',
-    relations: []
+    relations: [],
   },
   TrendHistory: {
     tableName: 'trend_history',
     primaryKey: 'id',
-    relations: []
+    relations: [],
   },
   StatisticalCache: {
     tableName: 'statistical_cache',
     primaryKey: 'id',
-    relations: []
-  }
+    relations: [],
+  },
 };
