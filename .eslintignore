@@ -1,0 +1,22 @@
+# Build outputs
+dist/
+build/
+coverage/
+
+# Dependencies
+node_modules/
+
+# Configuration files
+*.config.js
+*.config.ts
+.eslintrc.js
+
+# Test files can have looser rules
+**/*.test.ts
+**/*.spec.ts
+**/test-*.ts
+**/setup*.ts
+**/*-mock.ts
+
+# Migrations
+src/migrations/
