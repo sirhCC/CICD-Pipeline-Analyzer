@@ -6,79 +6,79 @@ export { DatabaseService, databaseService } from './database.service';
 export type { DatabaseHealthStatus, DatabaseSeedOptions } from './database.service';
 
 export { AnalyticsService } from './analytics.service';
-export type { 
+export type {
   AnalyticsConfig,
   MetricCalculationResult,
   FailurePatternResult,
   OptimizationResult,
-  AlertResult
+  AlertResult,
 } from './analytics.service';
 
-export { 
-  StatisticalAnalyticsService, 
-  statisticalAnalyticsService 
+export {
+  StatisticalAnalyticsService,
+  statisticalAnalyticsService,
 } from './statistical-analytics.service';
-export type { 
+export type {
   StatisticalDataPoint,
   AnomalyDetectionResult,
   TrendAnalysisResult,
   BenchmarkResult,
   SLAMonitoringResult,
   CostAnalysisResult,
-  StatisticalAnalyticsConfig
+  StatisticalAnalyticsConfig,
 } from './statistical-analytics.service';
 
 // Enhanced optimized services
-export { 
+export {
   EnhancedStatisticalAnalyticsService,
-  enhancedStatisticalAnalyticsService 
+  enhancedStatisticalAnalyticsService,
 } from './enhanced-statistical-analytics.service';
-export type { 
+export type {
   EnhancedAnalyticsConfig,
-  AnalyticsPerformanceMetrics
+  AnalyticsPerformanceMetrics,
 } from './enhanced-statistical-analytics.service';
 
 export { MemoizationService, memoizationService } from './memoization.service';
 export type { MemoizationConfig, MemoizationMetrics } from './memoization.service';
 
 export { BatchProcessingService, batchProcessingService } from './batch-processing.service';
-export type { 
-  BatchConfig, 
-  BatchResult, 
+export type {
+  BatchConfig,
+  BatchResult,
   BatchProgress,
-  StreamingConfig 
+  StreamingConfig,
 } from './batch-processing.service';
 
 export { OptimizedMathUtils, optimizedMathUtils } from './optimized-math-utils.service';
-export type { 
+export type {
   StatisticalSummary,
   RegressionResult,
-  MovingAverageConfig 
+  MovingAverageConfig,
 } from './optimized-math-utils.service';
 
 export { PerformanceMonitorService } from './performance-monitor.service';
-export type { 
+export type {
   PerformanceMetrics,
   PerformanceAlert,
-  PerformanceThresholds
+  PerformanceThresholds,
 } from './performance-monitor.service';
 
 export { AdvancedCacheService } from './advanced-cache.service';
-export type { 
+export type {
   CacheEntry as AdvancedCacheEntry,
   CacheStats,
   CacheConfig,
-  AccessPattern 
+  AccessPattern,
 } from './advanced-cache.service';
 
-export { 
-  AlertingService, 
+export {
+  AlertingService,
   alertingService,
   AlertType,
   AlertSeverity,
   AlertStatus,
   ChannelType,
-  ResolutionType
+  ResolutionType,
 } from './alerting.service';
 export type {
   AlertConfiguration,
@@ -86,17 +86,17 @@ export type {
   AlertDetails,
   AlertContext,
   NotificationChannel,
-  EscalationPolicy
+  EscalationPolicy,
 } from './alerting.service';
 
-export { 
-  AdvancedDataProcessingService, 
+export {
+  AdvancedDataProcessingService,
   advancedDataProcessingService,
   AggregationLevel,
   AggregationStrategy,
   ProcessingJobType,
   JobStatus,
-  ExportFormat
+  ExportFormat,
 } from './advanced-data-processing.service';
 export type {
   TimeSeriesPoint,
@@ -104,26 +104,26 @@ export type {
   AggregationConfig,
   ProcessingJob,
   CacheEntry,
-  ExportOptions
+  ExportOptions,
 } from './advanced-data-processing.service';
 
 // Optimization services
-export { 
+export {
   OptimizationConfigService,
-  optimizationConfigService 
+  optimizationConfigService,
 } from './optimization-config.service';
-export type { 
+export type {
   OptimizationProfile,
   PerformanceMetrics as OptimizationPerformanceMetrics,
-  AutoTuningConfig 
+  AutoTuningConfig,
 } from './optimization-config.service';
 
-export { 
+export {
   OptimizationIntegrationService,
-  optimizationIntegrationService 
+  optimizationIntegrationService,
 } from './optimization-integration.service';
-export type { 
+export type {
   OptimizationStatus,
   ServiceStatus,
-  OptimizationReport 
+  OptimizationReport,
 } from './optimization-integration.service';
