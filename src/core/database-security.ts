@@ -45,9 +45,9 @@ export class DatabaseSecurityManager {
       failedConnections: 0,
       suspiciousQueries: 0,
       lastSecurityEvent: null,
-      securityScore: 100
+      securityScore: 100,
     };
-    
+
     this.suspiciousPatterns = [];
     this.initializeSuspiciousPatterns();
   }
@@ -73,20 +73,22 @@ export class DatabaseSecurityManager {
       // Privilege escalation
       /create\s+user|alter\s+user|grant\s+all/gi,
       // Data exfiltration patterns
-      /select\s+\*\s+from\s+\w+\s+limit\s+\d{4,}/gi
+      /select\s+\*\s+from\s+\w+\s+limit\s+\d{4,}/gi,
     ];
   }
 
   /**
    * Log a security event
    */
-  public logSecurityEvent(event: Omit<SecurityEvent, 'details'> & { details?: Partial<SecurityEvent['details']> }): void {
+  public logSecurityEvent(
+    event: Omit<SecurityEvent, 'details'> & { details?: Partial<SecurityEvent['details']> }
+  ): void {
     const securityEvent: SecurityEvent = {
       ...event,
       details: {
         timestamp: new Date(),
-        ...event.details
-      }
+        ...event.details,
+      },
     };
 
     this.securityEvents.push(securityEvent);
@@ -100,7 +102,7 @@ export class DatabaseSecurityManager {
     const logContext = {
       type: event.type,
       severity: event.severity,
-      ...event.details
+      ...event.details,
     };
 
     switch (event.severity) {
@@ -159,7 +161,7 @@ export class DatabaseSecurityManager {
     }
 
     const suspiciousPatterns = this.suspiciousPatterns.filter(pattern => pattern.test(query));
-    
+
     if (suspiciousPatterns.length > 0) {
       this.logSecurityEvent({
         type: 'query',
@@ -168,8 +170,8 @@ export class DatabaseSecurityManager {
         details: {
           query: this.sanitizeQuery(query),
           patterns: suspiciousPatterns.map(p => p.source),
-          ...context
-        }
+          ...context,
+        },
       });
     }
 
@@ -181,9 +183,9 @@ export class DatabaseSecurityManager {
         message: 'Unusually large query detected',
         details: {
           queryLength: query.length,
-          query: this.sanitizeQuery(query.substring(0, 1000) + '...'),
-          ...context
-        }
+          query: this.sanitizeQuery(`${query.substring(0, 1000)}...`),
+          ...context,
+        },
       });
     }
   }
@@ -191,20 +193,23 @@ export class DatabaseSecurityManager {
   /**
    * Log connection attempt
    */
-  public logConnectionAttempt(success: boolean, context: { user?: string; host?: string; database?: string; error?: string }): void {
+  public logConnectionAttempt(
+    success: boolean,
+    context: { user?: string; host?: string; database?: string; error?: string }
+  ): void {
     if (success) {
       this.logSecurityEvent({
         type: 'connection',
         severity: 'low',
         message: 'Database connection established',
-        details: context
+        details: context,
       });
     } else {
       this.logSecurityEvent({
         type: 'connection',
         severity: 'high',
         message: 'Database connection failed',
-        details: context
+        details: context,
       });
     }
   }
@@ -212,12 +217,15 @@ export class DatabaseSecurityManager {
   /**
    * Log authentication event
    */
-  public logAuthenticationEvent(success: boolean, context: { user?: string; host?: string; method?: string }): void {
+  public logAuthenticationEvent(
+    success: boolean,
+    context: { user?: string; host?: string; method?: string }
+  ): void {
     this.logSecurityEvent({
       type: 'authentication',
       severity: success ? 'low' : 'high',
       message: success ? 'Authentication successful' : 'Authentication failed',
-      details: context
+      details: context,
     });
   }
 
@@ -231,13 +239,16 @@ export class DatabaseSecurityManager {
   /**
    * Get recent security events
    */
-  public getRecentEvents(limit: number = 50, severity?: SecurityEvent['severity']): SecurityEvent[] {
+  public getRecentEvents(
+    limit: number = 50,
+    severity?: SecurityEvent['severity']
+  ): SecurityEvent[] {
     let events = this.securityEvents;
-    
+
     if (severity) {
       events = events.filter(event => event.severity === severity);
     }
-    
+
     return events
       .sort((a, b) => b.details.timestamp.getTime() - a.details.timestamp.getTime())
       .slice(0, limit);
@@ -259,11 +270,15 @@ export class DatabaseSecurityManager {
     }
 
     if (this.metrics.suspiciousQueries > 5) {
-      recommendations.push('Suspicious query patterns detected - review application code for SQL injection vulnerabilities');
+      recommendations.push(
+        'Suspicious query patterns detected - review application code for SQL injection vulnerabilities'
+      );
     }
 
     if (this.metrics.securityScore < 80) {
-      recommendations.push('Security score is low - review recent security events and implement additional safeguards');
+      recommendations.push(
+        'Security score is low - review recent security events and implement additional safeguards'
+      );
     }
 
     const recentCriticalEvents = this.getRecentEvents(10, 'critical');
@@ -274,7 +289,7 @@ export class DatabaseSecurityManager {
     return {
       summary: this.getSecurityMetrics(),
       recentEvents: this.getRecentEvents(20),
-      recommendations
+      recommendations,
     };
   }
 
@@ -298,10 +313,10 @@ export class DatabaseSecurityManager {
       failedConnections: 0,
       suspiciousQueries: 0,
       lastSecurityEvent: null,
-      securityScore: 100
+      securityScore: 100,
     };
     this.securityEvents = [];
-    
+
     this.logger.info('Security metrics reset');
   }
 
@@ -311,11 +326,12 @@ export class DatabaseSecurityManager {
   public shouldBlockIP(ip: string): boolean {
     // Count failed connections from this IP in the last hour
     const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
-    const recentFailures = this.securityEvents.filter(event => 
-      event.type === 'connection' &&
-      (event.severity === 'high' || event.severity === 'critical') &&
-      event.details.host === ip &&
-      event.details.timestamp > oneHourAgo
+    const recentFailures = this.securityEvents.filter(
+      event =>
+        event.type === 'connection' &&
+        (event.severity === 'high' || event.severity === 'critical') &&
+        event.details.host === ip &&
+        event.details.timestamp > oneHourAgo
     ).length;
 
     // Block if more than 10 failed attempts in the last hour

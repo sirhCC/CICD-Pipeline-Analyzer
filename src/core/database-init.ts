@@ -38,7 +38,7 @@ export class DatabaseInitializer {
    */
   async initialize(options: InitializationOptions = {}): Promise<void> {
     const startTime = Date.now();
-    
+
     try {
       this.logger.info('Starting database initialization...', options as Record<string, unknown>);
 
@@ -62,11 +62,10 @@ export class DatabaseInitializer {
 
       // Step 5: Log completion
       const duration = Date.now() - startTime;
-      this.logger.info('Database initialization completed successfully', { 
+      this.logger.info('Database initialization completed successfully', {
         duration: `${duration}ms`,
-        environment: process.env.NODE_ENV
+        environment: process.env.NODE_ENV,
       });
-
     } catch (error) {
       this.logger.error('Database initialization failed', error);
       throw error;
@@ -78,9 +77,9 @@ export class DatabaseInitializer {
    */
   private async initializeService(options: InitializationOptions): Promise<void> {
     this.logger.info('Initializing enhanced database service...');
-    
+
     await enhancedDatabaseService.initialize();
-    
+
     this.logger.info('Enhanced database service initialized');
   }
 
@@ -89,7 +88,7 @@ export class DatabaseInitializer {
    */
   private async runMigrations(): Promise<void> {
     this.logger.info('Running database migrations...');
-    
+
     try {
       await databaseManager.runMigrations();
       this.logger.info('Database migrations completed successfully');
@@ -104,11 +103,11 @@ export class DatabaseInitializer {
    */
   private async seedData(options: InitializationOptions): Promise<void> {
     this.logger.info('Seeding database with initial data...');
-    
+
     const seedOptions: any = {
       createUsers: options.createAdminUser || false,
       createPipelines: true,
-      createTestData: configManager.isDevelopment()
+      createTestData: configManager.isDevelopment(),
     };
 
     if (options.adminUser) {
@@ -116,7 +115,7 @@ export class DatabaseInitializer {
     }
 
     await enhancedDatabaseService.seedDatabase(seedOptions);
-    
+
     this.logger.info('Database seeding completed');
   }
 
@@ -125,29 +124,28 @@ export class DatabaseInitializer {
    */
   private async performHealthCheck(): Promise<void> {
     this.logger.info('Performing database health check...');
-    
+
     try {
       const healthStatus = await enhancedDatabaseService.getHealthStatus();
-      
+
       this.logger.info('Database health check completed', {
         isHealthy: healthStatus.isHealthy,
         isConnected: healthStatus.isConnected,
         entityCounts: healthStatus.entityCounts,
-        uptime: healthStatus.uptime
+        uptime: healthStatus.uptime,
       });
 
       if (!healthStatus.isHealthy) {
         this.logger.warn('Database health issues detected', {
-          recommendations: healthStatus.recommendations
+          recommendations: healthStatus.recommendations,
         });
       }
 
       if (healthStatus.recommendations.length > 0) {
         this.logger.info('Performance recommendations:', {
-          recommendations: healthStatus.recommendations
+          recommendations: healthStatus.recommendations,
         });
       }
-
     } catch (error) {
       this.logger.error('Database health check failed', error);
       throw error;
@@ -167,10 +165,10 @@ export class DatabaseInitializer {
         username: 'admin',
         password: 'admin123456', // Should be changed in production
         firstName: 'Admin',
-        lastName: 'User'
+        lastName: 'User',
       },
       enableMonitoring: true,
-      verbose: true
+      verbose: true,
     });
   }
 
@@ -183,7 +181,7 @@ export class DatabaseInitializer {
       username: process.env.ADMIN_USERNAME || 'admin',
       password: process.env.ADMIN_PASSWORD || 'changeme',
       firstName: process.env.ADMIN_FIRST_NAME || 'System',
-      lastName: process.env.ADMIN_LAST_NAME || 'Administrator'
+      lastName: process.env.ADMIN_LAST_NAME || 'Administrator',
     };
 
     if (adminUser.password === 'changeme') {
@@ -197,7 +195,7 @@ export class DatabaseInitializer {
       adminUser,
       enableMonitoring: true,
       skipHealthCheck: false,
-      verbose: false
+      verbose: false,
     });
   }
 
@@ -211,7 +209,7 @@ export class DatabaseInitializer {
       createAdminUser: false,
       enableMonitoring: false,
       skipHealthCheck: true,
-      verbose: false
+      verbose: false,
     });
   }
 
@@ -222,21 +220,21 @@ export class DatabaseInitializer {
     try {
       const healthStatus = await enhancedDatabaseService.getHealthStatus();
       const statistics = await enhancedDatabaseService.getStatistics();
-      
+
       return {
         healthy: healthStatus.isHealthy,
         connected: healthStatus.isConnected,
         initialized: statistics.initialized,
         uptime: healthStatus.uptime,
         entityCounts: healthStatus.entityCounts,
-        performance: healthStatus.performanceMetrics
+        performance: healthStatus.performanceMetrics,
       };
     } catch (error) {
       return {
         healthy: false,
         connected: false,
         initialized: false,
-        error: error instanceof Error ? error.message : 'Unknown error'
+        error: error instanceof Error ? error.message : 'Unknown error',
       };
     }
   }
@@ -246,7 +244,7 @@ export class DatabaseInitializer {
    */
   async shutdown(): Promise<void> {
     this.logger.info('Shutting down database...');
-    
+
     try {
       await enhancedDatabaseService.shutdown();
       this.logger.info('Database shutdown completed');
@@ -274,7 +272,7 @@ export const initializeDatabaseForEnvironment = async (): Promise<void> => {
 // CLI script support
 if (require.main === module) {
   const command = process.argv[2];
-  
+
   switch (command) {
     case 'init':
       initializeDatabaseForEnvironment()
@@ -282,24 +280,25 @@ if (require.main === module) {
           console.log('Database initialization completed successfully');
           process.exit(0);
         })
-        .catch((error) => {
+        .catch(error => {
           console.error('Database initialization failed:', error);
           process.exit(1);
         });
       break;
-      
+
     case 'status':
-      databaseInitializer.getStatus()
-        .then((status) => {
+      databaseInitializer
+        .getStatus()
+        .then(status => {
           console.log('Database Status:', JSON.stringify(status, null, 2));
           process.exit(0);
         })
-        .catch((error) => {
+        .catch(error => {
           console.error('Failed to get database status:', error);
           process.exit(1);
         });
       break;
-      
+
     default:
       console.log('Usage: node database-init.js [init|status]');
       process.exit(1);

@@ -3,7 +3,7 @@
  * Centralized database configuration with environment-specific settings
  */
 
-import { DataSourceOptions } from 'typeorm';
+import type { DataSourceOptions } from 'typeorm';
 import { configManager } from '@/config';
 import { Logger } from '@/shared/logger';
 
@@ -11,11 +11,11 @@ import { Logger } from '@/shared/logger';
 import { Pipeline } from '@/entities/pipeline.entity';
 import { PipelineRun, PipelineRunStage } from '@/entities/pipeline-run.entity';
 import { User, UserSession, ApiKey } from '@/entities/user.entity';
-import { 
-  PipelineMetrics, 
-  FailurePattern, 
-  OptimizationRecommendation, 
-  AnalyticsAlert 
+import {
+  PipelineMetrics,
+  FailurePattern,
+  OptimizationRecommendation,
+  AnalyticsAlert,
 } from '@/entities/pipeline-metrics.entity';
 
 const logger = new Logger('DatabaseConfig');
@@ -79,7 +79,7 @@ export class DatabaseConfigManager {
    */
   public getDatabaseConfig(): DatabaseConfig {
     const config = configManager.getDatabase();
-    
+
     return {
       type: 'postgres',
       host: config.host,
@@ -99,7 +99,7 @@ export class DatabaseConfigManager {
       enableQueryLogging: !configManager.isProduction(),
       enableConnectionAuditing: true,
       maxConnections: (config.poolSize || this.getDefaultPoolSize()) * 2,
-      connectionAuditLog: true
+      connectionAuditLog: true,
     };
   }
 
@@ -111,19 +111,19 @@ export class DatabaseConfigManager {
       const sslConfig: any = {
         // Enable certificate validation in production
         rejectUnauthorized: process.env.DB_SSL_REJECT_UNAUTHORIZED !== 'false',
-        
+
         // Certificate authority
         ...(process.env.DB_SSL_CA && { ca: process.env.DB_SSL_CA }),
-        
+
         // Client certificate authentication
         ...(process.env.DB_SSL_CERT && { cert: process.env.DB_SSL_CERT }),
         ...(process.env.DB_SSL_KEY && { key: process.env.DB_SSL_KEY }),
-        
+
         // Additional SSL options
         checkServerIdentity: process.env.DB_SSL_CHECK_SERVER_IDENTITY !== 'false',
         secureProtocol: 'TLSv1_2_method', // Force TLS 1.2+
         ciphers: 'ECDHE+AESGCM:ECDHE+CHACHA20:DHE+AESGCM:DHE+CHACHA20:!aNULL:!MD5:!DSS',
-        honorCipherOrder: true
+        honorCipherOrder: true,
       };
 
       // Custom server identity check for cloud providers
@@ -142,12 +142,12 @@ export class DatabaseConfigManager {
         rejectUnauthorized: sslConfig.rejectUnauthorized,
         hasCert: !!sslConfig.cert,
         hasKey: !!sslConfig.key,
-        hasCA: !!sslConfig.ca
+        hasCA: !!sslConfig.ca,
       });
 
       return sslConfig;
     }
-    
+
     return false; // Development/test
   }
 
@@ -169,12 +169,12 @@ export class DatabaseConfigManager {
       return {
         enabled: false,
         type: 'memory',
-        duration: 60000
+        duration: 60000,
       };
     }
 
     const redisConfig = configManager.getRedis();
-    
+
     return {
       enabled: true,
       type: 'redis',
@@ -183,8 +183,8 @@ export class DatabaseConfigManager {
         host: redisConfig.host,
         port: redisConfig.port,
         ...(redisConfig.password && { password: redisConfig.password }),
-        db: redisConfig.db
-      }
+        db: redisConfig.db,
+      },
     };
   }
 
@@ -197,7 +197,7 @@ export class DatabaseConfigManager {
       directory: 'src/migrations',
       pattern: '**/*.ts',
       tableName: 'migrations',
-      transactional: true
+      transactional: true,
     };
   }
 
@@ -215,7 +215,7 @@ export class DatabaseConfigManager {
       database: dbConfig.database,
       poolSize: dbConfig.poolSize,
       ssl: !!dbConfig.ssl,
-      cache: cacheConfig.enabled
+      cache: cacheConfig.enabled,
     });
 
     const config: DataSourceOptions = {
@@ -237,26 +237,26 @@ export class DatabaseConfigManager {
         idleTimeoutMillis: dbConfig.idleTimeout,
         reapIntervalMillis: 1000,
         createRetryIntervalMillis: dbConfig.retryDelay,
-        
+
         // Connection validation
         testOnBorrow: true,
-        
+
         // Security enhancements
         ...(dbConfig.maxConnections && { absoluteMaxSize: dbConfig.maxConnections }),
-        
+
         // Additional PostgreSQL options
         application_name: 'cicd-pipeline-analyzer',
         statement_timeout: dbConfig.queryTimeout,
         idle_in_transaction_session_timeout: 30000,
-        
+
         // Security settings
         ...(configManager.isProduction() && {
           // Production security options
           tcp_keepalives_idle: 600,
           tcp_keepalives_interval: 30,
           tcp_keepalives_count: 3,
-          connect_timeout: 30
-        })
+          connect_timeout: 30,
+        }),
       },
 
       // Entity Configuration
@@ -270,11 +270,13 @@ export class DatabaseConfigManager {
         PipelineMetrics,
         FailurePattern,
         OptimizationRecommendation,
-        AnalyticsAlert
+        AnalyticsAlert,
       ],
 
       // Migration Configuration
-      migrations: migrationConfig.enabled ? [`${migrationConfig.directory}/${migrationConfig.pattern}`] : [],
+      migrations: migrationConfig.enabled
+        ? [`${migrationConfig.directory}/${migrationConfig.pattern}`]
+        : [],
       migrationsRun: false, // We handle migrations manually
       migrationsTableName: migrationConfig.tableName,
       migrationsTransactionMode: migrationConfig.transactional ? 'each' : 'none',
@@ -292,10 +294,10 @@ export class DatabaseConfigManager {
 
       // Subscriber Configuration
       subscribers: [],
-      
+
       // Schema Configuration
-      schema: 'public'
-      
+      schema: 'public',
+
       // Naming Strategy - use default
     };
 
@@ -305,7 +307,9 @@ export class DatabaseConfigManager {
   /**
    * Get logging configuration based on environment
    */
-  private getLoggingConfig(): boolean | ("query" | "error" | "schema" | "warn" | "info" | "log" | "migration")[] {
+  private getLoggingConfig():
+    | boolean
+    | ('query' | 'error' | 'schema' | 'warn' | 'info' | 'log' | 'migration')[] {
     if (configManager.isTest()) {
       return false;
     }
@@ -336,16 +340,16 @@ export class DatabaseConfigManager {
           maxRetriesPerRequest: 3,
           lazyConnect: true,
           connectTimeout: 10000,
-          commandTimeout: 5000
+          commandTimeout: 5000,
         },
         duration: cacheConfig.duration,
-        ignoreErrors: true // Don't fail queries if cache fails
+        ignoreErrors: true, // Don't fail queries if cache fails
       };
     }
 
     return {
       type: 'database',
-      duration: cacheConfig.duration
+      duration: cacheConfig.duration,
     };
   }
 
@@ -354,7 +358,7 @@ export class DatabaseConfigManager {
    */
   public validateConfig(): void {
     const dbConfig = this.getDatabaseConfig();
-    
+
     const requiredFields = ['host', 'port', 'database', 'username', 'password'];
     const missingFields = requiredFields.filter(field => {
       const value = (dbConfig as any)[field];
@@ -362,7 +366,9 @@ export class DatabaseConfigManager {
     });
 
     if (missingFields.length > 0) {
-      throw new Error(`Missing required database configuration fields: ${missingFields.join(', ')}`);
+      throw new Error(
+        `Missing required database configuration fields: ${missingFields.join(', ')}`
+      );
     }
 
     if (dbConfig.port < 1 || dbConfig.port > 65535) {
@@ -400,11 +406,11 @@ export class DatabaseConfigManager {
     // Validate password strength (basic check)
     if (typeof dbConfig.password === 'string') {
       const minPasswordLength = configManager.isTest() ? 4 : 8; // Relaxed for tests
-      
+
       if (dbConfig.password.length < minPasswordLength) {
         throw new Error(`Database password must be at least ${minPasswordLength} characters long`);
       }
-      
+
       // Check for common weak passwords (skip in test environment)
       if (!configManager.isTest()) {
         const weakPasswords = ['password', '123456', 'admin', 'postgres'];
@@ -423,14 +429,16 @@ export class DatabaseConfigManager {
 
     // Validate connection limits
     if (dbConfig.maxConnections < dbConfig.poolSize) {
-      throw new Error(`maxConnections (${dbConfig.maxConnections}) must be >= poolSize (${dbConfig.poolSize})`);
+      throw new Error(
+        `maxConnections (${dbConfig.maxConnections}) must be >= poolSize (${dbConfig.poolSize})`
+      );
     }
 
     logger.info('Security validation completed', {
       sslEnabled: !!dbConfig.ssl,
       sslValidation: dbConfig.enableSSLValidation,
       auditingEnabled: dbConfig.enableConnectionAuditing,
-      environment: process.env.NODE_ENV
+      environment: process.env.NODE_ENV,
     });
   }
 }

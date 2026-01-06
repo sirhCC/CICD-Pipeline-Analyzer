@@ -41,7 +41,7 @@ export class DatabaseConnectionManager extends EventEmitter {
     total: 0,
     totalTime: 0,
     slowQueries: 0,
-    errors: 0
+    errors: 0,
   };
 
   private constructor() {
@@ -71,7 +71,7 @@ export class DatabaseConnectionManager extends EventEmitter {
         totalQueries: 0,
         averageQueryTime: 0,
         slowQueries: 0,
-        errors: 0
+        errors: 0,
       },
       uptime: 0,
       lastHealthCheck: new Date(),
@@ -79,8 +79,8 @@ export class DatabaseConnectionManager extends EventEmitter {
       performanceMetrics: {
         queriesPerSecond: 0,
         averageResponseTime: 0,
-        errorRate: 0
-      }
+        errorRate: 0,
+      },
     };
   }
 
@@ -120,23 +120,22 @@ export class DatabaseConnectionManager extends EventEmitter {
    */
   private async performHealthCheck(): Promise<void> {
     const startTime = Date.now();
-    
+
     try {
       // Test basic connectivity
       await databaseManager.healthCheck();
-      
+
       // Update metrics
       this.updateMetrics();
-      
+
       const responseTime = Date.now() - startTime;
       this.metrics.lastHealthCheck = new Date();
       this.metrics.isHealthy = true;
-      
+
       this.emit('healthCheckSuccess', {
         responseTime,
-        metrics: this.metrics
+        metrics: this.metrics,
       });
-      
     } catch (error) {
       this.metrics.isHealthy = false;
       this.emit('healthCheckFailed', error);
@@ -150,21 +149,21 @@ export class DatabaseConnectionManager extends EventEmitter {
   private updateMetrics(): void {
     const poolStats = databaseManager.getPoolStats();
     const uptime = Date.now() - this.startTime.getTime();
-    
+
     this.metrics.uptime = uptime;
     this.metrics.connectionStats.totalQueries = this.queryStats.total;
-    this.metrics.connectionStats.averageQueryTime = 
+    this.metrics.connectionStats.averageQueryTime =
       this.queryStats.total > 0 ? this.queryStats.totalTime / this.queryStats.total : 0;
     this.metrics.connectionStats.slowQueries = this.queryStats.slowQueries;
     this.metrics.connectionStats.errors = this.queryStats.errors;
 
     // Calculate performance metrics
     const uptimeSeconds = uptime / 1000;
-    this.metrics.performanceMetrics.queriesPerSecond = 
+    this.metrics.performanceMetrics.queriesPerSecond =
       uptimeSeconds > 0 ? this.queryStats.total / uptimeSeconds : 0;
-    this.metrics.performanceMetrics.averageResponseTime = 
+    this.metrics.performanceMetrics.averageResponseTime =
       this.metrics.connectionStats.averageQueryTime;
-    this.metrics.performanceMetrics.errorRate = 
+    this.metrics.performanceMetrics.errorRate =
       this.queryStats.total > 0 ? (this.queryStats.errors / this.queryStats.total) * 100 : 0;
   }
 
@@ -174,11 +173,11 @@ export class DatabaseConnectionManager extends EventEmitter {
   public recordQuery(duration: number, isError: boolean = false): void {
     this.queryStats.total++;
     this.queryStats.totalTime += duration;
-    
+
     if (isError) {
       this.queryStats.errors++;
     }
-    
+
     // Consider queries over 1 second as slow
     if (duration > 1000) {
       this.queryStats.slowQueries++;
@@ -211,7 +210,7 @@ export class DatabaseConnectionManager extends EventEmitter {
       const startTime = Date.now();
       await databaseManager.healthCheck();
       const duration = Date.now() - startTime;
-      
+
       this.logger.info('Database connection test successful', { duration });
       return true;
     } catch (error) {
@@ -223,13 +222,10 @@ export class DatabaseConnectionManager extends EventEmitter {
   /**
    * Execute query with monitoring
    */
-  public async executeQuery<T = unknown>(
-    sql: string, 
-    parameters?: unknown[]
-  ): Promise<T> {
+  public async executeQuery<T = unknown>(sql: string, parameters?: unknown[]): Promise<T> {
     const startTime = Date.now();
     let isError = false;
-    
+
     try {
       const result = await databaseManager.query<T>(sql, parameters);
       return result;
@@ -248,19 +244,21 @@ export class DatabaseConnectionManager extends EventEmitter {
   public getPerformanceRecommendations(): string[] {
     const recommendations: string[] = [];
     const metrics = this.getMetrics();
-    
+
     if (metrics.performanceMetrics.averageResponseTime > 500) {
       recommendations.push('Consider optimizing slow queries or adding database indexes');
     }
-    
+
     if (metrics.performanceMetrics.errorRate > 5) {
-      recommendations.push('High error rate detected - investigate database connectivity or query issues');
+      recommendations.push(
+        'High error rate detected - investigate database connectivity or query issues'
+      );
     }
-    
+
     if (metrics.connectionStats.slowQueries > 10) {
       recommendations.push('Multiple slow queries detected - consider query optimization');
     }
-    
+
     return recommendations;
   }
 
@@ -272,7 +270,7 @@ export class DatabaseConnectionManager extends EventEmitter {
       total: 0,
       totalTime: 0,
       slowQueries: 0,
-      errors: 0
+      errors: 0,
     };
     this.startTime = new Date();
     this.logger.info('Database statistics reset');
