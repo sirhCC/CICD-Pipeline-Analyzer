@@ -3,10 +3,16 @@
  * Handles user authentication, registration, and session management
  */
 
-import { Request, Response, NextFunction } from 'express';
-import { getAuthService, hashPassword, verifyPassword, generateSessionId, UserRole } from '../middleware/auth';
+import type { Request, Response, NextFunction } from 'express';
+import {
+  getAuthService,
+  hashPassword,
+  verifyPassword,
+  generateSessionId,
+  UserRole,
+} from '../middleware/auth';
 import { userRepository } from '../repositories';
-import { AuthenticatedRequest } from '../middleware/auth';
+import type { AuthenticatedRequest } from '../middleware/auth';
 import { Logger } from '../shared/logger';
 import { AuthenticationError, ValidationError, NotFoundError } from '../middleware/error-handler';
 
@@ -40,21 +46,17 @@ export const authController = {
 
       // Generate session
       const sessionId = generateSessionId();
-      
+
       // Generate tokens
       const accessToken = getAuthService().generateAccessToken({
         userId: user.id,
         email: user.email,
         role: user.role,
         permissions: user.permissions || [],
-        sessionId
+        sessionId,
       });
 
-      const refreshToken = getAuthService().generateRefreshToken(
-        user.id, 
-        sessionId, 
-        'web'
-      );
+      const refreshToken = getAuthService().generateRefreshToken(user.id, sessionId, 'web');
 
       // Record successful login
       await userRepository.recordLogin(user.id, req.ip);
@@ -65,14 +67,14 @@ export const authController = {
           httpOnly: true,
           secure: process.env.NODE_ENV === 'production',
           sameSite: 'strict',
-          maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
+          maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
         });
       }
 
-      logger.info('User login successful', { 
-        userId: user.id, 
+      logger.info('User login successful', {
+        userId: user.id,
         email: user.email,
-        ip: req.ip 
+        ip: req.ip,
       });
 
       res.apiSuccess({
@@ -82,10 +84,10 @@ export const authController = {
           firstName: user.firstName,
           lastName: user.lastName,
           role: user.role,
-          permissions: user.permissions
+          permissions: user.permissions,
         },
         accessToken,
-        ...(rememberMe ? {} : { refreshToken })
+        ...(rememberMe ? {} : { refreshToken }),
       });
     } catch (error) {
       next(error);
@@ -116,12 +118,12 @@ export const authController = {
         lastName,
         role: UserRole.VIEWER, // Default role
         permissions: [],
-        isActive: true
+        isActive: true,
       });
 
-      logger.info('User registration successful', { 
-        userId: user.id, 
-        email: user.email 
+      logger.info('User registration successful', {
+        userId: user.id,
+        email: user.email,
       });
 
       res.apiCreated({
@@ -130,8 +132,8 @@ export const authController = {
           email: user.email,
           firstName: user.firstName,
           lastName: user.lastName,
-          role: user.role
-        }
+          role: user.role,
+        },
       });
     } catch (error) {
       next(error);
@@ -144,17 +146,20 @@ export const authController = {
   async refreshToken(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const refreshToken = req.body.refreshToken || req.cookies.refreshToken;
-      
+
       if (!refreshToken) {
         throw new AuthenticationError('Refresh token is required');
       }
 
       // Verify refresh token
-      const decoded = getAuthService().verifyToken(refreshToken, getAuthService().config.jwtRefreshSecret);
-      
+      const decoded = getAuthService().verifyToken(
+        refreshToken,
+        getAuthService().config.jwtRefreshSecret
+      );
+
       // Generate new access token
       const user = await userRepository.findById(decoded.userId);
-      if (!user || !user.isActive) {
+      if (!user?.isActive) {
         throw new AuthenticationError('User not found or inactive');
       }
 
@@ -163,7 +168,7 @@ export const authController = {
         email: user.email,
         role: user.role,
         permissions: user.permissions || [],
-        sessionId: decoded.sessionId
+        sessionId: decoded.sessionId,
       });
 
       res.apiSuccess({ accessToken });
@@ -191,8 +196,8 @@ export const authController = {
           role: user.role,
           permissions: user.permissions,
           createdAt: user.createdAt,
-          lastLoginAt: user.lastLoginAt
-        }
+          lastLoginAt: user.lastLoginAt,
+        },
       });
     } catch (error) {
       next(error);
@@ -205,10 +210,10 @@ export const authController = {
   async updateProfile(req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> {
     try {
       const { firstName, lastName } = req.body;
-      
+
       const user = await userRepository.updateById(req.user!.userId, {
         firstName,
-        lastName
+        lastName,
       });
 
       if (!user) {
@@ -236,9 +241,9 @@ export const authController = {
       // Clear refresh token cookie
       res.clearCookie('refreshToken');
 
-      logger.info('User logout successful', { 
+      logger.info('User logout successful', {
         userId: req.user!.userId,
-        sessionId: req.user!.sessionId 
+        sessionId: req.user!.sessionId,
       });
 
       res.apiSuccess({ message: 'Logged out successfully' });
@@ -257,14 +262,15 @@ export const authController = {
         throw new NotFoundError('User');
       }
 
-      const apiKeys = user.apiKeys?.map(key => ({
-        id: key.id,
-        name: key.name,
-        permissions: key.permissions,
-        lastUsed: key.lastUsedAt,
-        expiresAt: key.expiresAt,
-        createdAt: key.createdAt
-      })) || [];
+      const apiKeys =
+        user.apiKeys?.map(key => ({
+          id: key.id,
+          name: key.name,
+          permissions: key.permissions,
+          lastUsed: key.lastUsedAt,
+          expiresAt: key.expiresAt,
+          createdAt: key.createdAt,
+        })) || [];
 
       res.apiSuccess({ apiKeys });
     } catch (error) {
@@ -285,15 +291,15 @@ export const authController = {
         userId: req.user!.userId,
         permissions: permissions || ['pipelines:read'],
         rateLimit: 1000,
-        expiresIn: expiresIn || '90d'
+        expiresIn: expiresIn || '90d',
       });
 
       // Save to database (implementation depends on your ApiKey entity)
       // const savedKey = await apiKeyRepository.create({ ... });
 
-      res.apiCreated({ 
+      res.apiCreated({
         apiKey,
-        message: 'API key created successfully. Store it securely as it won\'t be shown again.'
+        message: "API key created successfully. Store it securely as it won't be shown again.",
       });
     } catch (error) {
       next(error);
@@ -306,7 +312,7 @@ export const authController = {
   async revokeApiKey(req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> {
     try {
       const { keyId } = req.params;
-      
+
       // Implementation depends on your ApiKey repository
       // await apiKeyRepository.deleteByIdAndUserId(keyId, req.user!.userId);
 
@@ -322,9 +328,9 @@ export const authController = {
   async listUsers(req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> {
     try {
       // For Phase 1, return a simplified response
-      res.apiSuccess({ 
+      res.apiSuccess({
         users: [],
-        message: 'User management will be implemented in Phase 2'
+        message: 'User management will be implemented in Phase 2',
       });
     } catch (error) {
       next(error);
@@ -334,7 +340,11 @@ export const authController = {
   /**
    * Update user role (Admin only) - Simplified for Phase 1
    */
-  async updateUserRole(req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> {
+  async updateUserRole(
+    req: AuthenticatedRequest,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> {
     try {
       const { userId } = req.params;
       const { role } = req.body;
@@ -344,15 +354,15 @@ export const authController = {
       }
 
       // For Phase 1, just return success without actual implementation
-      logger.info('User role update requested', { 
+      logger.info('User role update requested', {
         adminUserId: req.user!.userId,
         targetUserId: userId,
-        newRole: role 
+        newRole: role,
       });
 
       res.apiSuccess({ message: 'User role management will be implemented in Phase 2' });
     } catch (error) {
       next(error);
     }
-  }
+  },
 };
