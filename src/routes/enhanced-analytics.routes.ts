@@ -18,7 +18,8 @@
  * @version 2.0.0
  */
 
-import { Router, Request, Response } from 'express';
+import type { Request, Response } from 'express';
+import { Router } from 'express';
 import { Logger } from '../shared/logger';
 
 const router = Router();
@@ -39,7 +40,7 @@ const getServices = async () => {
   return {
     enhancedStatisticalAnalyticsService,
     optimizationIntegrationService,
-    optimizationConfigService
+    optimizationConfigService,
   };
 };
 
@@ -48,7 +49,7 @@ const createResponse = (success: boolean, data: any, message: string) => ({
   success,
   data,
   message,
-  timestamp: new Date().toISOString()
+  timestamp: new Date().toISOString(),
 });
 
 /**
@@ -57,21 +58,21 @@ const createResponse = (success: boolean, data: any, message: string) => ({
  */
 router.post('/anomalies', async (req: Request, res: Response) => {
   const startTime = Date.now();
-  
+
   try {
     const { data, method = 'all' } = req.body;
-    
+
     if (!data || !Array.isArray(data) || data.length < 10) {
-      return res.status(400).json(createResponse(
-        false,
-        null,
-        'Invalid data: requires array with at least 10 data points'
-      ));
+      return res
+        .status(400)
+        .json(
+          createResponse(false, null, 'Invalid data: requires array with at least 10 data points')
+        );
     }
 
     logger.info('Enhanced anomaly detection request', {
       dataPoints: data.length,
-      method
+      method,
     });
 
     const { enhancedStatisticalAnalyticsService } = await getServices();
@@ -84,32 +85,30 @@ router.post('/anomalies', async (req: Request, res: Response) => {
         totalDataPoints: data.length,
         anomaliesFound: results.length,
         anomalyRate: (results.length / data.length) * 100,
-        severityDistribution: calculateSeverityDistribution(results)
+        severityDistribution: calculateSeverityDistribution(results),
       },
       performance: {
-        executionTime
+        executionTime,
       },
       metadata: {
         method,
         timestamp: new Date(),
-        version: '2.0.0'
-      }
+        version: '2.0.0',
+      },
     };
 
     logger.info('Enhanced anomaly detection completed', {
       anomaliesFound: results.length,
       executionTime,
-      dataPoints: data.length
+      dataPoints: data.length,
     });
 
     return res.json(createResponse(true, response, 'Anomaly detection completed successfully'));
   } catch (error) {
     logger.error('Enhanced anomaly detection failed', error);
-    return res.status(500).json(createResponse(
-      false,
-      null,
-      error instanceof Error ? error.message : 'Unknown error'
-    ));
+    return res
+      .status(500)
+      .json(createResponse(false, null, error instanceof Error ? error.message : 'Unknown error'));
   }
 });
 
@@ -119,20 +118,20 @@ router.post('/anomalies', async (req: Request, res: Response) => {
  */
 router.post('/trends', async (req: Request, res: Response) => {
   const startTime = Date.now();
-  
+
   try {
     const { data } = req.body;
-    
+
     if (!data || !Array.isArray(data) || data.length < 5) {
-      return res.status(400).json(createResponse(
-        false,
-        null,
-        'Invalid data: requires array with at least 5 data points'
-      ));
+      return res
+        .status(400)
+        .json(
+          createResponse(false, null, 'Invalid data: requires array with at least 5 data points')
+        );
     }
 
     logger.info('Enhanced trend analysis request', {
-      dataPoints: data.length
+      dataPoints: data.length,
     });
 
     const { enhancedStatisticalAnalyticsService } = await getServices();
@@ -147,32 +146,30 @@ router.post('/trends', async (req: Request, res: Response) => {
         forecast: {
           shortTerm: result.prediction.next24h,
           mediumTerm: result.prediction.next7d,
-          longTerm: result.prediction.next30d
-        }
+          longTerm: result.prediction.next30d,
+        },
       },
       performance: {
-        executionTime
+        executionTime,
       },
       metadata: {
         timestamp: new Date(),
-        version: '2.0.0'
-      }
+        version: '2.0.0',
+      },
     };
 
     logger.info('Enhanced trend analysis completed', {
       trend: result.trend,
       correlation: result.correlation,
-      executionTime
+      executionTime,
     });
 
     return res.json(createResponse(true, response, 'Trend analysis completed successfully'));
   } catch (error) {
     logger.error('Enhanced trend analysis failed', error);
-    return res.status(500).json(createResponse(
-      false,
-      null,
-      error instanceof Error ? error.message : 'Unknown error'
-    ));
+    return res
+      .status(500)
+      .json(createResponse(false, null, error instanceof Error ? error.message : 'Unknown error'));
   }
 });
 
@@ -182,22 +179,31 @@ router.post('/trends', async (req: Request, res: Response) => {
  */
 router.post('/benchmark', async (req: Request, res: Response) => {
   const startTime = Date.now();
-  
+
   try {
     const { currentValue, historicalData, category = 'general' } = req.body;
-    
-    if (typeof currentValue !== 'number' || !historicalData || !Array.isArray(historicalData) || historicalData.length < 5) {
-      return res.status(400).json(createResponse(
-        false,
-        null,
-        'Invalid data: requires currentValue (number) and historicalData (array with at least 5 points)'
-      ));
+
+    if (
+      typeof currentValue !== 'number' ||
+      !historicalData ||
+      !Array.isArray(historicalData) ||
+      historicalData.length < 5
+    ) {
+      return res
+        .status(400)
+        .json(
+          createResponse(
+            false,
+            null,
+            'Invalid data: requires currentValue (number) and historicalData (array with at least 5 points)'
+          )
+        );
     }
 
     logger.info('Enhanced benchmark request', {
       currentValue,
       historicalDataPoints: historicalData.length,
-      category
+      category,
     });
 
     const result = await enhancedStatisticalAnalyticsService.generateBenchmark(
@@ -205,7 +211,7 @@ router.post('/benchmark', async (req: Request, res: Response) => {
       historicalData,
       category
     );
-    
+
     const executionTime = Date.now() - startTime;
 
     const response = {
@@ -213,32 +219,30 @@ router.post('/benchmark', async (req: Request, res: Response) => {
       insights: {
         performanceLevel: getPerformanceLevel(result.performance),
         improvementPotential: calculateImprovementPotential(result),
-        recommendations: generatePerformanceRecommendations(result)
+        recommendations: generatePerformanceRecommendations(result),
       },
       performance: {
-        executionTime
+        executionTime,
       },
       metadata: {
         category,
         timestamp: new Date(),
-        version: '2.0.0'
-      }
+        version: '2.0.0',
+      },
     };
 
     logger.info('Enhanced benchmark completed', {
       performance: result.performance,
       percentile: result.percentile,
-      executionTime
+      executionTime,
     });
 
     return res.json(createResponse(true, response, 'Benchmark analysis completed successfully'));
   } catch (error) {
     logger.error('Enhanced benchmark failed', error);
-    return res.status(500).json(createResponse(
-      false,
-      null,
-      error instanceof Error ? error.message : 'Unknown error'
-    ));
+    return res
+      .status(500)
+      .json(createResponse(false, null, error instanceof Error ? error.message : 'Unknown error'));
   }
 });
 
@@ -250,15 +254,13 @@ router.get('/optimization/status', async (req: Request, res: Response) => {
   try {
     const { optimizationIntegrationService } = await getServices();
     const status = await optimizationIntegrationService.getOptimizationStatus();
-    
+
     return res.json(createResponse(true, status, 'Optimization status retrieved successfully'));
   } catch (error) {
     logger.error('Failed to get optimization status', error);
-    return res.status(500).json(createResponse(
-      false,
-      null,
-      error instanceof Error ? error.message : 'Unknown error'
-    ));
+    return res
+      .status(500)
+      .json(createResponse(false, null, error instanceof Error ? error.message : 'Unknown error'));
   }
 });
 
@@ -270,15 +272,13 @@ router.get('/optimization/report', async (req: Request, res: Response) => {
   try {
     const { optimizationIntegrationService } = await getServices();
     const report = await optimizationIntegrationService.generateOptimizationReport();
-    
+
     return res.json(createResponse(true, report, 'Optimization report generated successfully'));
   } catch (error) {
     logger.error('Failed to generate optimization report', error);
-    return res.status(500).json(createResponse(
-      false,
-      null,
-      error instanceof Error ? error.message : 'Unknown error'
-    ));
+    return res
+      .status(500)
+      .json(createResponse(false, null, error instanceof Error ? error.message : 'Unknown error'));
   }
 });
 
@@ -291,19 +291,23 @@ router.get('/optimization/profiles', async (req: Request, res: Response) => {
     const { optimizationConfigService } = await getServices();
     const profiles = optimizationConfigService.getAvailableProfiles();
     const currentProfile = optimizationConfigService.getCurrentProfile();
-    
-    return res.json(createResponse(true, {
-      available: profiles,
-      current: currentProfile.name,
-      currentConfig: currentProfile
-    }, 'Profiles retrieved successfully'));
+
+    return res.json(
+      createResponse(
+        true,
+        {
+          available: profiles,
+          current: currentProfile.name,
+          currentConfig: currentProfile,
+        },
+        'Profiles retrieved successfully'
+      )
+    );
   } catch (error) {
     logger.error('Failed to get optimization profiles', error);
-    return res.status(500).json(createResponse(
-      false,
-      null,
-      error instanceof Error ? error.message : 'Unknown error'
-    ));
+    return res
+      .status(500)
+      .json(createResponse(false, null, error instanceof Error ? error.message : 'Unknown error'));
   }
 });
 
@@ -314,38 +318,32 @@ router.get('/optimization/profiles', async (req: Request, res: Response) => {
 router.post('/optimization/profiles/:profileName', async (req: Request, res: Response) => {
   try {
     const { profileName } = req.params;
-    
+
     if (!profileName) {
-      return res.status(400).json(createResponse(
-        false,
-        null,
-        'Profile name is required'
-      ));
+      return res.status(400).json(createResponse(false, null, 'Profile name is required'));
     }
-    
+
     const { optimizationConfigService } = await getServices();
     const success = optimizationConfigService.switchProfile(profileName);
-    
+
     if (success) {
-      return res.json(createResponse(
-        true,
-        { profile: profileName },
-        `Switched to ${profileName} profile successfully`
-      ));
+      return res.json(
+        createResponse(
+          true,
+          { profile: profileName },
+          `Switched to ${profileName} profile successfully`
+        )
+      );
     } else {
-      return res.status(404).json(createResponse(
-        false,
-        null,
-        `Profile '${profileName}' does not exist`
-      ));
+      return res
+        .status(404)
+        .json(createResponse(false, null, `Profile '${profileName}' does not exist`));
     }
   } catch (error) {
     logger.error('Failed to switch optimization profile', error);
-    return res.status(500).json(createResponse(
-      false,
-      null,
-      error instanceof Error ? error.message : 'Unknown error'
-    ));
+    return res
+      .status(500)
+      .json(createResponse(false, null, error instanceof Error ? error.message : 'Unknown error'));
   }
 });
 
@@ -376,11 +374,11 @@ function assessTrendReliability(rSquared: number): string {
 
 function getPerformanceLevel(performance: string): string {
   const levels: Record<string, string> = {
-    'excellent': 'top tier',
-    'good': 'above average',
-    'average': 'baseline',
+    excellent: 'top tier',
+    good: 'above average',
+    average: 'baseline',
     'below-average': 'needs improvement',
-    'poor': 'critical improvement needed'
+    poor: 'critical improvement needed',
   };
   return levels[performance] || 'unknown';
 }
@@ -391,16 +389,16 @@ function calculateImprovementPotential(result: any): number {
 
 function generatePerformanceRecommendations(result: any): string[] {
   const recommendations: string[] = [];
-  
+
   if (result.performance === 'poor' || result.performance === 'below-average') {
     recommendations.push('Immediate performance optimization required');
     recommendations.push('Review current implementation for bottlenecks');
   }
-  
+
   if (result.deviationPercent > 20) {
     recommendations.push('Significant deviation from benchmark detected');
   }
-  
+
   return recommendations;
 }
 
