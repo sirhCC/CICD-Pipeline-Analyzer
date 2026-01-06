@@ -1,4 +1,4 @@
-import { Request, Response, NextFunction } from 'express';
+import type { Request, Response, NextFunction } from 'express';
 
 export interface CacheControlOptions {
   maxAge?: number; // seconds
@@ -27,10 +27,16 @@ export function cacheControl(options: CacheControlOptions = { noStore: true }) {
       if (options.noCache) parts.push('no-cache');
       if (options.public) parts.push('public');
       if (options.private) parts.push('private');
-      if (typeof options.maxAge === 'number') parts.push(`max-age=${Math.max(0, Math.floor(options.maxAge))}`);
-      if (typeof options.sMaxAge === 'number') parts.push(`s-maxage=${Math.max(0, Math.floor(options.sMaxAge))}`);
-      if (typeof options.staleWhileRevalidate === 'number') parts.push(`stale-while-revalidate=${Math.max(0, Math.floor(options.staleWhileRevalidate))}`);
-      if (typeof options.staleIfError === 'number') parts.push(`stale-if-error=${Math.max(0, Math.floor(options.staleIfError))}`);
+      if (typeof options.maxAge === 'number')
+        parts.push(`max-age=${Math.max(0, Math.floor(options.maxAge))}`);
+      if (typeof options.sMaxAge === 'number')
+        parts.push(`s-maxage=${Math.max(0, Math.floor(options.sMaxAge))}`);
+      if (typeof options.staleWhileRevalidate === 'number')
+        parts.push(
+          `stale-while-revalidate=${Math.max(0, Math.floor(options.staleWhileRevalidate))}`
+        );
+      if (typeof options.staleIfError === 'number')
+        parts.push(`stale-if-error=${Math.max(0, Math.floor(options.staleIfError))}`);
       if (options.mustRevalidate) parts.push('must-revalidate');
       if (options.immutable) parts.push('immutable');
     }
@@ -42,4 +48,5 @@ export function cacheControl(options: CacheControlOptions = { noStore: true }) {
 
 // Convenience presets
 export const noStore = () => cacheControl({ noStore: true });
-export const shortPublicCache = (seconds = 60) => cacheControl({ public: true, maxAge: seconds, staleWhileRevalidate: seconds });
+export const shortPublicCache = (seconds = 60) =>
+  cacheControl({ public: true, maxAge: seconds, staleWhileRevalidate: seconds });
