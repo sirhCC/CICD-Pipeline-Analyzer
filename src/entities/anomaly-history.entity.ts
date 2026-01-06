@@ -3,21 +3,29 @@
  * Tracks historical anomaly detection results for pattern analysis
  */
 
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, Index, ManyToOne, JoinColumn } from 'typeorm';
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  CreateDateColumn,
+  Index,
+  ManyToOne,
+  JoinColumn,
+} from 'typeorm';
 import { Pipeline } from './pipeline.entity';
 
 export enum AnomalyMethod {
   Z_SCORE = 'z-score',
   PERCENTILE = 'percentile',
   IQR = 'iqr',
-  COMPOSITE = 'composite'
+  COMPOSITE = 'composite',
 }
 
 export enum AnomalySeverity {
   LOW = 'low',
   MEDIUM = 'medium',
   HIGH = 'high',
-  CRITICAL = 'critical'
+  CRITICAL = 'critical',
 }
 
 @Entity('anomaly_history')
@@ -41,7 +49,7 @@ export class AnomalyHistory {
 
   @Column({
     type: 'enum',
-    enum: AnomalyMethod
+    enum: AnomalyMethod,
   })
   method!: AnomalyMethod;
 
@@ -56,7 +64,7 @@ export class AnomalyHistory {
 
   @Column({
     type: 'enum',
-    enum: AnomalySeverity
+    enum: AnomalySeverity,
   })
   severity!: AnomalySeverity;
 
