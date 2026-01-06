@@ -1,6 +1,6 @@
 /**
  * Enhanced Statistical Analytics Service - Optimized High-Performance Analytics
- * 
+ *
  * This is an optimized version of the statistical analytics service with:
  * - Memoization for expensive calculations
  * - Batch processing for large datasets
@@ -8,7 +8,7 @@
  * - Memory-efficient algorithms
  * - Enhanced error handling and validation
  * - Performance monitoring integration
- * 
+ *
  * @author sirhCC
  * @version 2.0.0
  */
@@ -19,14 +19,14 @@ import { memoizationService } from './memoization.service';
 import { batchProcessingService } from './batch-processing.service';
 import { optimizedMathUtils } from './optimized-math-utils.service';
 import { PerformanceMonitorService } from './performance-monitor.service';
-import {
+import type {
   StatisticalDataPoint,
   AnomalyDetectionResult,
   TrendAnalysisResult,
   BenchmarkResult,
   SLAMonitoringResult,
   CostAnalysisResult,
-  StatisticalAnalyticsConfig
+  StatisticalAnalyticsConfig,
 } from './statistical-analytics.service';
 
 export interface EnhancedAnalyticsConfig extends StatisticalAnalyticsConfig {
@@ -36,15 +36,15 @@ export interface EnhancedAnalyticsConfig extends StatisticalAnalyticsConfig {
   enableParallelProcessing: boolean;
   batchSize: number;
   maxConcurrency: number;
-  
+
   // Memory management
   memoryThreshold: number; // MB
   enableStreamProcessing: boolean;
-  
+
   // Caching
   cacheEnabled: boolean;
   cacheTtl: number; // milliseconds
-  
+
   // Performance monitoring
   enablePerformanceTracking: boolean;
   slowQueryThreshold: number; // milliseconds
@@ -91,20 +91,20 @@ export class EnhancedStatisticalAnalyticsService {
         alertThresholds: {
           minor: 90,
           major: 85,
-          critical: 80
+          critical: 80,
         },
       },
       costAnalysis: {
-        defaultHourlyCost: 0.10,
+        defaultHourlyCost: 0.1,
         currencyCode: 'USD',
         resourceCosts: {
           cpu: 0.02,
           memory: 0.01,
           storage: 0.001,
-          network: 0.005
+          network: 0.005,
         },
       },
-      
+
       // Enhanced config
       enableMemoization: true,
       enableBatchProcessing: true,
@@ -117,14 +117,18 @@ export class EnhancedStatisticalAnalyticsService {
       cacheTtl: 300000, // 5 minutes
       enablePerformanceTracking: true,
       slowQueryThreshold: 1000, // 1 second
-      
-      ...config
+
+      ...config,
     };
   }
 
-  public static getInstance(config?: Partial<EnhancedAnalyticsConfig>): EnhancedStatisticalAnalyticsService {
+  public static getInstance(
+    config?: Partial<EnhancedAnalyticsConfig>
+  ): EnhancedStatisticalAnalyticsService {
     if (!EnhancedStatisticalAnalyticsService.instance) {
-      EnhancedStatisticalAnalyticsService.instance = new EnhancedStatisticalAnalyticsService(config);
+      EnhancedStatisticalAnalyticsService.instance = new EnhancedStatisticalAnalyticsService(
+        config
+      );
     }
     return EnhancedStatisticalAnalyticsService.instance;
   }
@@ -136,35 +140,44 @@ export class EnhancedStatisticalAnalyticsService {
     data: StatisticalDataPoint[],
     method: 'z-score' | 'percentile' | 'iqr' | 'all' = 'all'
   ): Promise<AnomalyDetectionResult[]> {
-    return this.executeWithPerformanceTracking('detectAnomalies', async () => {
-      this.validateInput(data, this.config.anomalyDetection.minDataPoints);
+    return this.executeWithPerformanceTracking(
+      'detectAnomalies',
+      async () => {
+        this.validateInput(data, this.config.anomalyDetection.minDataPoints);
 
-      // Use batch processing for large datasets
-      if (data.length > this.config.batchSize && this.config.enableBatchProcessing) {
-        return this.detectAnomaliesBatch(data, method);
-      }
+        // Use batch processing for large datasets
+        if (data.length > this.config.batchSize && this.config.enableBatchProcessing) {
+          return this.detectAnomaliesBatch(data, method);
+        }
 
-      return this.detectAnomaliesOptimized(data, method);
-    }, data.length);
+        return this.detectAnomaliesOptimized(data, method);
+      },
+      data.length
+    );
   }
 
   /**
    * Enhanced trend analysis with memoization
    */
   public async analyzeTrend(data: StatisticalDataPoint[]): Promise<TrendAnalysisResult> {
-    return this.executeWithPerformanceTracking('analyzeTrend', async () => {
-      this.validateInput(data, this.config.trendAnalysis.minDataPoints);
+    return this.executeWithPerformanceTracking(
+      'analyzeTrend',
+      async () => {
+        this.validateInput(data, this.config.trendAnalysis.minDataPoints);
 
-      // Memoized computation for repeated requests
-      const memoizedAnalysis = this.config.enableMemoization ? 
-        memoizationService.memoizeAsync(this.computeTrendAnalysis.bind(this), {
-          ttl: this.config.cacheTtl,
-          keyGenerator: (data: StatisticalDataPoint[]) => 
-            `trend_${this.generateDataHash(data)}`
-        }) : this.computeTrendAnalysis.bind(this);
+        // Memoized computation for repeated requests
+        const memoizedAnalysis = this.config.enableMemoization
+          ? memoizationService.memoizeAsync(this.computeTrendAnalysis.bind(this), {
+              ttl: this.config.cacheTtl,
+              keyGenerator: (data: StatisticalDataPoint[]) =>
+                `trend_${this.generateDataHash(data)}`,
+            })
+          : this.computeTrendAnalysis.bind(this);
 
-      return memoizedAnalysis(data);
-    }, data.length);
+        return memoizedAnalysis(data);
+      },
+      data.length
+    );
   }
 
   /**
@@ -175,33 +188,37 @@ export class EnhancedStatisticalAnalyticsService {
     historicalData: StatisticalDataPoint[],
     category: string = 'general'
   ): Promise<BenchmarkResult> {
-    return this.executeWithPerformanceTracking('generateBenchmark', async () => {
-      this.validateInput(historicalData, this.config.benchmarking.minSamples);
+    return this.executeWithPerformanceTracking(
+      'generateBenchmark',
+      async () => {
+        this.validateInput(historicalData, this.config.benchmarking.minSamples);
 
-      const values = historicalData.map(d => d.value);
-      
-      // Use parallel computation for statistical summary
-      const stats = optimizedMathUtils.computeStatisticalSummary(values);
-      const percentile = this.calculateValuePercentile(values, currentValue);
-      
-      return {
-        currentValue,
-        benchmark: stats.mean,
-        percentile,
-        deviationPercent: ((currentValue - stats.mean) / stats.mean) * 100,
-        performance: this.determinePerformance(percentile),
-        historicalContext: {
-          best: stats.min,
-          worst: stats.max,
-          average: stats.mean,
-          median: stats.median
-        },
-        comparison: {
-          betterThan: percentile,
-          category
-        }
-      };
-    }, historicalData.length);
+        const values = historicalData.map(d => d.value);
+
+        // Use parallel computation for statistical summary
+        const stats = optimizedMathUtils.computeStatisticalSummary(values);
+        const percentile = this.calculateValuePercentile(values, currentValue);
+
+        return {
+          currentValue,
+          benchmark: stats.mean,
+          percentile,
+          deviationPercent: ((currentValue - stats.mean) / stats.mean) * 100,
+          performance: this.determinePerformance(percentile),
+          historicalContext: {
+            best: stats.min,
+            worst: stats.max,
+            average: stats.mean,
+            median: stats.median,
+          },
+          comparison: {
+            betterThan: percentile,
+            category,
+          },
+        };
+      },
+      historicalData.length
+    );
   }
 
   /**
@@ -213,25 +230,29 @@ export class EnhancedStatisticalAnalyticsService {
     historicalData: StatisticalDataPoint[],
     violationType: 'threshold' | 'availability' | 'performance' | 'quality' = 'performance'
   ): Promise<SLAMonitoringResult> {
-    return this.executeWithPerformanceTracking('monitorSLA', async () => {
-      const violated = currentValue < slaTarget;
-      const violationPercent = violated ? ((slaTarget - currentValue) / slaTarget) * 100 : 0;
+    return this.executeWithPerformanceTracking(
+      'monitorSLA',
+      async () => {
+        const violated = currentValue < slaTarget;
+        const violationPercent = violated ? ((slaTarget - currentValue) / slaTarget) * 100 : 0;
 
-      // Optimized violation frequency calculation
-      const recentViolations = this.calculateRecentViolations(historicalData, slaTarget);
-      
-      return {
-        violated,
-        slaTarget,
-        actualValue: currentValue,
-        violationPercent,
-        violationType,
-        severity: this.determineSLASeverity(violationPercent),
-        timeInViolation: violated ? 1 : 0,
-        frequencyOfViolation: recentViolations,
-        remediation: this.generateSLARemediation(violationType, violationPercent)
-      };
-    }, historicalData.length);
+        // Optimized violation frequency calculation
+        const recentViolations = this.calculateRecentViolations(historicalData, slaTarget);
+
+        return {
+          violated,
+          slaTarget,
+          actualValue: currentValue,
+          violationPercent,
+          violationType,
+          severity: this.determineSLASeverity(violationPercent),
+          timeInViolation: violated ? 1 : 0,
+          frequencyOfViolation: recentViolations,
+          remediation: this.generateSLARemediation(violationType, violationPercent),
+        };
+      },
+      historicalData.length
+    );
   }
 
   /**
@@ -247,35 +268,39 @@ export class EnhancedStatisticalAnalyticsService {
     },
     historicalCostData: StatisticalDataPoint[]
   ): Promise<CostAnalysisResult> {
-    return this.executeWithPerformanceTracking('analyzeCosts', async () => {
-      const costs = this.config.costAnalysis.resourceCosts;
-      const executionHours = executionTimeMinutes / 60;
+    return this.executeWithPerformanceTracking(
+      'analyzeCosts',
+      async () => {
+        const costs = this.config.costAnalysis.resourceCosts;
+        const executionHours = executionTimeMinutes / 60;
 
-      // Parallel cost calculation
-      const totalCost = await this.calculateTotalCost(resourceUsage, costs, executionHours);
-      const costPerMinute = totalCost / executionTimeMinutes;
+        // Parallel cost calculation
+        const totalCost = await this.calculateTotalCost(resourceUsage, costs, executionHours);
+        const costPerMinute = totalCost / executionTimeMinutes;
 
-      // Optimized trend analysis for cost data
-      let costTrend: TrendAnalysisResult | null = null;
-      if (historicalCostData.length >= this.config.trendAnalysis.minDataPoints) {
-        costTrend = await this.analyzeTrend(historicalCostData);
-      }
+        // Optimized trend analysis for cost data
+        let costTrend: TrendAnalysisResult | null = null;
+        if (historicalCostData.length >= this.config.trendAnalysis.minDataPoints) {
+          costTrend = await this.analyzeTrend(historicalCostData);
+        }
 
-      return {
-        totalCost,
-        costPerMinute,
-        costTrend: costTrend!,
-        optimizationOpportunities: this.generateCostOptimizations(resourceUsage, totalCost),
-        resourceUtilization: resourceUsage,
-        efficiency: this.calculateEfficiencyScore(resourceUsage, executionTimeMinutes)
-      };
-    }, historicalCostData.length);
+        return {
+          totalCost,
+          costPerMinute,
+          costTrend: costTrend!,
+          optimizationOpportunities: this.generateCostOptimizations(resourceUsage, totalCost),
+          resourceUtilization: resourceUsage,
+          efficiency: this.calculateEfficiencyScore(resourceUsage, executionTimeMinutes),
+        };
+      },
+      historicalCostData.length
+    );
   }
 
   /**
    * Streaming analytics for very large datasets
    */
-  public async* analyzeDataStream(
+  public async *analyzeDataStream(
     dataStream: AsyncIterable<StatisticalDataPoint>,
     analysisTypes: ('anomaly' | 'trend' | 'benchmark')[] = ['anomaly']
   ): AsyncGenerator<{ type: string; result: any }, void, unknown> {
@@ -341,11 +366,11 @@ export class EnhancedStatisticalAnalyticsService {
         return batchResults;
       },
       {
-        onProgress: (progress) => {
-          this.logger.debug('Anomaly detection progress', { 
-            percentage: progress.percentage.toFixed(2) 
+        onProgress: progress => {
+          this.logger.debug('Anomaly detection progress', {
+            percentage: progress.percentage.toFixed(2),
           });
-        }
+        },
       }
     );
 
@@ -371,9 +396,9 @@ export class EnhancedStatisticalAnalyticsService {
       }
 
       if (method === 'iqr' || method === 'all') {
-        const lowerBound = stats.q1 - (1.5 * stats.iqr);
-        const upperBound = stats.q3 + (1.5 * stats.iqr);
-        
+        const lowerBound = stats.q1 - 1.5 * stats.iqr;
+        const upperBound = stats.q3 + 1.5 * stats.iqr;
+
         if (value < lowerBound || value > upperBound) {
           const distance = Math.min(Math.abs(value - lowerBound), Math.abs(value - upperBound));
           const anomalyScore = distance / stats.iqr;
@@ -391,8 +416,8 @@ export class EnhancedStatisticalAnalyticsService {
     const yValues = data.map(d => d.value);
 
     const regression = optimizedMathUtils.computeLinearRegression(
-      xValues, 
-      yValues, 
+      xValues,
+      yValues,
       this.config.trendAnalysis.confidenceLevel
     );
 
@@ -409,10 +434,10 @@ export class EnhancedStatisticalAnalyticsService {
       prediction: {
         next24h: regression.slope * (lastPoint + 24) + regression.intercept,
         next7d: regression.slope * (lastPoint + 24 * 7) + regression.intercept,
-        next30d: regression.slope * (lastPoint + 24 * 30) + regression.intercept
+        next30d: regression.slope * (lastPoint + 24 * 30) + regression.intercept,
       },
       changeRate,
-      volatility: this.calculateVolatility(yValues, regression)
+      volatility: this.calculateVolatility(yValues, regression),
     };
   }
 
@@ -426,7 +451,7 @@ export class EnhancedStatisticalAnalyticsService {
       Promise.resolve(resourceUsage.cpu * costs.cpu * executionHours),
       Promise.resolve(resourceUsage.memory * costs.memory * executionHours),
       Promise.resolve(resourceUsage.storage * costs.storage * executionHours),
-      Promise.resolve(resourceUsage.network * costs.network)
+      Promise.resolve(resourceUsage.network * costs.network),
     ];
 
     const costComponents = await Promise.all(costPromises);
@@ -443,29 +468,29 @@ export class EnhancedStatisticalAnalyticsService {
 
     try {
       const result = await operation();
-      
+
       if (this.config.enablePerformanceTracking) {
         const endTime = performance.now();
         const endMemory = process.memoryUsage().heapUsed;
         const executionTime = endTime - startTime;
-        
+
         const metrics: AnalyticsPerformanceMetrics = {
           operationName,
           executionTime,
           memoryUsage: endMemory - startMemory,
           cacheHit: false, // Would be determined by actual cache implementation
           dataSize,
-          timestamp: new Date()
+          timestamp: new Date(),
         };
 
         this.performanceMetrics.push(metrics);
-        
+
         // Log slow queries
         if (executionTime > this.config.slowQueryThreshold) {
-          this.logger.warn('Slow operation detected', { 
+          this.logger.warn('Slow operation detected', {
             operationName: metrics.operationName,
             executionTime: metrics.executionTime,
-            dataSize: metrics.dataSize
+            dataSize: metrics.dataSize,
           });
         }
 
@@ -482,10 +507,13 @@ export class EnhancedStatisticalAnalyticsService {
   }
 
   // Helper methods (simplified versions of originals)
-  
+
   private validateInput(data: StatisticalDataPoint[], minSize: number): void {
     if (!Array.isArray(data) || data.length < minSize) {
-      throw new AppError(`Insufficient data points. Required: ${minSize}, provided: ${data.length}`, 400);
+      throw new AppError(
+        `Insufficient data points. Required: ${minSize}, provided: ${data.length}`,
+        400
+      );
     }
   }
 
@@ -507,15 +535,17 @@ export class EnhancedStatisticalAnalyticsService {
       threshold: method === 'z-score' ? this.config.anomalyDetection.zScoreThreshold : 1.5,
       actualValue: value,
       expectedRange: {
-        min: method === 'z-score' 
-          ? stats.mean - (this.config.anomalyDetection.zScoreThreshold * stats.standardDeviation)
-          : stats.q1 - (1.5 * stats.iqr),
-        max: method === 'z-score'
-          ? stats.mean + (this.config.anomalyDetection.zScoreThreshold * stats.standardDeviation)
-          : stats.q3 + (1.5 * stats.iqr)
+        min:
+          method === 'z-score'
+            ? stats.mean - this.config.anomalyDetection.zScoreThreshold * stats.standardDeviation
+            : stats.q1 - 1.5 * stats.iqr,
+        max:
+          method === 'z-score'
+            ? stats.mean + this.config.anomalyDetection.zScoreThreshold * stats.standardDeviation
+            : stats.q3 + 1.5 * stats.iqr,
       },
       confidence: Math.min(100, anomalyScore * 50),
-      severity: this.determineSeverity(anomalyScore)
+      severity: this.determineSeverity(anomalyScore),
     };
   }
 
@@ -527,7 +557,9 @@ export class EnhancedStatisticalAnalyticsService {
     return (count / sortedValues.length) * 100;
   }
 
-  private determinePerformance(percentile: number): 'excellent' | 'good' | 'average' | 'below-average' | 'poor' {
+  private determinePerformance(
+    percentile: number
+  ): 'excellent' | 'good' | 'average' | 'below-average' | 'poor' {
     if (percentile >= 90) return 'excellent';
     if (percentile >= 75) return 'good';
     if (percentile >= 50) return 'average';
@@ -535,9 +567,12 @@ export class EnhancedStatisticalAnalyticsService {
     return 'poor';
   }
 
-  private calculateRecentViolations(historicalData: StatisticalDataPoint[], slaTarget: number): number {
+  private calculateRecentViolations(
+    historicalData: StatisticalDataPoint[],
+    slaTarget: number
+  ): number {
     const recent = historicalData.filter(
-      d => d.timestamp.getTime() > Date.now() - (24 * 60 * 60 * 1000)
+      d => d.timestamp.getTime() > Date.now() - 24 * 60 * 60 * 1000
     );
     return recent.filter(d => d.value < slaTarget).length;
   }
@@ -553,7 +588,7 @@ export class EnhancedStatisticalAnalyticsService {
     return {
       immediateActions: ['Scale resources', 'Check health'],
       longTermActions: ['Optimize performance', 'Add monitoring'],
-      estimatedImpact: `${Math.ceil(violationPercent / 2)}% improvement expected`
+      estimatedImpact: `${Math.ceil(violationPercent / 2)}% improvement expected`,
     };
   }
 
@@ -566,13 +601,16 @@ export class EnhancedStatisticalAnalyticsService {
     // Simplified efficiency calculation
     return {
       score: Math.max(0, 100 - (executionTime / 60) * 10),
-      recommendations: ['Optimize resource usage', 'Reduce execution time']
+      recommendations: ['Optimize resource usage', 'Reduce execution time'],
     };
   }
 
-  private determineTrend(slope: number, standardError: number): 'increasing' | 'decreasing' | 'stable' | 'volatile' {
+  private determineTrend(
+    slope: number,
+    standardError: number
+  ): 'increasing' | 'decreasing' | 'stable' | 'volatile' {
     const significance = Math.abs(slope) / Math.max(standardError, 0.0001);
-    
+
     if (significance < 0.5) return 'stable';
     if (standardError > Math.abs(slope) * 3) return 'volatile';
     if (slope > 0) return 'increasing';
@@ -583,13 +621,13 @@ export class EnhancedStatisticalAnalyticsService {
     // Calculate residuals and their standard deviation
     const n = values.length;
     let sumSquaredResiduals = 0;
-    
+
     for (let i = 0; i < n; i++) {
       const predicted = regression.slope * i + regression.intercept;
       const residual = values[i]! - predicted;
       sumSquaredResiduals += residual * residual;
     }
-    
+
     return Math.sqrt(sumSquaredResiduals / (n - 2));
   }
 
@@ -631,4 +669,5 @@ export class EnhancedStatisticalAnalyticsService {
 }
 
 // Export singleton instance
-export const enhancedStatisticalAnalyticsService = EnhancedStatisticalAnalyticsService.getInstance();
+export const enhancedStatisticalAnalyticsService =
+  EnhancedStatisticalAnalyticsService.getInstance();
